@@ -1,0 +1,1582 @@
+file: -- models\canvas_object.dart
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+/// Enum que define los modos de edición y tipos de objetos.
+enum InfiniteCanvasMode { gridObject, text, line, freeForm }
+
+/// Clase base para los objetos del lienzo.
+abstract class InfiniteCanvasObject {
+  final InfiniteCanvasMode objectMode;
+  Offset position;
+  Color color;
+  double rotation;
+  
+
+  InfiniteCanvasObject({
+    required this.position,
+    required this.color,
+    this.rotation = 0.0,
+    required this.objectMode,
+  });
+
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
+      double gridSize);
+
+  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize);
+
+  Offset rotatePoint(Offset point, double angle) {
+    final radians = angle * (math.pi / 180);
+    final cosTheta = math.cos(radians);
+    final sinTheta = math.sin(radians);
+    return Offset(
+      point.dx * cosTheta - point.dy * sinTheta,
+      point.dx * sinTheta + point.dy * cosTheta,
+    );
+  }
+}
+
+
+file: -- models\free_form_object.dart
+import 'package:flutter/material.dart';
+import 'canvas_object.dart';
+import 'dart:math' as math;
+
+/// Objeto que representa una forma libre.
+class FreeFormObject extends InfiniteCanvasObject {
+  List<Offset> points;
+
+  FreeFormObject({
+    required super.position,
+    required super.color,
+    required this.points,
+  }) : super(objectMode: InfiniteCanvasMode.freeForm);
+
+  @override
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(scale);
+    canvas.translate(position.dx, position.dy);
+    canvas.rotate(rotation * (math.pi / 180));
+
+    final path = Path();
+    if (points.isNotEmpty) {
+      path.moveTo(points[0].dx, points[0].dy);
+      for (var point in points) {
+        path.lineTo(point.dx, point.dy);
+      }
+      path.close();
+    }
+
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = 2;
+    canvas.drawPath(path, paint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+    final transformedPoint = (point - canvasOffset) / scale;
+    final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
+
+    final path = Path();
+    if (points.isNotEmpty) {
+      path.moveTo(points[0].dx, points[0].dy);
+      for (var point in points) {
+        path.lineTo(point.dx, point.dy);
+      }
+      path.close();
+    }
+
+    return path.contains(rotatedPoint);
+  }
+}
+
+
+file: -- models\grid_object.dart
+import 'package:flutter/material.dart';
+import 'canvas_object.dart';
+import 'dart:math' as math;
+
+abstract class GridObject extends InfiniteCanvasObject {
+  double width;
+  double height;
+
+  GridObject({
+    required super.position,
+    required super.color,
+    required this.width,
+    required this.height,
+  }) : super(objectMode: InfiniteCanvasMode.gridObject);
+
+  @override
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
+      double gridSize) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(scale);
+    canvas.translate(
+      (position.dx / gridSize).round() * gridSize,
+      (position.dy / gridSize).round() * gridSize,
+    );
+    canvas.rotate(rotation * (math.pi / 180));
+
+    final rect = Rect.fromLTWH(
+      0,
+      0,
+      width * gridSize,
+      height * gridSize,
+    );
+    paint.color = color;
+    canvas.drawRect(rect, paint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+    final transformedPoint = (point - canvasOffset) / scale;
+    final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
+    return rotatedPoint.dx >= 0 &&
+        rotatedPoint.dx <= width * gridSize &&
+        rotatedPoint.dy >= 0 &&
+        rotatedPoint.dy <= height * gridSize;
+  }
+}
+
+
+file: -- models\indicator_object.dart
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+import 'grid_object.dart';
+
+enum InidicatorObjectType { exit, entrance }
+
+class IndicatorObject extends GridObject {
+  String label;
+  InidicatorObjectType type;
+
+  IndicatorObject({
+    required this.label,
+    required this.type,
+    super.position = const Offset(0, 0),
+  }) : super(
+          width: 0.25, // 25 cm de ancho
+          height: 0.5, // 50 cm de alto
+          color: type == InidicatorObjectType.exit ? Colors.red : Colors.green,
+        );
+
+  @override
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(scale);
+    canvas.translate(
+      (position.dx / gridSize).round() * gridSize,
+      (position.dy / gridSize).round() * gridSize,
+    );
+    canvas.rotate(rotation * (math.pi / 180));
+
+    // Dibujar el rectángulo
+    final rect = Rect.fromLTWH(
+      0,
+      0,
+      width * gridSize,
+      height * gridSize,
+    );
+    paint.color = color;
+    paint.style = PaintingStyle.fill;
+    canvas.drawRect(rect, paint);
+
+    // Dibujar el borde
+    final borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRect(rect, borderPaint);
+
+    // Dibujar el texto
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: (width * gridSize) / 2,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (width * gridSize - textPainter.width) / 2,
+        (height * gridSize - textPainter.height) / 2,
+      ),
+    );
+
+    canvas.restore();
+  }
+}
+
+file: -- models\office_object.dart
+import 'package:flutter/material.dart';
+import 'canvas_object.dart';
+import 'dart:math' as math;
+
+import 'grid_object.dart';
+
+class OfficeObject extends GridObject {
+  String label;
+
+  OfficeObject({
+    super.position = const Offset(0, 0),
+    super.color = const Color.fromARGB(255, 220, 169, 169),
+    required this.label,
+  }) : super(
+          width: 4, // 4 metros de ancho
+          height: 4, // 4 metros de alto
+        );
+
+  @override
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(scale);
+    canvas.translate(
+      (position.dx / gridSize).round() * gridSize,
+      (position.dy / gridSize).round() * gridSize,
+    );
+    canvas.rotate(rotation * (math.pi / 180));
+
+    // Dibujar el rectángulo transparente
+    final rect = Rect.fromLTWH(
+      0,
+      0,
+      width * gridSize,
+      height * gridSize,
+    );
+    paint.color = color.withOpacity(0.3); // Transparencia
+    paint.style = PaintingStyle.fill;
+    canvas.drawRect(rect, paint);
+
+    // Dibujar el borde segmentado
+    final borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final dashWidth = 5; // Longitud del segmento
+    final dashSpace = 5; // Espacio entre segmentos
+    double startX = 0;
+    while (startX < width * gridSize) {
+      canvas.drawLine(
+        Offset(startX, 0),
+        Offset(startX + dashWidth, 0),
+        borderPaint,
+      );
+      startX += dashWidth + dashSpace;
+    }
+    startX = 0;
+    while (startX < width * gridSize) {
+      canvas.drawLine(
+        Offset(startX, height * gridSize),
+        Offset(startX + dashWidth, height * gridSize),
+        borderPaint,
+      );
+      startX += dashWidth + dashSpace;
+    }
+    double startY = 0;
+    while (startY < height * gridSize) {
+      canvas.drawLine(
+        Offset(0, startY),
+        Offset(0, startY + dashWidth),
+        borderPaint,
+      );
+      startY += dashWidth + dashSpace;
+    }
+    startY = 0;
+    while (startY < height * gridSize) {
+      canvas.drawLine(
+        Offset(width * gridSize, startY),
+        Offset(width * gridSize, startY + dashWidth),
+        borderPaint,
+      );
+      startY += dashWidth + dashSpace;
+    }
+
+    // Dibujar el texto
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: (width * gridSize) / 4,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (width * gridSize - textPainter.width) / 2,
+        (height * gridSize - textPainter.height) / 2,
+      ),
+    );
+
+    canvas.restore();
+  }
+}
+
+file: -- models\spot_object.dart
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+import 'grid_object.dart';
+
+enum SpotObjectType { car, bus, truck, van, motorcycle, bicycle }
+enum SpotObjectCategory { standart, vip, electric, handicap }
+
+class SpotObject extends GridObject {
+  final SpotObjectType type;
+  final SpotObjectCategory category;
+  String label;
+  bool isFree;
+
+  // Tamaños predefinidos para cada tipo de spot
+  static const Map<SpotObjectType, Size> spotSizes = {
+    SpotObjectType.car: Size(2.5, 5), // 2.5m x 5m
+    SpotObjectType.bus: Size(3, 12),  // 3m x 12m
+    SpotObjectType.truck: Size(3, 8), // 3m x 8m
+    SpotObjectType.van: Size(2.5, 6), // 2.5m x 6m
+    SpotObjectType.motorcycle: Size(1, 2), // 1m x 2m
+    SpotObjectType.bicycle: Size(0.8, 1.5), // 0.8m x 1.5m
+  };
+
+  // Colores predefinidos para cada categoría
+  static const Map<SpotObjectCategory, Color> categoryColors = {
+    SpotObjectCategory.standart: Colors.blue,
+    SpotObjectCategory.vip: Colors.purple,
+    SpotObjectCategory.electric: Colors.green,
+    SpotObjectCategory.handicap: Colors.orange,
+  };
+
+  SpotObject({
+    super.position = const Offset(0, 0),
+    this.label = "",
+    this.isFree = true,
+    required this.type,
+    required this.category,
+  }) : super(
+          width: spotSizes[type]!.width, // Tamaño basado en el tipo
+          height: spotSizes[type]!.height, // Tamaño basado en el tipo
+          color: categoryColors[category]!, // Color basado en la categoría
+        );
+
+  @override
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
+      double gridSize) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(scale);
+    canvas.translate(
+      (position.dx / gridSize).round() * gridSize,
+      (position.dy / gridSize).round() * gridSize,
+    );
+    canvas.rotate(rotation * (math.pi / 180));
+
+    // Dibujar el rectángulo con bordes redondeados
+    final rect = Rect.fromLTWH(
+      0,
+      0,
+      width * gridSize,
+      height * gridSize,
+    );
+    final radius = Radius.circular(10); // Bordes redondeados
+
+    // Color de fondo basado en la categoría
+    paint.color = isFree ? color : Colors.grey; // Si no está libre, se marca en gris
+    paint.style = PaintingStyle.fill;
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), paint);
+
+    // Dibujar el borde con sombra
+    final borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), borderPaint);
+
+    // Dibujar un icono o símbolo según el tipo de spot
+    _drawSpotIcon(canvas, rect);
+
+    // Dibujar el texto
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: (width * gridSize) / 4,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 2,
+              offset: Offset(1, 1),
+            ),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (width * gridSize - textPainter.width) / 2,
+        (height * gridSize - textPainter.height) / 2,
+      ),
+    );
+
+    canvas.restore();
+  }
+
+  void _drawSpotIcon(Canvas canvas, Rect rect) {
+    final iconPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    switch (type) {
+      case SpotObjectType.car:
+        _drawCarIcon(canvas, rect, iconPaint);
+        break;
+      default:
+        _drawBusIcon(canvas, rect, iconPaint);
+        break;
+        
+    }
+  }
+
+  void _drawCarIcon(Canvas canvas, Rect rect, Paint paint) {
+    // Dibujar un icono de auto simple
+    final path = Path();
+    path.moveTo(rect.left + rect.width * 0.2, rect.top + rect.height * 0.5);
+    path.lineTo(rect.left + rect.width * 0.8, rect.top + rect.height * 0.5);
+    path.lineTo(rect.left + rect.width * 0.7, rect.top + rect.height * 0.7);
+    path.lineTo(rect.left + rect.width * 0.3, rect.top + rect.height * 0.7);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  void _drawBusIcon(Canvas canvas, Rect rect, Paint paint) {
+    // Dibujar un icono de bus simple
+    final path = Path();
+    path.addRect(Rect.fromLTWH(
+      rect.left + rect.width * 0.1,
+      rect.top + rect.height * 0.3,
+      rect.width * 0.8,
+      rect.height * 0.4,
+    ));
+    canvas.drawPath(path, paint);
+  }
+
+  // Métodos similares para _drawTruckIcon, _drawVanIcon, _drawMotorcycleIcon, _drawBicycleIcon
+}
+
+file: -- models\text_object.dart
+import 'package:flutter/material.dart';
+import 'canvas_object.dart';
+import 'dart:math' as math;
+
+/// Objeto que representa un texto.
+class TextObject extends InfiniteCanvasObject {
+  String text;
+  TextStyle style;
+
+  TextObject({
+    required super.position,
+    required this.text,
+    required super.color,
+    this.style = const TextStyle(color: Colors.black, fontSize: 16),
+  }) : super(objectMode: InfiniteCanvasMode.text);
+
+  @override
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(scale);
+    canvas.translate(
+      (position.dx / gridSize).round() * gridSize,
+      (position.dy / gridSize).round() * gridSize,
+    );
+    canvas.rotate(rotation * (math.pi / 180));
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset.zero);
+
+    canvas.restore();
+  }
+  @override
+  Size get size {
+    // Calcular el tamaño del texto usando un TextPainter
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    return textPainter.size;
+  }
+
+  @override
+  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+    final transformedPoint = (point - canvasOffset) / scale;
+    final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(color: color, fontSize: 16)),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    return rotatedPoint.dx >= 0 &&
+        rotatedPoint.dx <= textPainter.width &&
+        rotatedPoint.dy >= 0 &&
+        rotatedPoint.dy <= textPainter.height;
+  }
+}
+
+
+file: -- widgets\canvas.dart
+// ignore_for_file: avoid_single_cascade_in_expression_statements
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:parkar/infinite_canvas/widgets/tools/mode_bar.dart';
+import 'canvas_controller.dart';
+import 'canvas_painter.dart';
+import 'tools/grid_object_bar.dart';
+import 'tools/action_bar.dart';
+import 'mini_map/mini_map.dart';
+import 'tools/floating_buttons.dart';
+
+class InfiniteCanvas extends StatefulWidget {
+  final InfiniteCanvasController? controller;
+  final double gridSize;
+  final double scalePerGrid;
+  final bool isEditable;
+
+  const InfiniteCanvas({
+    super.key,
+    this.controller,
+    this.gridSize = 10,
+    this.scalePerGrid = 0.25,
+    this.isEditable = true,
+  });
+
+  @override
+  _InfiniteCanvasState createState() => _InfiniteCanvasState();
+}
+
+class _InfiniteCanvasState extends State<InfiniteCanvas> {
+  late InfiniteCanvasController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = widget.controller ?? InfiniteCanvasController();
+    controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void dispose() {
+    controller.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    setState(() {});
+  }
+
+  Map<Type, GestureRecognizerFactory> _buildGestures() {
+    return {
+      PanGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
+        () => PanGestureRecognizer(),
+        (PanGestureRecognizer instance) {
+          instance
+            ..onStart = controller.onPanStart
+            ..onUpdate = controller.onPanUpdate
+            ..onEnd = controller.onPanEnd;
+        },
+      ),
+      ScaleGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<ScaleGestureRecognizer>(
+        () => ScaleGestureRecognizer(),
+        (ScaleGestureRecognizer instance) {
+          instance
+            ..onStart = controller.onScaleStart
+            ..onUpdate = controller.onScaleUpdate
+            ..onEnd = controller.onScaleEnd;
+        },
+      ),
+      TapGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+        () => TapGestureRecognizer(),
+        (TapGestureRecognizer instance) {
+          instance
+            ..onTapDown = (details) {
+              final position =
+                  (details.localPosition - controller.canvasOffset) /
+                      controller.zoom;
+              if (controller.canvasMode == InfiniteCanvasMode.text) {
+                _showEditTextDialog(position);
+              } else {
+                controller.selectObject(position);
+              }
+            };
+        },
+      ),
+    };
+  }
+
+  void _showEditTextDialog(Offset position) {
+    final textController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Agregar texto"),
+          content: TextField(
+            controller: textController,
+            decoration: const InputDecoration(hintText: "Escribe algo..."),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                controller.addText(position, textController.text);
+                Navigator.of(context).pop();
+              },
+              child: const Text("Agregar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Shortcuts(
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyC):
+            CopyCommand(),
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyV):
+            PasteCommand(),
+        LogicalKeySet(LogicalKeyboardKey.delete): DeleteCommand(),
+      },
+      child: Actions(
+        actions: {
+          CopyCommand: CallbackAction<CopyCommand>(
+              onInvoke: (_) => controller.copySelectedObjects()),
+          PasteCommand: CallbackAction<PasteCommand>(
+              onInvoke: (_) => controller.pasteObjects()),
+          DeleteCommand: CallbackAction<DeleteCommand>(
+              onInvoke: (_) => controller.deleteSelectedObjects()),
+        },
+        child: Scaffold(
+          body: Stack(
+            children: [
+              Listener(
+                onPointerSignal: (pointerSignal) {
+                  if (pointerSignal is PointerScrollEvent) {
+                    controller.adjustZoom(pointerSignal.scrollDelta.dy < 0);
+                  }
+                },
+                // onPointerDown: (details) {
+                //   if (details.kind == PointerDeviceKind.mouse || details.kind == PointerDeviceKind.touch) {
+                //     controller.onTapDown(TapDownDetails(
+                //       globalPosition: details.position,
+                //       localPosition: details.localPosition,
+                //     ));
+                //   }
+                // },
+                // onPointerUp: (details) {
+                //   if (details.kind == PointerDeviceKind.mouse || details.kind == PointerDeviceKind.touch) {
+                //     // Manejar doble clic
+                //     if (details.delta.distance == 0) {
+                //       controller.onDoubleTap();
+                //     }
+                //   }
+                // },
+                child: RawGestureDetector(
+                  gestures: _buildGestures(),
+                  child: CustomPaint(
+                    size: Size.infinite,
+                    painter: InfiniteCanvasPainter(
+                      objects: controller.objects,
+                      selectedObjects: controller.selectedObjects,
+                      gridSize: widget.gridSize,
+                      zoom: controller.zoom,
+                      canvasOffset: controller.canvasOffset,
+                      viewportSize: MediaQuery.of(context).size,
+                      scalePerGrid: widget.scalePerGrid,
+                      gridColor: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.2),
+                      freeFormPoints: controller.freeFormPoints,
+                    ),
+                  ),
+                ),
+              ),
+              MiniMap(
+                controller: controller,
+                viewportSize: MediaQuery.of(context).size,
+              ),
+              Modebar(controller: controller),
+              if (controller.canvasMode == InfiniteCanvasMode.gridObject)
+                GridObjectBar(controller: controller),
+              
+              if (controller.selectedObjects.isNotEmpty && widget.isEditable)
+                ActionBar(controller: controller),
+              FloatingButtons(controller: controller),
+              Positioned(
+                bottom: 20,
+                left: 20,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    "Escala: ${widget.scalePerGrid.toStringAsFixed(2)} m/cuadrado",
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CopyCommand extends Intent {}
+
+class PasteCommand extends Intent {}
+
+class DeleteCommand extends Intent {}
+
+
+file: -- widgets\canvas_controller.dart
+// ignore_for_file: prefer_final_fields
+
+import 'package:flutter/material.dart';
+import '../models/free_form_object.dart';
+import '../models/canvas_object.dart';
+import '../models/grid_object.dart';
+import '../models/text_object.dart';
+import '../models/spot_object.dart';
+
+enum InfiniteCanvasMode { gridObject, text, freeForm }
+
+class InfiniteCanvasController extends ChangeNotifier {
+  List<InfiniteCanvasObject> _objects = [];
+  List<InfiniteCanvasObject> _selectedObjects = [];
+  InfiniteCanvasMode _canvasMode = InfiniteCanvasMode.gridObject;
+  double _zoom = 1.0;
+  Offset _canvasOffset = Offset.zero;
+  List<Offset> _freeFormPoints = [];
+  bool _isDrawingFreeForm =
+      false; // Indica si se está dibujando una forma libre
+  Offset? _dragStart; // Punto de inicio del arrastre
+  Offset? _objectDragStart; // Posición inicial del objeto al arrastrar
+  double gridSize = 10;
+  SpotObjectType spotObjectType = SpotObjectType.car;
+
+  List<InfiniteCanvasObject> get objects => _objects;
+  List<InfiniteCanvasObject> get selectedObjects => _selectedObjects;
+  InfiniteCanvasMode get canvasMode => _canvasMode;
+  double get zoom => _zoom;
+  Offset get canvasOffset => _canvasOffset;
+  List<Offset> get freeFormPoints => _freeFormPoints;
+
+  InfiniteCanvasController({
+    this.gridSize = 10,
+  });
+
+  void setCanvasMode(InfiniteCanvasMode mode) {
+    _canvasMode = mode;
+    if (mode != InfiniteCanvasMode.freeForm) {
+      _isDrawingFreeForm = false; // Finalizar el dibujo si se cambia de modo
+    }
+    notifyListeners();
+  }
+
+  void adjustZoom(bool zoomIn) {
+    _zoom = (zoomIn ? _zoom * 1.2 : _zoom / 1.2).clamp(0.1, 5.0);
+    notifyListeners();
+  }
+
+  void onPanStart(DragStartDetails details) {
+    if (_canvasMode != InfiniteCanvasMode.freeForm) {
+      _dragStart =
+          details.localPosition; // Guardar el punto de inicio del arrastre
+      if (_selectedObjects.isNotEmpty) {
+        _objectDragStart = _selectedObjects
+            .first.position; // Guardar la posición inicial del objeto
+      }
+    }
+    notifyListeners();
+  }
+
+  void onPanUpdate(DragUpdateDetails details) {
+    if (_canvasMode != InfiniteCanvasMode.freeForm) {
+      final delta = (details.localPosition - _dragStart!) / _zoom;
+
+      // Ajustar el delta a la cuadrícula
+      final gridDelta = Offset(
+        (delta.dx / gridSize).round() * gridSize,
+        (delta.dy / gridSize).round() * gridSize,
+      );
+
+      if (_selectedObjects.isNotEmpty && _objectDragStart != null) {
+        // Calcular la nueva posición temporal
+        final newPosition = _objectDragStart! + gridDelta;
+
+        // Verificar si la nueva posición colisiona con otros objetos
+        bool canMove = true;
+        for (var object in _objects) {
+          if (object != _selectedObjects.first && _checkCollision(_selectedObjects.first, newPosition, object)) {
+            canMove = false;
+            break;
+          }
+        }
+
+        // Mover el objeto solo si no hay colisión
+        if (canMove) {
+          for (var object in _selectedObjects) {
+            object.position = newPosition;
+          }
+        }
+      } else {
+        // Mover el lienzo en incrementos de la cuadrícula
+        _canvasOffset += gridDelta * _zoom;
+        _dragStart = details.localPosition;
+      }
+    }
+    notifyListeners();
+  }
+
+  void onPanEnd(DragEndDetails details) {
+    if (_canvasMode != InfiniteCanvasMode.freeForm) {
+      _dragStart = null; // Reiniciar el punto de inicio del arrastre
+      _objectDragStart = null; // Reiniciar la posición inicial del objeto
+    }
+    notifyListeners();
+  }
+
+  void onScaleStart(ScaleStartDetails details) {
+    if (_canvasMode != InfiniteCanvasMode.freeForm) {
+      _dragStart =
+          details.focalPoint; // Guardar el punto de inicio de la escala
+    }
+  }
+
+  void onScaleUpdate(ScaleUpdateDetails details) {
+    if (_canvasMode != InfiniteCanvasMode.freeForm) {
+      if (details.scale != 1.0) {
+        final oldZoom = _zoom;
+        _zoom *= details.scale;
+        _zoom = _zoom.clamp(0.1, 5.0);
+
+        final focalPoint = details.focalPoint;
+        final zoomFactor = _zoom / oldZoom;
+        _canvasOffset = focalPoint - (focalPoint - _canvasOffset) * zoomFactor;
+      } else {
+        _canvasOffset += details.focalPoint - _dragStart!;
+        _dragStart = details.focalPoint;
+      }
+    }
+    notifyListeners();
+  }
+
+  void onScaleEnd(ScaleEndDetails details) {
+    if (_canvasMode != InfiniteCanvasMode.freeForm) {
+      _dragStart = null; // Reiniciar el punto de inicio de la escala
+    }
+    notifyListeners();
+  }
+
+  void onTapDown(TapDownDetails details) {
+    final canvasPosition = (details.localPosition - _canvasOffset) / _zoom;
+
+    if (_canvasMode == InfiniteCanvasMode.freeForm) {
+      if (!_isDrawingFreeForm) {
+        // Iniciar una nueva forma libre
+        _freeFormPoints.clear();
+        _freeFormPoints.add(canvasPosition); // Agregar el primer punto
+        _isDrawingFreeForm = true;
+      } else {
+        // Agregar un nuevo punto y unirlo al último punto
+        final nearestPoint = _findNearestPoint(canvasPosition);
+        if (nearestPoint != null) {
+          // Unirse al punto más cercano si está dentro del rango
+          _freeFormPoints.add(nearestPoint);
+        } else {
+          // Agregar el nuevo punto
+          _freeFormPoints.add(canvasPosition);
+        }
+      }
+    } else if (_canvasMode == InfiniteCanvasMode.gridObject) {
+      selectObject(canvasPosition);
+    }
+    notifyListeners();
+  }
+
+  void onDoubleTap() {
+    if (_canvasMode == InfiniteCanvasMode.freeForm && _isDrawingFreeForm) {
+      // Finalizar la forma libre al hacer doble clic
+      _finishFreeFormDrawing();
+    }
+  }
+
+  void _finishFreeFormDrawing() {
+    if (_freeFormPoints.length >= 2) {
+      _objects.add(FreeFormObject(
+        position: Offset.zero,
+        color: Colors.purple,
+        points: List.from(_freeFormPoints),
+      ));
+      _freeFormPoints.clear();
+      _isDrawingFreeForm = false;
+      notifyListeners();
+    }
+  }
+
+  Offset? _findNearestPoint(Offset point) {
+    const double snapDistance = 10.0; // Distancia máxima para unirse a un punto
+    for (var object in _objects) {
+      if (object is FreeFormObject) {
+        for (var p in object.points) {
+          if ((p - point).distance <= snapDistance) {
+            return p; // Retornar el punto más cercano
+          }
+        }
+      }
+    }
+    return null; // No hay puntos cercanos
+  }
+
+  void selectObject(Offset position) {
+    _selectedObjects.clear();
+    for (var object in _objects.reversed) {
+      if (object.contains(position, Offset.zero, 1.0, gridSize)) {
+        _selectedObjects.add(object);
+        break;
+      }
+    }
+    notifyListeners();
+  }
+  bool _checkCollision(InfiniteCanvasObject object1, Offset newPosition, InfiniteCanvasObject object2) {
+    if (object1 is GridObject && object2 is GridObject) {
+      final rect1 = Rect.fromLTWH(
+        newPosition.dx,
+        newPosition.dy,
+        object1.width * gridSize,
+        object1.height * gridSize,
+      );
+      final rect2 = Rect.fromLTWH(
+        object2.position.dx,
+        object2.position.dy,
+        object2.width * gridSize,
+        object2.height * gridSize,
+      );
+      return rect1.overlaps(rect2);
+    }
+    return false;
+  }
+
+  void addGridObjectNode(GridObject object) {
+    Offset offset = Offset.zero;
+    bool positionFound = false;
+
+    while (!positionFound) {
+      positionFound = true;
+      for (var existingObject in _objects) {
+        if (existingObject is GridObject && _checkCollision(object, offset, existingObject)) {
+          positionFound = false;
+          offset = Offset(offset.dx + object.width * gridSize, offset.dy);
+          break;
+        }
+      }
+    }
+
+    object.position = offset;
+    _selectedObjects.add(object);
+    _objects.add(object);
+    _selectedObjects.clear();
+    notifyListeners();
+  }
+
+  void addText(Offset position, String text) {
+    final textObject = TextObject(
+      position: position,
+      text: text,
+      color: Colors.black,
+    );
+    _objects.add(textObject);
+    _selectedObjects.clear();
+    _selectedObjects.add(textObject);
+    notifyListeners();
+  }
+
+  void deleteSelectedObjects() {
+    _objects.removeWhere((object) => _selectedObjects.contains(object));
+    _selectedObjects.clear();
+    notifyListeners();
+  }
+
+  void rotateSelectedObjects() {
+    for (var object in _selectedObjects) {
+      object.rotation += 15.0;
+    }
+    notifyListeners();
+  }
+
+  void toggleSelectedObjectStatus() {
+    if (_selectedObjects.isNotEmpty && _selectedObjects.first is SpotObject) {
+      final selectedVehicle = _selectedObjects.first as SpotObject;
+      selectedVehicle.isFree = !selectedVehicle.isFree;
+      notifyListeners();
+    }
+  }
+
+  void editSelectedText() {
+    if (_selectedObjects.isNotEmpty && _selectedObjects.first is TextObject) {
+      final selectedTextObject = _selectedObjects.first as TextObject;
+      // Implementar lógica para editar texto
+      notifyListeners();
+    }
+  }
+
+  void centerCanvas() {
+    _canvasOffset = Offset.zero;
+    notifyListeners();
+  }
+
+  void resetZoom() {
+    _zoom = 1.0;
+    notifyListeners();
+  }
+
+  void copySelectedObjects() {
+    // Implementar lógica para copiar objetos
+    notifyListeners();
+  }
+
+  void pasteObjects() {
+    // Implementar lógica para pegar objetos
+    notifyListeners();
+  }
+
+  void updateCanvasOffset(double dx, double dy) {
+    _canvasOffset = Offset(dx, dy);
+    notifyListeners();
+  }
+  void setGridSize(double newGridSize) {
+    gridSize = newGridSize;
+    notifyListeners();
+  }
+}
+
+
+file: -- widgets\canvas_painter.dart
+import 'package:flutter/material.dart';
+import '../models/canvas_object.dart';
+
+/// Pintor personalizado para el lienzo.
+class InfiniteCanvasPainter extends CustomPainter {
+  final List<InfiniteCanvasObject> objects;
+  final List<InfiniteCanvasObject> selectedObjects;
+  final double gridSize;
+  final double zoom;
+  final Offset canvasOffset;
+  final Size viewportSize;
+  final double scalePerGrid;
+  final Color gridColor;
+  final List<Offset> freeFormPoints;
+
+  InfiniteCanvasPainter({
+    required this.objects,
+    required this.selectedObjects,
+    required this.gridSize,
+    required this.zoom,
+    required this.canvasOffset,
+    required this.viewportSize,
+    required this.scalePerGrid,
+    required this.gridColor,
+    required this.freeFormPoints,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(canvasOffset.dx, canvasOffset.dy);
+    canvas.scale(zoom);
+
+    _drawGrid(canvas, size);
+
+    for (var object in objects) {
+      object.draw(canvas, Paint()..color = object.color, Offset.zero, 1.0, gridSize);
+
+      if (selectedObjects.contains(object)) {
+        final borderPaint = Paint()
+          ..color = const Color.fromARGB(255, 3, 222, 69)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2 / zoom;
+        object.draw(canvas, borderPaint, Offset.zero, 1.0, gridSize);
+      }
+    }
+
+    if (freeFormPoints.isNotEmpty) {
+      final path = Path();
+      path.moveTo(freeFormPoints[0].dx, freeFormPoints[0].dy);
+      for (var point in freeFormPoints) {
+        path.lineTo(point.dx, point.dy);
+      }
+      final paint = Paint()
+        ..color = Colors.purple
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2 / zoom;
+      canvas.drawPath(path, paint);
+    }
+
+    canvas.restore();
+  }
+
+  // void _drawGrid(Canvas canvas, Size size) {
+  //   final paint = Paint()
+  //     ..color = gridColor
+  //     ..strokeWidth = 1 / zoom;
+
+  //   final startX = -canvasOffset.dx / zoom;
+  //   final endX = (size.width - canvasOffset.dx) / zoom;
+  //   final startY = -canvasOffset.dy / zoom;
+  //   final endY = (size.height - canvasOffset.dy) / zoom;
+
+  //   for (double x = (startX / gridSize).floor() * gridSize;
+  //       x <= endX;
+  //       x += gridSize) {
+  //     canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
+  //   }
+
+  //   for (double y = (startY / gridSize).floor() * gridSize;
+  //       y <= endY;
+  //       y += gridSize) {
+  //     canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
+  //   }
+  // }
+  void _drawGrid(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 1 / zoom;
+
+    final startX = (-canvasOffset.dx / zoom / gridSize).floor() * gridSize;
+    final endX = ((size.width - canvasOffset.dx) / zoom / gridSize).ceil() * gridSize;
+    final startY = (-canvasOffset.dy / zoom / gridSize).floor() * gridSize;
+    final endY = ((size.height - canvasOffset.dy) / zoom / gridSize).ceil() * gridSize;
+
+    for (double x = startX; x <= endX; x += gridSize) {
+      canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
+    }
+
+    for (double y = startY; y <= endY; y += gridSize) {
+      canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(InfiniteCanvasPainter oldDelegate) {
+    return true;
+  }
+}
+
+
+file: -- widgets\mini_map\mini_map.dart
+import 'package:flutter/material.dart';
+import '../canvas_controller.dart';
+import 'mini_map_painter.dart';
+
+class MiniMap extends StatelessWidget {
+  final InfiniteCanvasController controller;
+  final Size viewportSize;
+
+  const MiniMap(
+      {super.key, required this.controller, required this.viewportSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 20,
+      left: 20,
+      child: GestureDetector(
+        onTapDown: (details) {
+          final localPosition = details.localPosition;
+          final canvasPosition = Offset(
+            localPosition.dx / 0.4,
+            localPosition.dy / 0.4,
+          );
+          controller.updateCanvasOffset(
+            -canvasPosition.dx + viewportSize.width / (2 * controller.zoom),
+            -canvasPosition.dy + viewportSize.height / (2 * controller.zoom),
+          );
+        },
+        child: Container(
+          width: 200,
+          height: 200,
+          decoration: BoxDecoration(
+            border: Border.all(
+                color: Theme.of(context).colorScheme.onTertiary, width: 2),
+            color: Colors.white.withOpacity(0.2),
+          ),
+          child: CustomPaint(
+            painter: MiniMapPainter(
+              objects: controller.objects,
+              canvasOffset: controller.canvasOffset,
+              zoom: controller.zoom,
+              viewportSize: viewportSize,
+              gridSize: 10,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+file: -- widgets\mini_map\mini_map_painter.dart
+import 'package:flutter/material.dart';
+import '../../models/canvas_object.dart';
+
+/// Pintor personalizado para el minimapa.
+class MiniMapPainter extends CustomPainter {
+  final List<InfiniteCanvasObject> objects;
+  final Offset canvasOffset;
+  final double zoom;
+  final Size viewportSize;
+  final double gridSize;
+
+  MiniMapPainter({
+    required this.objects,
+    required this.canvasOffset,
+    required this.zoom,
+    required this.viewportSize,
+    required this.gridSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final minimapScale = size.width / 1000;
+
+    final backgroundPaint = Paint()..color = Colors.white.withOpacity(0.8);
+    canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height), backgroundPaint);
+
+    // final gridPaint = Paint()
+    //   ..color = Colors.grey.withOpacity(0.3)
+    //   ..strokeWidth = 1;
+    // for (double x = 0; x <= size.width; x += gridSize * minimapScale) {
+    //   canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    // }
+    // for (double y = 0; y <= size.height; y += gridSize * minimapScale) {
+    //   canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    // }
+
+    for (var object in objects) {
+      final position = Offset(
+        object.position.dx * minimapScale,
+        object.position.dy * minimapScale,
+      );
+
+      if (position.dx >= 0 &&
+          position.dx <= size.width &&
+          position.dy >= 0 &&
+          position.dy <= size.height) {
+        object.draw(
+            canvas, Paint()..color = object.color, position, minimapScale, gridSize);
+      }
+    }
+
+    final viewPortScale = minimapScale / 5;
+
+    final viewportRect = Rect.fromLTWH(
+      -canvasOffset.dx * viewPortScale,
+      -canvasOffset.dy * viewPortScale,
+      viewportSize.width * viewPortScale / zoom,
+      viewportSize.height * viewPortScale / zoom,
+    );
+
+    final viewportPaint = Paint()
+      ..color = Colors.blue.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRect(viewportRect, viewportPaint);
+  }
+
+  @override
+  bool shouldRepaint(MiniMapPainter oldDelegate) {
+    return true;
+  }
+}
+
+
+file: -- widgets\tools\action_bar.dart
+import 'package:flutter/material.dart';
+import '../canvas_controller.dart';
+import '../../models/text_object.dart';
+import '../../models/spot_object.dart';
+
+class ActionBar extends StatelessWidget {
+  final InfiniteCanvasController controller;
+
+  const ActionBar({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedObject = controller.selectedObjects.first;
+    final position =
+        selectedObject.position * controller.zoom + controller.canvasOffset;
+
+    return Positioned(
+      top: position.dy + 50,
+      left: position.dx,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            const BoxShadow(
+                color: Colors.black26, blurRadius: 5, offset: Offset(0, 3))
+          ],
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.rotate_right),
+              onPressed: controller.rotateSelectedObjects,
+              tooltip: "Rotar",
+            ),
+            if (selectedObject is SpotObject)
+              IconButton(
+                icon: const Icon(Icons.swap_horiz),
+                onPressed: controller.toggleSelectedObjectStatus,
+                tooltip: "Cambiar estado",
+              ),
+            if (selectedObject is TextObject)
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  // Implementar lógica para editar texto
+                },
+                tooltip: "Editar texto",
+              ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: controller.deleteSelectedObjects,
+              tooltip: "Eliminar",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+file: -- widgets\tools\floating_buttons.dart
+import 'package:flutter/material.dart';
+import '../canvas_controller.dart';
+
+class FloatingButtons extends StatelessWidget {
+  final InfiniteCanvasController controller;
+
+  const FloatingButtons({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 20,
+      right: 20,
+      child: Column(
+        children: [
+          FloatingActionButton(
+            onPressed: controller.centerCanvas,
+            child: const Icon(Icons.center_focus_strong),
+            tooltip: "Centrar lienzo",
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton(
+            onPressed: controller.resetZoom,
+            child: const Icon(Icons.zoom_out_map),
+            tooltip: "Zoom predeterminado",
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+file: -- widgets\tools\grid_object_bar.dart
+// ignore_for_file: prefer_const_literals_to_create_immutables
+
+import 'package:flutter/material.dart';
+import 'package:parkar/infinite_canvas/models/indicator_object.dart';
+import 'package:parkar/infinite_canvas/models/office_object.dart';
+import 'package:parkar/infinite_canvas/models/spot_object.dart';
+import '../canvas_controller.dart';
+
+class GridObjectBar extends StatelessWidget {
+  final InfiniteCanvasController controller;
+
+  const GridObjectBar({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 100,
+      right: 10,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            const BoxShadow(
+                color: Colors.black26, blurRadius: 5, offset: Offset(0, 3))
+          ],
+        ),
+        child: Column(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.directions_car),
+              onPressed: () => controller.addGridObjectNode(
+                SpotObject(
+                  type: SpotObjectType.car,
+                  category: SpotObjectCategory.standart,
+                ),
+              ),
+              tooltip: "Spot",
+            ),
+            IconButton(
+              icon: const Icon(Icons.directions_car),
+              onPressed: () => controller.addGridObjectNode(
+                IndicatorObject(
+                  label: '',
+                  type: InidicatorObjectType.entrance,
+                ),
+              ),
+              tooltip: "Entrada",
+            ),
+            IconButton(
+              icon: const Icon(Icons.directions_car),
+              onPressed: () => controller.addGridObjectNode(
+                IndicatorObject(
+                  label: '',
+                  type: InidicatorObjectType.exit,
+                ),
+              ),
+              tooltip: "Salida",
+            ),
+            IconButton(
+              icon: const Icon(Icons.directions_car),
+              onPressed: () => controller.addGridObjectNode(
+                OfficeObject(
+                  label: '',
+                ),
+              ),
+              tooltip: "Oficina",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+file: -- widgets\tools\mode_bar.dart
+// ignore_for_file: prefer_const_literals_to_create_immutables
+
+import 'package:flutter/material.dart';
+import '../canvas_controller.dart';
+
+class Modebar extends StatelessWidget {
+  final InfiniteCanvasController controller;
+
+  const Modebar({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 10,
+      right: 10,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            const BoxShadow(
+                color: Colors.black26, blurRadius: 5, offset: Offset(0, 3))
+          ],
+        ),
+        child: Column(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.directions_car),
+              onPressed: () =>
+                  controller.setCanvasMode(InfiniteCanvasMode.gridObject),
+              color: controller.canvasMode == InfiniteCanvasMode.gridObject
+                  ? Colors.blue
+                  : Colors.grey,
+              tooltip: "Agregar vehículo",
+            ),
+            IconButton(
+              icon: const Icon(Icons.text_fields),
+              onPressed: () =>
+                  controller.setCanvasMode(InfiniteCanvasMode.text),
+              color: controller.canvasMode == InfiniteCanvasMode.text
+                  ? Colors.blue
+                  : Colors.grey,
+              tooltip: "Agregar texto",
+            ),
+            IconButton(
+              icon: const Icon(Icons.brush),
+              onPressed: () =>
+                  controller.setCanvasMode(InfiniteCanvasMode.freeForm),
+              color: controller.canvasMode == InfiniteCanvasMode.freeForm
+                  ? Colors.blue
+                  : Colors.grey,
+              tooltip: "Dibujar forma libre",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+

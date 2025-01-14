@@ -1,0 +1,23 @@
+{
+  "name": "iathings_api",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts",
+    "seed": "bun run src/seed.ts"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.2.0",
+    "@elysiajs/jwt": "^1.2.0",
+    "@elysiajs/opentelemetry": "^1.2.0",
+    "@elysiajs/swagger": "^1.1.6",
+    "@prisma/client": "^6.1.0",
+    "elysia": "latest",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
