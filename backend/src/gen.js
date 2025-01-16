@@ -42,13 +42,13 @@ const entities = {
       phone: { type: 'String', composite: false, description: 'Número de teléfono de la empresa', required: false, isArray: false },
       logoUrl: { type: 'String', composite: false, description: 'URL del logo de la empresa', required: false, isArray: false },
       userId: { type: 'String', composite: false, description: 'ID del usuario que creó la empresa', required: true, isArray: false },
-      user: { type: 'User', composite: true, description: 'Usuario propietario de la empresa', required: true, isArray: false },
+      owner: { type: 'User', composite: true, description: 'Usuario propietario de la empresa', required: false, isArray: false },
       params: { type: 'CompanyParams', composite: true, description: 'Parámetros adicionales de la empresa', required: false, isArray: false },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
-    createFields: ['name', 'userId', 'email', 'phone', 'logoUrl', 'params'],
-    updateFields: ['name', 'userId', 'email', 'phone', 'logoUrl', 'params'],
+    createFields: ['name', 'userId', 'email', 'phone', 'logoUrl'],
+    updateFields: ['name', 'userId', 'email', 'phone', 'logoUrl'],
     imports: ['user'],
     jsonSchemas: {
       CompanyParamsSchema: {
@@ -62,9 +62,9 @@ const entities = {
     fields: {
       id: { type: 'String', composite: false, description: 'Identificador único del empleado', required: true, isArray: false },
       userId: { type: 'String', composite: false, description: 'ID del usuario asociado al empleado', required: true, isArray: false },
-      user: { type: 'User', composite: true, description: 'Usuario asociado al empleado', required: true, isArray: false },
+      user: { type: 'User', composite: true, description: 'Usuario asociado al empleado', required: false, isArray: false },
       companyId: { type: 'String', composite: false, description: 'ID de la empresa a la que pertenece el empleado', required: true, isArray: false },
-      company: { type: 'Company', composite: true, description: 'Empresa asociada al empleado', required: true, isArray: false },
+      company: { type: 'Company', composite: true, description: 'Empresa asociada al empleado', required: false, isArray: false },
       role: { type: 'String', composite: false, description: 'Rol del empleado', required: true, isArray: false },
       assignedParkings: { type: 'String', composite: false, description: 'Estacionamientos asignados al empleado', required: true, isArray: true },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
@@ -80,14 +80,14 @@ const entities = {
       id: { type: 'String', composite: false, description: 'Identificador único del estacionamiento', required: true, isArray: false },
       name: { type: 'String', composite: false, description: 'Nombre del estacionamiento', required: true, isArray: false },
       companyId: { type: 'String', composite: false, description: 'ID de la empresa a la que pertenece el estacionamiento', required: true, isArray: false },
-      company: { type: 'Company', composite: true, description: 'Empresa asociada al estacionamiento', required: true, isArray: false },
+      company: { type: 'Company', composite: true, description: 'Empresa asociada al estacionamiento', required: false, isArray: false },
       vehicleTypes: { type: 'VehicleType', composite: true, description: 'Tipos de vehículos permitidos en el estacionamiento', required: true, isArray: true },
       params: { type: 'ParkingParams', composite: true, description: 'Parámetros adicionales del estacionamiento', required: true, isArray: false },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
-    createFields: ['name', 'companyId', 'vehicleTypes', 'params'],
-    updateFields: ['name', 'vehicleTypes', 'params'],
+    createFields: ['name', 'companyId'],
+    updateFields: ['name'],
     imports: ['company'],
     jsonSchemas: {
       VehicleTypeSchema: {
@@ -116,7 +116,7 @@ const entities = {
       id: { type: 'String', composite: false, description: 'Identificador único del nivel', required: true, isArray: false },
       name: { type: 'String', composite: false, description: 'Nombre del nivel', required: true, isArray: false },
       parkingId: { type: 'String', composite: false, description: 'ID del estacionamiento al que pertenece el nivel', required: true, isArray: false },
-      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al nivel', required: true, isArray: false },
+      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al nivel', required: false, isArray: false },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
@@ -132,13 +132,15 @@ const entities = {
       coordinates: { type: 'Coordinates', composite: true, description: 'Coordenadas del lugar', required: true, isArray: false },
       status: { type: 'String', composite: false, description: 'Estado del lugar (libre, ocupado, etc.)', required: true, isArray: false },
       parkingId: { type: 'String', composite: false, description: 'ID del estacionamiento asociado', required: true, isArray: false },
-      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al lugar', required: true, isArray: false },
+      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al lugar', required: false, isArray: false },
+      levelId: { type: 'String', composite: false, description: 'ID del nivel al que pertenece el área', required: true, isArray: false },
+      level: { type: 'Level', composite: true, description: 'Nivel asociado al área', required: false, isArray: false },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
     createFields: ['name', 'coordinates', 'status', 'parkingId'],
     updateFields: ['name', 'coordinates', 'status'],
-    imports: ['parking'],
+    imports: ['parking', 'level'],
     jsonSchemas: {
       CoordinatesSchema: {
         fields: {
@@ -324,6 +326,7 @@ const entities = {
     jsonSchemas: {}, // No hay esquemas adicionales
   },
 };
+
 
 // Funciones de utilidad
 function toKebabCase(str) {

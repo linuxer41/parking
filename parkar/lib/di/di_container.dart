@@ -5,7 +5,6 @@ import '../services/company_service.dart';
 import '../services/employee_service.dart';
 import '../services/parking_service.dart';
 import '../services/level_service.dart';
-import '../services/area_service.dart';
 import '../services/spot_service.dart';
 import '../services/vehicle_service.dart';
 import '../services/price_service.dart';
@@ -36,9 +35,6 @@ class DIContainer {
     
 
     _dependencies[LevelService] = LevelService();
-    
-
-    _dependencies[AreaService] = AreaService();
     
 
     _dependencies[SpotService] = SpotService();

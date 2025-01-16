@@ -2,7 +2,6 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:parkar/models/company_model.dart';
 import 'package:parkar/models/level_model.dart';
 
-import 'area_model.dart';
 import 'parking_model.dart';
 import 'spot_model.dart';
 
@@ -33,35 +32,16 @@ class CompanyCompositeModel extends CompanyModel {
 
 
 @JsonSerializable()
-class AreaCompositeModel extends AreaModel {
+class LevelCompositeModel extends LevelModel {
   final List<SpotModel> spots;
 
-  AreaCompositeModel(
-      {required this.spots,
-      required super.id,
-      required super.name,
-      required super.createdAt,
-      required super.updatedAt, required super.parkingId, required super.levelId
-      });
-
-  factory AreaCompositeModel.fromJson(Map<String, dynamic> json) =>
-      _$AreaCompositeModelFromJson(json);
-
-  @override
-  Map<String, dynamic> toJson() => _$AreaCompositeModelToJson(this);
-}
-
-@JsonSerializable()
-class LevelCompositeModel extends LevelModel {
-  final List<AreaCompositeModel> areas;
-
   LevelCompositeModel(
-      {required this.areas,
+      {required this.spots,
       required super.id,
       required super.name,
       required super.parkingId,
       required super.createdAt,
-      required super.updatedAt});
+      required super.updatedAt, required super.parking});
 
   factory LevelCompositeModel.fromJson(Map<String, dynamic> json) =>
       _$LevelCompositeModelFromJson(json);

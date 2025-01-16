@@ -16,10 +16,10 @@ SpotModel _$SpotModelFromJson(Map<String, dynamic> json) => SpotModel(
       parking: json['parking'] == null
           ? null
           : ParkingModel.fromJson(json['parking'] as Map<String, dynamic>),
-      areaId: json['areaId'] as String,
-      area: json['area'] == null
+      levelId: json['levelId'] as String,
+      level: json['level'] == null
           ? null
-          : AreaModel.fromJson(json['area'] as Map<String, dynamic>),
+          : LevelModel.fromJson(json['level'] as Map<String, dynamic>),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -31,8 +31,8 @@ Map<String, dynamic> _$SpotModelToJson(SpotModel instance) => <String, dynamic>{
       'status': instance.status,
       'parkingId': instance.parkingId,
       'parking': instance.parking,
-      'areaId': instance.areaId,
-      'area': instance.area,
+      'levelId': instance.levelId,
+      'level': instance.level,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
@@ -44,7 +44,6 @@ SpotCreateModel _$SpotCreateModelFromJson(Map<String, dynamic> json) =>
           json['coordinates'] as Map<String, dynamic>),
       status: json['status'] as String,
       parkingId: json['parkingId'] as String,
-      areaId: json['areaId'] as String,
     );
 
 Map<String, dynamic> _$SpotCreateModelToJson(SpotCreateModel instance) =>
@@ -53,7 +52,6 @@ Map<String, dynamic> _$SpotCreateModelToJson(SpotCreateModel instance) =>
       'coordinates': instance.coordinates,
       'status': instance.status,
       'parkingId': instance.parkingId,
-      'areaId': instance.areaId,
     };
 
 SpotUpdateModel _$SpotUpdateModelFromJson(Map<String, dynamic> json) =>

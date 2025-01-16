@@ -2,7 +2,7 @@
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
 import 'parking_model.dart';
-import 'area_model.dart';
+import 'level_model.dart';
 
 part 'spot_model.g.dart';
 
@@ -14,8 +14,8 @@ class SpotModel extends JsonConvertible<SpotModel> {
   final String status;
   final String parkingId;
   final ParkingModel? parking;
-  final String areaId;
-  final AreaModel? area;
+  final String levelId;
+  final LevelModel? level;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -26,8 +26,8 @@ class SpotModel extends JsonConvertible<SpotModel> {
     required this.status,
     required this.parkingId,
      this.parking,
-    required this.areaId,
-     this.area,
+    required this.levelId,
+     this.level,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -45,14 +45,12 @@ class SpotCreateModel extends JsonConvertible<SpotCreateModel> {
   final CoordinatesModel coordinates;
   final String status;
   final String parkingId;
-  final String areaId;
 
   SpotCreateModel({
     required this.name,
     required this.coordinates,
     required this.status,
     required this.parkingId,
-    required this.areaId,
   });
 
   factory SpotCreateModel.fromJson(Map<String, dynamic> json) =>

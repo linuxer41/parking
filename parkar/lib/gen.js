@@ -108,22 +108,6 @@ const entities = {
     imports: ['parking'],
     jsonSchemas: {}, // No hay esquemas adicionales
   },
-  Area: {
-    fields: {
-      id: { type: 'String', composite: false, description: 'Identificador único del área', required: true, isArray: false },
-      name: { type: 'String', composite: false, description: 'Nombre del área', required: true, isArray: false },
-      parkingId: { type: 'String', composite: false, description: 'ID del estacionamiento asociado', required: true, isArray: false },
-      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al área', required: false, isArray: false },
-      levelId: { type: 'String', composite: false, description: 'ID del nivel al que pertenece el área', required: true, isArray: false },
-      level: { type: 'Level', composite: true, description: 'Nivel asociado al área', required: false, isArray: false },
-      createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
-      updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
-    },
-    createFields: ['name', 'parkingId', 'levelId'],
-    updateFields: ['name'],
-    imports: ['parking', 'level'],
-    jsonSchemas: {}, // No hay esquemas adicionales
-  },
   Spot: {
     fields: {
       id: { type: 'String', composite: false, description: 'Identificador único del lugar de estacionamiento', required: true, isArray: false },
@@ -132,14 +116,14 @@ const entities = {
       status: { type: 'String', composite: false, description: 'Estado del lugar (libre, ocupado, etc.)', required: true, isArray: false },
       parkingId: { type: 'String', composite: false, description: 'ID del estacionamiento asociado', required: true, isArray: false },
       parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al lugar', required: false, isArray: false },
-      areaId: { type: 'String', composite: false, description: 'ID del área a la que pertenece el lugar', required: true, isArray: false },
-      area: { type: 'Area', composite: true, description: 'Área asociada al lugar', required: false, isArray: false },
+      levelId: { type: 'String', composite: false, description: 'ID del nivel al que pertenece el área', required: true, isArray: false },
+      level: { type: 'Level', composite: true, description: 'Nivel asociado al área', required: false, isArray: false },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
-    createFields: ['name', 'coordinates', 'status', 'parkingId', 'areaId'],
+    createFields: ['name', 'coordinates', 'status', 'parkingId'],
     updateFields: ['name', 'coordinates', 'status'],
-    imports: ['parking', 'area'],
+    imports: ['parking', 'level'],
     jsonSchemas: {
       CoordinatesSchema: {
         fields: {

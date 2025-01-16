@@ -40,40 +40,19 @@ Map<String, dynamic> _$CompanyCompositeModelToJson(
       'parkings': instance.parkings,
     };
 
-AreaCompositeModel _$AreaCompositeModelFromJson(Map<String, dynamic> json) =>
-    AreaCompositeModel(
+LevelCompositeModel _$LevelCompositeModelFromJson(Map<String, dynamic> json) =>
+    LevelCompositeModel(
       spots: (json['spots'] as List<dynamic>)
           .map((e) => SpotModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       id: json['id'] as String,
       name: json['name'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      parkingId: json['parkingId'] as String,
-      levelId: json['levelId'] as String,
-    );
-
-Map<String, dynamic> _$AreaCompositeModelToJson(AreaCompositeModel instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'parkingId': instance.parkingId,
-      'levelId': instance.levelId,
-      'createdAt': instance.createdAt.toIso8601String(),
-      'updatedAt': instance.updatedAt.toIso8601String(),
-      'spots': instance.spots,
-    };
-
-LevelCompositeModel _$LevelCompositeModelFromJson(Map<String, dynamic> json) =>
-    LevelCompositeModel(
-      areas: (json['areas'] as List<dynamic>)
-          .map((e) => AreaCompositeModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      id: json['id'] as String,
-      name: json['name'] as String,
       parkingId: json['parkingId'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      parking: json['parking'] == null
+          ? null
+          : ParkingModel.fromJson(json['parking'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$LevelCompositeModelToJson(
@@ -82,9 +61,10 @@ Map<String, dynamic> _$LevelCompositeModelToJson(
       'id': instance.id,
       'name': instance.name,
       'parkingId': instance.parkingId,
+      'parking': instance.parking,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
-      'areas': instance.areas,
+      'spots': instance.spots,
     };
 
 ParkingCompositeModel _$ParkingCompositeModelFromJson(
