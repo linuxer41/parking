@@ -74,21 +74,6 @@ create index t_level_parking_id on t_level ("parkingId");
 
 
 
-DROP TABLE IF EXISTS t_area;
-CREATE TABLE t_area (
-  "id" text primary key not null,
-  "name" text not null,
-  "parkingId" text not null,
-  "levelId" text not null,
-  "createdAt" timestamptz default now() not null,
-  "updatedAt" timestamptz default now()
-);
-
-create index t_area_parking_id on t_area ("parkingId");
-create index t_area_level_id on t_area ("levelId");
-
-
-
 DROP TABLE IF EXISTS t_spot;
 CREATE TABLE t_spot (
   "id" text primary key not null,
@@ -96,13 +81,11 @@ CREATE TABLE t_spot (
   "coordinates" jsonb not null,
   "status" text not null,
   "parkingId" text not null,
-  "areaId" text not null,
   "createdAt" timestamptz default now() not null,
   "updatedAt" timestamptz default now()
 );
 
 create index t_spot_parking_id on t_spot ("parkingId");
-create index t_spot_area_id on t_spot ("areaId");
 
 
 

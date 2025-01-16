@@ -8,7 +8,6 @@ import { companyController } from './controllers/company';
 import { employeeController } from './controllers/employee';
 import { parkingController } from './controllers/parking';
 import { levelController } from './controllers/level';
-import { areaController } from './controllers/area';
 import { spotController } from './controllers/spot';
 import { vehicleController } from './controllers/vehicle';
 import { priceController } from './controllers/price';
@@ -45,7 +44,6 @@ const app = new Elysia()
     { name: 'employee', description: 'Operaciones relacionadas con employees' },
     { name: 'parking', description: 'Operaciones relacionadas con parkings' },
     { name: 'level', description: 'Operaciones relacionadas con levels' },
-    { name: 'area', description: 'Operaciones relacionadas con areas' },
     { name: 'spot', description: 'Operaciones relacionadas con spots' },
     { name: 'vehicle', description: 'Operaciones relacionadas con vehicles' },
     { name: 'price', description: 'Operaciones relacionadas con prices' },
@@ -97,7 +95,6 @@ const app = new Elysia()
     .use(employeeController)
     .use(parkingController)
     .use(levelController)
-    .use(areaController)
     .use(spotController)
     .use(vehicleController)
     .use(priceController)

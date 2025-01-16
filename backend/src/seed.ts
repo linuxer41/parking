@@ -110,42 +110,23 @@ async function main() {
     level = await db.level.create({ data: defaultLevel });
   }
 
-  // Verificar e insertar áreas
-  const defaultAreas = Array.from({ length: 2 }, (_, i) => ({
+  const defaultSpots = Array.from({ length: 25 }, (_, i) => {
+    const x0 =  2 * i;
+    const y0 = 4 * i;
+    return {
     id: getUUID(),
-    name: `Área ${i + 1}`,
+    name: `Lugar ${i + 1}`,
+    coordinates: { x0: x0, y0: y0, x1: x0 + 2, y1: y0 + 4 },
+    status: "free",
     parkingId: parking.id,
-    levelId: level.id,
-  }));
+  }});
 
-  let areas = await db.area.findMany({
-    where: { parkingId: defaultAreas[0].parkingId },
+  let spots = await db.spot.findMany({
+    where: { parkingId: defaultSpots[0].parkingId },
   });
-  if (areas.length === 0) {
-    for (const area of defaultAreas) {
-      areas.push(await db.area.create({ data: area }));
-    }
-  }
-
-  // Verificar e insertar lugares de estacionamiento
-
-  for (const area of areas) {
-    const defaultSpots = Array.from({ length: 25 }, (_, i) => ({
-      id: getUUID(),
-      name: `Lugar ${i + 1}`,
-      coordinates: { x0: 0, y0: 0, x1: 10, y1: 10 },
-      status: "free",
-      parkingId: parking.id,
-      areaId: area.id,
-    }));
-
-    let spots = await db.spot.findMany({
-      where: { parkingId: defaultSpots[0].parkingId, areaId: defaultSpots[0].areaId },
-    });
-    if (spots.length === 0) {
-      for (const spot of defaultSpots) {
-        spots.push(await db.spot.create({ data: spot }));
-      }
+  if (spots.length === 0) {
+    for (const spot of defaultSpots) {
+      spots.push(await db.spot.create({ data: spot }));
     }
   }
 }

@@ -1,7 +1,6 @@
 
 import { t } from 'elysia';
 import { ParkingSchema } from './parking';
-import { AreaSchema } from './area';
 
 // Esquemas JSON adicionales
 export const CoordinatesSchema = t.Object(
@@ -65,13 +64,6 @@ export const SpotSchema = t.Object(
     }
   ),
   parking: ParkingSchema,
-  areaId: t.String(
-    {
-      description: "ID del área a la que pertenece el lugar",
-      required: true
-    }
-  ),
-  area: AreaSchema,
   createdAt: t.Union([
     t.String(
       {
@@ -125,12 +117,6 @@ export const SpotCreateSchema = t.Object(
   parkingId: t.String(
     {
       description: "ID del estacionamiento asociado",
-      required: true
-    }
-  ),
-  areaId: t.String(
-    {
-      description: "ID del área a la que pertenece el lugar",
       required: true
     }
   ),
