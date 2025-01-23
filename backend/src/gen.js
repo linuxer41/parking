@@ -83,6 +83,8 @@ const entities = {
       company: { type: 'Company', composite: true, description: 'Empresa asociada al estacionamiento', required: false, isArray: false },
       vehicleTypes: { type: 'VehicleType', composite: true, description: 'Tipos de vehículos permitidos en el estacionamiento', required: true, isArray: true },
       params: { type: 'ParkingParams', composite: true, description: 'Parámetros adicionales del estacionamiento', required: true, isArray: false },
+      prices: { type: 'Price', composite: true, description: 'Precios del estacionamiento', required: true, isArray: true },
+      subscriptionPlans: { type: 'SubscriptionPlan', composite: true, description: 'Planes de suscripción del estacionamiento', required: true, isArray: true },
       createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
@@ -101,13 +103,33 @@ const entities = {
       },
       ParkingParamsSchema: {
         fields: {
-          baseTime: { type: 'Integer', composite: false, description: 'Tiempo base del pase', required: true, isArray: false },
-          pasePrice: { type: 'Numeric', composite: false, description: 'Precio del pase', required: true, isArray: false },
           currency: { type: 'String', composite: false, description: 'Moneda del pase', required: true, isArray: false },
           timeZone: { type: 'String', composite: false, description: 'Zona horaria del pase', required: true, isArray: false },
           decimalPlaces: { type: 'Integer', composite: false, description: 'Decimales del pase', required: true, isArray: false },
           theme: { type: 'String', composite: false, description: 'Tema del pase', required: true, isArray: false },
         },
+      },
+      PriceSchema: {
+        fields: {
+          id: { type: 'String', composite: false, description: 'Identificador único del precio', required: true, isArray: false },
+          name: { type: 'String', composite: false, description: 'Nombre del precio', required: true, isArray: false },
+          baseTime: { type: 'Integer', composite: false, description: 'Tiempo base del pase', required: true, isArray: false },
+          tolerance: { type: 'Integer', composite: false, description: 'Tolerancia del pase', required: true, isArray: false },
+          pasePrice: { type: 'Numeric', composite: false, description: 'Precio del pase', required: true, isArray: false },
+        },
+        createFields: ['name', 'baseTime', 'tolerance', 'pasePrice'],
+        updateFields: ['name', 'baseTime', 'tolerance', 'pasePrice'],
+      },
+      SubscriptionPlanSchema: {
+        fields: {
+          id: { type: 'String', composite: false, description: 'Identificador único del plan de suscripción', required: true, isArray: false },
+          name: { type: 'String', composite: false, description: 'Nombre del plan', required: true, isArray: false },
+          description: { type: 'String', composite: false, description: 'Descripción opcional del plan', required: false, isArray: false },
+          price: { type: 'Numeric', composite: false, description: 'Precio del plan', required: true, isArray: false },
+          duration: { type: 'Integer', composite: false, description: 'Duración del plan en días', required: true, isArray: false },
+        },
+        createFields: ['name', 'description', 'price', 'duration'],
+        updateFields: ['name', 'description', 'price', 'duration'],
       }
     },
   },
@@ -133,30 +155,35 @@ const entities = {
           name: { type: 'String', composite: false, description: 'Nombre del lugar', required: true, isArray: false },
           posX: { type: 'Number', composite: false, description: 'Coordenada X del lugar', required: true, isArray: false },
           posY: { type: 'Number', composite: false, description: 'Coordenada Y del lugar', required: true, isArray: false },
-          status: { type: 'String', composite: false, description: 'Estado del lugar (libre, ocupado, etc.)', required: true, isArray: false },
+          vehicleId: { type: 'String', composite: false, description: 'ID del vehículo que se encuentra en el lugar', required: false, isArray: false },
+          spotType: { type: 'Integer', composite: false, description: 'Tipo de lugar (motocicleta, camión, etc.)', required: true, isArray: false },
+          spotLevel: { type: 'Integer', composite: false, description: 'vip, normal, etc.', required: true, isArray: false },
         },
-        createFields: ['name', 'posX', 'posY', 'status'],
-        updateFields: ['name', 'posX', 'posY', 'status'],
+        createFields: ['name', 'posX', 'posY', 'vehicleId', 'spotTypeId', 'spotLevelId'],
+        updateFields: ['name', 'posX', 'posY', 'vehicleId', 'spotTypeId', 'spotLevelId'],
+      },
+      IndicatorSchema: {
+        fields: {
+          id: { type: 'String', composite: false, description: 'Identificador único del indicador', required: true, isArray: false },
+          posX: { type: 'Number', composite: false, description: 'Coordenada X del indicador', required: true, isArray: false },
+          posY: { type: 'Number', composite: false, description: 'Coordenada Y del indicador', required: true, isArray: false },
+          indicatorType: { type: "Integer", composite: false, description: 'Tipo de indicador (entrada, salida, etc.)', required: true, isArray: false },
+        },
+        createFields: ['posX', 'posY', 'indicatorType',],
+        updateFields: ['posX', 'posY', 'indicatorType',],
+      },
+      OfficeSchema: {
+        fields: {
+          id: { type: 'String', composite: false, description: 'Identificador único de la oficina', required: true, isArray: false },
+          name: { type: 'String', composite: false, description: 'Nombre de la oficina', required: true, isArray: false },
+          posX: { type: 'Number', composite: false, description: 'Coordenada X de la oficina', required: true, isArray: false },
+          posY: { type: 'Number', composite: false, description: 'Coordenada Y de la oficina', required: true, isArray: false },
+        },
+        createFields: ['posX', 'posY', 'name',],
+        updateFields: ['posX', 'posY', 'name',],
       },
     },
-    IndicatorSchema: {
-      fields: {
-        id: { type: 'String', composite: false, description: 'Identificador único del indicador', required: true, isArray: false },
-        posX: { type: 'Number', composite: false, description: 'Coordenada X del indicador', required: true, isArray: false },
-        posY: { type: 'Number', composite: false, description: 'Coordenada Y del indicador', required: true, isArray: false },
-      },
-      createFields: ['posX', 'posY',],
-      updateFields: ['posX', 'posY'],
-    },
-    OfficeSchema: {
-      fields: {
-        id: { type: 'String', composite: false, description: 'Identificador único de la oficina', required: true, isArray: false },
-        posX: { type: 'Number', composite: false, description: 'Coordenada X de la oficina', required: true, isArray: false },
-        posY: { type: 'Number', composite: false, description: 'Coordenada Y de la oficina', required: true, isArray: false },
-      },
-      createFields: ['posX', 'posY',],
-      updateFields: ['posX', 'posY'],
-    },
+    
   },
   Vehicle: {
     fields: {
@@ -171,22 +198,6 @@ const entities = {
     },
     createFields: ['parkingId', 'typeId', 'plate', 'isSubscriber'],
     updateFields: ['typeId', 'plate', 'isSubscriber'],
-    imports: ['parking'],
-    jsonSchemas: {}, // No hay esquemas adicionales
-  },
-  Price: {
-    fields: {
-      id: { type: 'String', composite: false, description: 'Identificador único del precio', required: true, isArray: false },
-      parkingId: { type: 'String', composite: false, description: 'ID del estacionamiento asociado', required: true, isArray: false },
-      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al precio', required: true, isArray: false },
-      vehicleTypeId: { type: 'String', composite: false, description: 'ID del tipo de vehículo', required: true, isArray: false },
-      timeRangeId: { type: 'String', composite: false, description: 'ID del rango de tiempo', required: true, isArray: false },
-      amount: { type: 'Numeric', composite: false, description: 'Monto del precio', required: true, isArray: false },
-      createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
-      updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
-    },
-    createFields: ['parkingId', 'vehicleTypeId', 'timeRangeId', 'amount'],
-    updateFields: ['vehicleTypeId', 'timeRangeId', 'amount'],
     imports: ['parking'],
     jsonSchemas: {}, // No hay esquemas adicionales
   },
@@ -209,24 +220,7 @@ const entities = {
     },
     createFields: ['parkingId', 'employeeId', 'vehicleId', 'planId', 'startDate', 'endDate', 'isActive'],
     updateFields: ['planId', 'startDate', 'endDate', 'isActive'],
-    imports: ['parking', 'employee', 'vehicle', 'subscription-plan'],
-    jsonSchemas: {}, // No hay esquemas adicionales
-  },
-  SubscriptionPlan: {
-    fields: {
-      id: { type: 'String', composite: false, description: 'Identificador único del plan de suscripción', required: true, isArray: false },
-      name: { type: 'String', composite: false, description: 'Nombre del plan', required: true, isArray: false },
-      description: { type: 'String', composite: false, description: 'Descripción opcional del plan', required: false, isArray: false },
-      price: { type: 'Numeric', composite: false, description: 'Precio del plan', required: true, isArray: false },
-      duration: { type: 'Integer', composite: false, description: 'Duración del plan en días', required: true, isArray: false },
-      parkingId: { type: 'String', composite: false, description: 'ID del estacionamiento asociado', required: true, isArray: false },
-      parking: { type: 'Parking', composite: true, description: 'Estacionamiento asociado al plan', required: true, isArray: false },
-      createdAt: { type: 'Date', composite: false, description: 'Fecha de creación del registro', required: true, isArray: false },
-      updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
-    },
-    createFields: ['name', 'description', 'price', 'duration', 'parkingId'],
-    updateFields: ['name', 'description', 'price', 'duration'],
-    imports: ['parking'],
+    imports: ['parking', 'employee', 'vehicle'],
     jsonSchemas: {}, // No hay esquemas adicionales
   },
   Entry: {
@@ -247,7 +241,7 @@ const entities = {
     },
     createFields: ['number', 'parkingId', 'employeeId', 'vehicleId', 'spotId', 'dateTime'],
     updateFields: ['number', 'employeeId', 'vehicleId', 'spotId', 'dateTime'],
-    imports: ['parking', 'employee', 'vehicle', 'spot'],
+    imports: ['parking', 'employee', 'vehicle', 'level'],
     jsonSchemas: {}, // No hay esquemas adicionales
   },
   Exit: {
@@ -326,7 +320,7 @@ const entities = {
     },
     createFields: ['number', 'parkingId', 'employeeId', 'vehicleId', 'spotId', 'startDate', 'endDate', 'status', 'amount'],
     updateFields: ['number', 'employeeId', 'vehicleId', 'spotId', 'startDate', 'endDate', 'status', 'amount'],
-    imports: ['parking', 'employee', 'vehicle', 'spot'],
+    imports: ['parking', 'employee', 'vehicle', 'level'],
     jsonSchemas: {}, // No hay esquemas adicionales
   },
 };
@@ -415,7 +409,10 @@ function generateAdditionalSchemas(jsonSchemas) {
   {
     description: 'Esquema adicional: ${schemaName}'
   }
-);`;
+);
+
+export type ${schemaName.replace('Schema', '')} = typeof ${schemaName}.static;
+`;
     })
     .join('\n\n');
 }
@@ -811,8 +808,8 @@ ${indexes}
 // Ejecutar todos los generadores
 const runGenerators = () => {
   // createControllers();
-  createServices();
-  generateCruds();
+  // createServices();
+  // generateCruds();
   createModels();
   generatePostgresTables();
   // createIndexFile();

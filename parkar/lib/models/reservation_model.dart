@@ -4,7 +4,7 @@ import '_base_model.dart';
 import 'parking_model.dart';
 import 'employee_model.dart';
 import 'vehicle_model.dart';
-import 'spot_model.dart';
+import 'level_model.dart';
 
 part 'reservation_model.g.dart';
 

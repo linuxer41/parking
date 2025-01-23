@@ -1,9 +1,8 @@
 
 import { t } from 'elysia';
-import { ParkingSchema } from './parking';
+import { ParkingSchema, SubscriptionPlanSchema } from './parking';
 import { EmployeeSchema } from './employee';
 import { VehicleSchema } from './vehicle';
-import { SubscriptionPlanSchema } from './subscription-plan';
 
 // Esquemas JSON adicionales
 // No hay esquemas adicionales

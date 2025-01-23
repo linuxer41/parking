@@ -1,4 +1,7 @@
 import { db } from './db';
+import { Company } from './models/company';
+import { Indicator, Office, Spot } from './models/level';
+import { Parking, ParkingCreate, Price, SubscriptionPlan } from './models/parking';
 
 
 function getUUID() {
@@ -63,13 +66,57 @@ async function main() {
         description: "Vehículo de camión",
       }],
       params: {
-        pasePrice: 30,
-        baseTime: 30,
         currency: "BOB",
         timeZone: "America/La_Paz",
         decimalPlaces: 2,
         theme: "dark",
       },
+      prices: [
+        {
+          id: getUUID(),
+          name: "Vicicleta",
+          baseTime: 30,
+          tolerance: 5,
+          pasePrice: 0.5,
+        },
+        {
+          id: getUUID(),
+          name: "Motocicleta",
+          baseTime: 30,
+          tolerance: 5,
+          pasePrice: 1,
+        },
+        {
+          id: getUUID(),
+          name: "Vehiculo liviano",
+          baseTime: 30,
+          tolerance: 5,
+          pasePrice: 1.5,
+        },
+        {
+          id: getUUID(),
+          name: "Vehiculo pesado",
+          baseTime: 30,
+          tolerance: 10,
+          pasePrice: 3,
+        }
+      ] as Price[],
+      subscriptionPlans: [
+        {
+          id: getUUID(),
+          name: "Plan diario",
+          description: "Plan diario",
+          price: 5,
+          duration: 1,
+        },
+        {
+          id: getUUID(),
+          name: "Plan mensual",
+          description: "Plan mensual",
+          price: 150,
+          duration: 30,
+        }
+      ] as SubscriptionPlan[],
     };
   
     let parking = await db.parking.findFirst({
@@ -96,11 +143,81 @@ async function main() {
   }
 
 
+  const defaultIndicators: Indicator[] = [];
+  const defaultOffices: Office[] = [];
+  const defaultSpots: Spot[] = [];
+  
+  // Configuración
+  const cuadroSize = 15; // Cada cuadro son 15 píxeles
+  const spotWidth = 4 * cuadroSize; // Ancho de un spot (60 píxeles)
+  const spotHeight = 8 * cuadroSize; // Largo de un spot (120 píxeles)
+  const columnSpacing = 1 * cuadroSize; // Separación entre columnas (15 píxeles)
+  const rowSpacing = 5 * cuadroSize; // Separación entre filas (75 píxeles)
+  
+  // Dimensiones de los indicadores y oficinas
+  const indicatorWidth = 4 * cuadroSize; // Ancho del indicador (60 píxeles)
+  const indicatorHeight = 2 * cuadroSize; // Alto del indicador (30 píxeles)
+  const officeSize = 8 * cuadroSize; // Tamaño de la oficina (120 píxeles de ancho y alto)
+  
+  // Número de filas y columnas
+  const rows = 2; // 2 filas de spots
+  const columns = 15; // 15 columnas de spots
+  
+  // Generar los spots
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      const posX = col * (spotWidth + columnSpacing);
+      const posY = row * (spotHeight + rowSpacing);
+  
+      defaultSpots.push({
+        id: getUUID(),
+        name: `Lugar ${row * columns + col + 1}`,
+        posX,
+        posY,
+        vehicleId: '',
+        spotType: 0,
+        spotLevel: 0,
+      });
+    }
+  }
+  
+  // Generar los indicadores (entrada y salida)
+  for (let row = 0; row < rows - 1; row++) {
+    const posY = (row + 1) * (spotHeight + rowSpacing) - rowSpacing / 2;
+  
+    // Indicador de entrada (izquierda)
+    defaultIndicators.push({
+      id: getUUID(),
+      posX: 0,
+      posY: posY - indicatorHeight / 2, // Ajustar la posición Y para centrar el indicador
+      indicatorType: 0, // Entrada
+    });
+  
+    // Indicador de salida (derecha)
+    defaultIndicators.push({
+      id: getUUID(),
+      posX: columns * (spotWidth + columnSpacing) - indicatorWidth,
+      posY: posY - indicatorHeight / 2, // Ajustar la posición Y para centrar el indicador
+      indicatorType: 1, // salida
+    });
+  }
+  
+  // Generar la oficina (parte superior derecha)
+  defaultOffices.push({
+    id: getUUID(),
+    posX: columns * (spotWidth + columnSpacing) - officeSize,
+    posY: 0,
+    name: "Oficina",
+  });
+
   // Verificar e insertar nivel
   const defaultLevel = {
     id: getUUID(),
     name: "Nivel 1",
     parkingId: parking.id,
+    spots: defaultSpots,
+    indicators: defaultIndicators,
+    offices: defaultOffices,
   };
 
   let level = await db.level.findUnique({
@@ -108,27 +225,6 @@ async function main() {
   });
   if (!level) {
     level = await db.level.create({ data: defaultLevel });
-  }
-
-  const defaultSpots = Array.from({ length: 25 }, (_, i) => {
-    const x0 =  2 * i;
-    const y0 = 4 * i;
-    return {
-    id: getUUID(),
-    name: `Lugar ${i + 1}`,
-    coordinates: { x0: x0, y0: y0, x1: x0 + 2, y1: y0 + 4 },
-    status: "free",
-    parkingId: parking.id,
-    levelId: level.id,
-  }});
-
-  let spots = await db.spot.findMany({
-    where: { parkingId: defaultSpots[0].parkingId },
-  });
-  if (spots.length === 0) {
-    for (const spot of defaultSpots) {
-      spots.push(await db.spot.create({ data: spot }));
-    }
   }
 }
 

@@ -29,21 +29,12 @@ export const VehicleTypeSchema = t.Object(
   }
 );
 
+export type VehicleType = typeof VehicleTypeSchema.static;
+
+
 export const ParkingParamsSchema = t.Object(
   {
-    baseTime: t.Integer(
-    {
-      description: "Tiempo base del pase",
-      required: true
-    }
-  ),
-  pasePrice: t.Numeric(
-    {
-      description: "Precio del pase",
-      required: true
-    }
-  ),
-  currency: t.String(
+    currency: t.String(
     {
       description: "Moneda del pase",
       required: true
@@ -73,6 +64,91 @@ export const ParkingParamsSchema = t.Object(
   }
 );
 
+export type ParkingParams = typeof ParkingParamsSchema.static;
+
+
+export const PriceSchema = t.Object(
+  {
+    id: t.String(
+    {
+      description: "Identificador único del precio",
+      required: true
+    }
+  ),
+  name: t.String(
+    {
+      description: "Nombre del precio",
+      required: true
+    }
+  ),
+  baseTime: t.Integer(
+    {
+      description: "Tiempo base del pase",
+      required: true
+    }
+  ),
+  tolerance: t.Integer(
+    {
+      description: "Tolerancia del pase",
+      required: true
+    }
+  ),
+  pasePrice: t.Numeric(
+    {
+      description: "Precio del pase",
+      required: true
+    }
+  ),
+  },
+  {
+    description: 'Esquema adicional: PriceSchema'
+  }
+);
+
+export type Price = typeof PriceSchema.static;
+
+
+export const SubscriptionPlanSchema = t.Object(
+  {
+    id: t.String(
+    {
+      description: "Identificador único del plan de suscripción",
+      required: true
+    }
+  ),
+  name: t.String(
+    {
+      description: "Nombre del plan",
+      required: true
+    }
+  ),
+  description: t.String(
+    {
+      description: "Descripción opcional del plan",
+      required: false
+    }
+  ),
+  price: t.Numeric(
+    {
+      description: "Precio del plan",
+      required: true
+    }
+  ),
+  duration: t.Integer(
+    {
+      description: "Duración del plan en días",
+      required: true
+    }
+  ),
+  },
+  {
+    description: 'Esquema adicional: SubscriptionPlanSchema'
+  }
+);
+
+export type SubscriptionPlan = typeof SubscriptionPlanSchema.static;
+
+
 // Modelo Principal
 export const ParkingSchema = t.Object(
   {
@@ -97,6 +173,8 @@ export const ParkingSchema = t.Object(
   company: CompanySchema,
   vehicleTypes: t.Array(VehicleTypeSchema),
   params: ParkingParamsSchema,
+  prices: t.Array(PriceSchema),
+  subscriptionPlans: t.Array(SubscriptionPlanSchema),
   createdAt: t.Union([
     t.String(
       {

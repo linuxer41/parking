@@ -11,6 +11,9 @@ class LevelModel extends JsonConvertible<LevelModel> {
   final String name;
   final String parkingId;
   final ParkingModel? parking;
+  final List<SpotModel> spots;
+  final List<IndicatorModel> indicators;
+  final List<OfficeModel> offices;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +22,9 @@ class LevelModel extends JsonConvertible<LevelModel> {
     required this.name,
     required this.parkingId,
      this.parking,
+    required this.spots,
+    required this.indicators,
+    required this.offices,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -62,4 +68,75 @@ class LevelUpdateModel extends JsonConvertible<LevelUpdateModel> {
   Map<String, dynamic> toJson() => _$LevelUpdateModelToJson(this);
 }
 
+
+@JsonSerializable()
+class SpotModel extends JsonConvertible<SpotModel> {
+  final String id;
+  final String name;
+  final double posX;
+  final double posY;
+  final String? vehicleId;
+  final int spotType;
+  final int spotLevel;
+
+  SpotModel({
+    required this.id,
+    required this.name,
+    required this.posX,
+    required this.posY,
+     this.vehicleId,
+    required this.spotType,
+    required this.spotLevel,
+  });
+
+  factory SpotModel.fromJson(Map<String, dynamic> json) =>
+      _$SpotModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$SpotModelToJson(this);
+}
+
+
+@JsonSerializable()
+class IndicatorModel extends JsonConvertible<IndicatorModel> {
+  final String id;
+  final double posX;
+  final double posY;
+  final int indicatorType;
+
+  IndicatorModel({
+    required this.id,
+    required this.posX,
+    required this.posY,
+    required this.indicatorType,
+  });
+
+  factory IndicatorModel.fromJson(Map<String, dynamic> json) =>
+      _$IndicatorModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$IndicatorModelToJson(this);
+}
+
+
+@JsonSerializable()
+class OfficeModel extends JsonConvertible<OfficeModel> {
+  final String id;
+  final String name;
+  final double posX;
+  final double posY;
+
+  OfficeModel({
+    required this.id,
+    required this.name,
+    required this.posX,
+    required this.posY,
+  });
+
+  factory OfficeModel.fromJson(Map<String, dynamic> json) =>
+      _$OfficeModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$OfficeModelToJson(this);
+}
 

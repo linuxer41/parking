@@ -3,7 +3,7 @@ import { t } from 'elysia';
 import { ParkingSchema } from './parking';
 import { EmployeeSchema } from './employee';
 import { VehicleSchema } from './vehicle';
-import { SpotSchema } from './spot';
+import { SpotSchema } from './level';
 
 // Esquemas JSON adicionales
 // No hay esquemas adicionales

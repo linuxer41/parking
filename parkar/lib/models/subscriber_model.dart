@@ -4,7 +4,6 @@ import '_base_model.dart';
 import 'parking_model.dart';
 import 'employee_model.dart';
 import 'vehicle_model.dart';
-import 'subscription_plan_model.dart';
 
 part 'subscriber_model.g.dart';
 

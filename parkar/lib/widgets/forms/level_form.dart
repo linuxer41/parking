@@ -108,7 +108,7 @@ class _LevelFormState extends State<LevelForm> {
                 },
               ),
               
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _submitForm,
                 child: Text(widget.model == null ? 'Crear' : 'Actualizar'),

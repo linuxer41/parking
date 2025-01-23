@@ -40,38 +40,11 @@ Map<String, dynamic> _$CompanyCompositeModelToJson(
       'parkings': instance.parkings,
     };
 
-LevelCompositeModel _$LevelCompositeModelFromJson(Map<String, dynamic> json) =>
-    LevelCompositeModel(
-      spots: (json['spots'] as List<dynamic>)
-          .map((e) => SpotModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      id: json['id'] as String,
-      name: json['name'] as String,
-      parkingId: json['parkingId'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      parking: json['parking'] == null
-          ? null
-          : ParkingModel.fromJson(json['parking'] as Map<String, dynamic>),
-    );
-
-Map<String, dynamic> _$LevelCompositeModelToJson(
-        LevelCompositeModel instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'parkingId': instance.parkingId,
-      'parking': instance.parking,
-      'createdAt': instance.createdAt.toIso8601String(),
-      'updatedAt': instance.updatedAt.toIso8601String(),
-      'spots': instance.spots,
-    };
-
 ParkingCompositeModel _$ParkingCompositeModelFromJson(
         Map<String, dynamic> json) =>
     ParkingCompositeModel(
       levels: (json['levels'] as List<dynamic>)
-          .map((e) => LevelCompositeModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => LevelModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       id: json['id'] as String,
       name: json['name'] as String,
@@ -83,6 +56,12 @@ ParkingCompositeModel _$ParkingCompositeModelFromJson(
           ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      prices: (json['prices'] as List<dynamic>)
+          .map((e) => PriceModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      subscriptionPlans: (json['subscriptionPlans'] as List<dynamic>)
+          .map((e) => SubscriptionPlanModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$ParkingCompositeModelToJson(
@@ -93,6 +72,8 @@ Map<String, dynamic> _$ParkingCompositeModelToJson(
       'companyId': instance.companyId,
       'vehicleTypes': instance.vehicleTypes,
       'params': instance.params,
+      'prices': instance.prices,
+      'subscriptionPlans': instance.subscriptionPlans,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
       'levels': instance.levels,

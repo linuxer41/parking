@@ -29,9 +29,21 @@ export const SpotSchema = t.Object(
       required: true
     }
   ),
-  status: t.String(
+  vehicleId: t.String(
     {
-      description: "Estado del lugar (libre, ocupado, etc.)",
+      description: "ID del vehículo que se encuentra en el lugar",
+      required: false
+    }
+  ),
+  spotType: t.Integer(
+    {
+      description: "Tipo de lugar (motocicleta, camión, etc.)",
+      required: true
+    }
+  ),
+  spotLevel: t.Integer(
+    {
+      description: "vip, normal, etc.",
       required: true
     }
   ),
@@ -40,6 +52,79 @@ export const SpotSchema = t.Object(
     description: 'Esquema adicional: SpotSchema'
   }
 );
+
+export type Spot = typeof SpotSchema.static;
+
+
+export const IndicatorSchema = t.Object(
+  {
+    id: t.String(
+    {
+      description: "Identificador único del indicador",
+      required: true
+    }
+  ),
+  posX: t.Number(
+    {
+      description: "Coordenada X del indicador",
+      required: true
+    }
+  ),
+  posY: t.Number(
+    {
+      description: "Coordenada Y del indicador",
+      required: true
+    }
+  ),
+  indicatorType: t.Integer(
+    {
+      description: "Tipo de indicador (entrada, salida, etc.)",
+      required: true
+    }
+  ),
+  },
+  {
+    description: 'Esquema adicional: IndicatorSchema'
+  }
+);
+
+export type Indicator = typeof IndicatorSchema.static;
+
+
+export const OfficeSchema = t.Object(
+  {
+    id: t.String(
+    {
+      description: "Identificador único de la oficina",
+      required: true
+    }
+  ),
+  name: t.String(
+    {
+      description: "Nombre de la oficina",
+      required: true
+    }
+  ),
+  posX: t.Number(
+    {
+      description: "Coordenada X de la oficina",
+      required: true
+    }
+  ),
+  posY: t.Number(
+    {
+      description: "Coordenada Y de la oficina",
+      required: true
+    }
+  ),
+  },
+  {
+    description: 'Esquema adicional: OfficeSchema'
+  }
+);
+
+export type Office = typeof OfficeSchema.static;
+
 
 // Modelo Principal
 export const LevelSchema = t.Object(

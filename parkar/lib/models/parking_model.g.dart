@@ -18,6 +18,12 @@ ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
           .toList(),
       params:
           ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
+      prices: (json['prices'] as List<dynamic>)
+          .map((e) => PriceModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      subscriptionPlans: (json['subscriptionPlans'] as List<dynamic>)
+          .map((e) => SubscriptionPlanModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -30,6 +36,8 @@ Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
       'company': instance.company,
       'vehicleTypes': instance.vehicleTypes,
       'params': instance.params,
+      'prices': instance.prices,
+      'subscriptionPlans': instance.subscriptionPlans,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
@@ -72,8 +80,6 @@ Map<String, dynamic> _$VehicleTypeModelToJson(VehicleTypeModel instance) =>
 
 ParkingParamsModel _$ParkingParamsModelFromJson(Map<String, dynamic> json) =>
     ParkingParamsModel(
-      baseTime: (json['baseTime'] as num).toInt(),
-      pasePrice: (json['pasePrice'] as num).toDouble(),
       currency: json['currency'] as String,
       timeZone: json['timeZone'] as String,
       decimalPlaces: (json['decimalPlaces'] as num).toInt(),
@@ -82,10 +88,45 @@ ParkingParamsModel _$ParkingParamsModelFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ParkingParamsModelToJson(ParkingParamsModel instance) =>
     <String, dynamic>{
-      'baseTime': instance.baseTime,
-      'pasePrice': instance.pasePrice,
       'currency': instance.currency,
       'timeZone': instance.timeZone,
       'decimalPlaces': instance.decimalPlaces,
       'theme': instance.theme,
+    };
+
+PriceModel _$PriceModelFromJson(Map<String, dynamic> json) => PriceModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      baseTime: (json['baseTime'] as num).toInt(),
+      tolerance: (json['tolerance'] as num).toInt(),
+      pasePrice: (json['pasePrice'] as num).toDouble(),
+    );
+
+Map<String, dynamic> _$PriceModelToJson(PriceModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'baseTime': instance.baseTime,
+      'tolerance': instance.tolerance,
+      'pasePrice': instance.pasePrice,
+    };
+
+SubscriptionPlanModel _$SubscriptionPlanModelFromJson(
+        Map<String, dynamic> json) =>
+    SubscriptionPlanModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String?,
+      price: (json['price'] as num).toDouble(),
+      duration: (json['duration'] as num).toInt(),
+    );
+
+Map<String, dynamic> _$SubscriptionPlanModelToJson(
+        SubscriptionPlanModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'description': instance.description,
+      'price': instance.price,
+      'duration': instance.duration,
     };

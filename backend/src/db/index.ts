@@ -4,9 +4,7 @@ import { employeeCrud } from './crud/employee';
 import { parkingCrud } from './crud/parking';
 import { levelCrud } from './crud/level';
 import { vehicleCrud } from './crud/vehicle';
-import { priceCrud } from './crud/price';
 import { subscriberCrud } from './crud/subscriber';
-import { subscriptionPlanCrud } from './crud/subscription-plan';
 import { entryCrud } from './crud/entry';
 import { exitCrud } from './crud/exit';
 import { cashRegisterCrud } from './crud/cash-register';
@@ -20,9 +18,7 @@ import { reservationCrud } from './crud/reservation';
     parking: parkingCrud,
     level: levelCrud,
     vehicle: vehicleCrud,
-    price: priceCrud,
     subscriber: subscriberCrud,
-    subscriptionPlan: subscriptionPlanCrud,
     entry: entryCrud,
     exit: exitCrud,
     cashRegister: cashRegisterCrud,

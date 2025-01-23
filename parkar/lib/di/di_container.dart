@@ -5,11 +5,8 @@ import '../services/company_service.dart';
 import '../services/employee_service.dart';
 import '../services/parking_service.dart';
 import '../services/level_service.dart';
-import '../services/spot_service.dart';
 import '../services/vehicle_service.dart';
-import '../services/price_service.dart';
 import '../services/subscriber_service.dart';
-import '../services/subscription_plan_service.dart';
 import '../services/entry_service.dart';
 import '../services/exit_service.dart';
 import '../services/cash_register_service.dart';
@@ -37,19 +34,10 @@ class DIContainer {
     _dependencies[LevelService] = LevelService();
     
 
-    _dependencies[SpotService] = SpotService();
-    
-
     _dependencies[VehicleService] = VehicleService();
     
 
-    _dependencies[PriceService] = PriceService();
-    
-
     _dependencies[SubscriberService] = SubscriberService();
-    
-
-    _dependencies[SubscriptionPlanService] = SubscriptionPlanService();
     
 
     _dependencies[EntryService] = EntryService();

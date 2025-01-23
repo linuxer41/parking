@@ -17,6 +17,9 @@ export const CompanyParamsSchema = t.Object(
   }
 );
 
+export type CompanyParams = typeof CompanyParamsSchema.static;
+
+
 // Modelo Principal
 export const CompanySchema = t.Object(
   {

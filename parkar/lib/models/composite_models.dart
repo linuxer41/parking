@@ -3,7 +3,6 @@ import 'package:parkar/models/company_model.dart';
 import 'package:parkar/models/level_model.dart';
 
 import 'parking_model.dart';
-import 'spot_model.dart';
 
 part 'composite_models.g.dart';
 
@@ -32,27 +31,8 @@ class CompanyCompositeModel extends CompanyModel {
 
 
 @JsonSerializable()
-class LevelCompositeModel extends LevelModel {
-  final List<SpotModel> spots;
-
-  LevelCompositeModel(
-      {required this.spots,
-      required super.id,
-      required super.name,
-      required super.parkingId,
-      required super.createdAt,
-      required super.updatedAt, required super.parking});
-
-  factory LevelCompositeModel.fromJson(Map<String, dynamic> json) =>
-      _$LevelCompositeModelFromJson(json);
-
-  @override
-  Map<String, dynamic> toJson() => _$LevelCompositeModelToJson(this);
-}
-
-@JsonSerializable()
 class ParkingCompositeModel extends ParkingModel {
-  final List<LevelCompositeModel> levels;
+  final List<LevelModel> levels;
 
   ParkingCompositeModel(
       {required this.levels,
@@ -62,7 +42,7 @@ class ParkingCompositeModel extends ParkingModel {
       required super.vehicleTypes,
       required super.params,
       required super.createdAt,
-      required super.updatedAt});
+      required super.updatedAt, required super.prices, required super.subscriptionPlans});
 
   factory ParkingCompositeModel.fromJson(Map<String, dynamic> json) =>
       _$ParkingCompositeModelFromJson(json);

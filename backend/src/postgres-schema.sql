@@ -53,6 +53,8 @@ CREATE TABLE t_parking (
   "companyId" text not null,
   "vehicleTypes" jsonb not null,
   "params" jsonb not null,
+  "prices" jsonb not null,
+  "subscriptionPlans" jsonb not null,
   "createdAt" timestamptz default now() not null,
   "updatedAt" timestamptz default now()
 );
@@ -67,6 +69,8 @@ CREATE TABLE t_level (
   "name" text not null,
   "parkingId" text not null,
   "spots" jsonb not null,
+  "indicators" jsonb not null,
+  "offices" jsonb not null,
   "createdAt" timestamptz default now() not null,
   "updatedAt" timestamptz default now()
 );
@@ -91,23 +95,6 @@ create index t_vehicle_type_id on t_vehicle ("typeId");
 
 
 
-DROP TABLE IF EXISTS t_price;
-CREATE TABLE t_price (
-  "id" text primary key not null,
-  "parkingId" text not null,
-  "vehicleTypeId" text not null,
-  "timeRangeId" text not null,
-  "amount" numeric not null,
-  "createdAt" timestamptz default now() not null,
-  "updatedAt" timestamptz default now()
-);
-
-create index t_price_parking_id on t_price ("parkingId");
-create index t_price_vehicle_type_id on t_price ("vehicleTypeId");
-create index t_price_time_range_id on t_price ("timeRangeId");
-
-
-
 DROP TABLE IF EXISTS t_subscriber;
 CREATE TABLE t_subscriber (
   "id" text primary key not null,
@@ -126,22 +113,6 @@ create index t_subscriber_parking_id on t_subscriber ("parkingId");
 create index t_subscriber_employee_id on t_subscriber ("employeeId");
 create index t_subscriber_vehicle_id on t_subscriber ("vehicleId");
 create index t_subscriber_plan_id on t_subscriber ("planId");
-
-
-
-DROP TABLE IF EXISTS t_subscription_plan;
-CREATE TABLE t_subscription_plan (
-  "id" text primary key not null,
-  "name" text not null,
-  "description" text ,
-  "price" numeric not null,
-  "duration" integer not null,
-  "parkingId" text not null,
-  "createdAt" timestamptz default now() not null,
-  "updatedAt" timestamptz default now()
-);
-
-create index t_subscription_plan_parking_id on t_subscription_plan ("parkingId");
 
 
 

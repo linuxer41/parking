@@ -8,11 +8,8 @@ import { companyController } from './controllers/company';
 import { employeeController } from './controllers/employee';
 import { parkingController } from './controllers/parking';
 import { levelController } from './controllers/level';
-import { spotController } from './controllers/spot';
 import { vehicleController } from './controllers/vehicle';
-import { priceController } from './controllers/price';
 import { subscriberController } from './controllers/subscriber';
-import { subscriptionPlanController } from './controllers/subscription-plan';
 import { entryController } from './controllers/entry';
 import { exitController } from './controllers/exit';
 import { cashRegisterController } from './controllers/cash-register';
@@ -95,11 +92,8 @@ const app = new Elysia()
     .use(employeeController)
     .use(parkingController)
     .use(levelController)
-    .use(spotController)
     .use(vehicleController)
-    .use(priceController)
     .use(subscriberController)
-    .use(subscriptionPlanController)
     .use(entryController)
     .use(exitController)
     .use(cashRegisterController)
