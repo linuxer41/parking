@@ -3,7 +3,6 @@ import { companyCrud } from './crud/company';
 import { employeeCrud } from './crud/employee';
 import { parkingCrud } from './crud/parking';
 import { levelCrud } from './crud/level';
-import { spotCrud } from './crud/spot';
 import { vehicleCrud } from './crud/vehicle';
 import { priceCrud } from './crud/price';
 import { subscriberCrud } from './crud/subscriber';
@@ -20,7 +19,6 @@ import { reservationCrud } from './crud/reservation';
     employee: employeeCrud,
     parking: parkingCrud,
     level: levelCrud,
-    spot: spotCrud,
     vehicle: vehicleCrud,
     price: priceCrud,
     subscriber: subscriberCrud,

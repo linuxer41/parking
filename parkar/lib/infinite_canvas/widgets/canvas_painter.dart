@@ -9,7 +9,6 @@ class InfiniteCanvasPainter extends CustomPainter {
   final double zoom;
   final Offset canvasOffset;
   final Size viewportSize;
-  final double scalePerGrid;
   final Color gridColor;
   final List<Offset> freeFormPoints;
 
@@ -20,7 +19,6 @@ class InfiniteCanvasPainter extends CustomPainter {
     required this.zoom,
     required this.canvasOffset,
     required this.viewportSize,
-    required this.scalePerGrid,
     required this.gridColor,
     required this.freeFormPoints,
   });
@@ -32,6 +30,13 @@ class InfiniteCanvasPainter extends CustomPainter {
     canvas.scale(zoom);
 
     _drawGrid(canvas, size);
+        // Dibujar un indicador redondo en el centro
+    const double radius = 5;
+    final center = Offset((size.width / 2) - (radius / 2), (size.height / 2) - (radius / 2));
+    final centerPaint = Paint()
+      ..color = Colors.blue
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, radius, centerPaint);
 
     for (var object in objects) {
       object.draw(canvas, Paint()..color = object.color, Offset.zero, 1.0, gridSize);
@@ -61,30 +66,8 @@ class InfiniteCanvasPainter extends CustomPainter {
     canvas.restore();
   }
 
-  // void _drawGrid(Canvas canvas, Size size) {
-  //   final paint = Paint()
-  //     ..color = gridColor
-  //     ..strokeWidth = 1 / zoom;
-
-  //   final startX = -canvasOffset.dx / zoom;
-  //   final endX = (size.width - canvasOffset.dx) / zoom;
-  //   final startY = -canvasOffset.dy / zoom;
-  //   final endY = (size.height - canvasOffset.dy) / zoom;
-
-  //   for (double x = (startX / gridSize).floor() * gridSize;
-  //       x <= endX;
-  //       x += gridSize) {
-  //     canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
-  //   }
-
-  //   for (double y = (startY / gridSize).floor() * gridSize;
-  //       y <= endY;
-  //       y += gridSize) {
-  //     canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
-  //   }
-  // }
   void _drawGrid(Canvas canvas, Size size) {
-    final paint = Paint()
+    final gridPaint = Paint()
       ..color = gridColor
       ..strokeWidth = 1 / zoom;
 
@@ -94,11 +77,19 @@ class InfiniteCanvasPainter extends CustomPainter {
     final endY = ((size.height - canvasOffset.dy) / zoom / gridSize).ceil() * gridSize;
 
     for (double x = startX; x <= endX; x += gridSize) {
-      canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
+      canvas.drawLine(
+        Offset(x, startY),
+        Offset(x, endY),
+        gridPaint,
+      );
     }
 
     for (double y = startY; y <= endY; y += gridSize) {
-      canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
+      canvas.drawLine(
+        Offset(startX, y),
+        Offset(endX, y),
+        gridPaint,
+      );
     }
   }
 

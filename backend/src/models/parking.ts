@@ -146,8 +146,6 @@ export const ParkingCreateSchema = t.Object(
       required: true
     }
   ),
-  vehicleTypes: t.Array(VehicleTypeSchema),
-  params: ParkingParamsSchema,
   },
   {
   description: 'Esquema para la creación de un Parking'
@@ -165,8 +163,6 @@ export const ParkingUpdateSchema = t.Object(
       required: true
     }
   ),
-  vehicleTypes: t.Array(VehicleTypeSchema),
-  params: ParkingParamsSchema,
   },
   {
   description: 'Esquema para la actualización de un Parking'

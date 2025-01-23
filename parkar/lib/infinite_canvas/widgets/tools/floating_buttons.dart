@@ -15,14 +15,14 @@ class FloatingButtons extends StatelessWidget {
         children: [
           FloatingActionButton(
             onPressed: controller.centerCanvas,
-            child: const Icon(Icons.center_focus_strong),
             tooltip: "Centrar lienzo",
+            child: const Icon(Icons.center_focus_strong),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: controller.resetZoom,
-            child: const Icon(Icons.zoom_out_map),
             tooltip: "Zoom predeterminado",
+            child: const Icon(Icons.zoom_out_map),
           ),
         ],
       ),

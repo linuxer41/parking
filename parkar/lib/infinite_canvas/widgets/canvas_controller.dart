@@ -1,5 +1,3 @@
-// ignore_for_file: prefer_final_fields
-
 import 'package:flutter/material.dart';
 import '../models/free_form_object.dart';
 import '../models/canvas_object.dart';
@@ -10,18 +8,16 @@ import '../models/spot_object.dart';
 enum InfiniteCanvasMode { gridObject, text, freeForm }
 
 class InfiniteCanvasController extends ChangeNotifier {
-  List<InfiniteCanvasObject> _objects = [];
-  List<InfiniteCanvasObject> _selectedObjects = [];
+  final List<InfiniteCanvasObject> _objects = [];
+  final List<InfiniteCanvasObject> _selectedObjects = [];
   InfiniteCanvasMode _canvasMode = InfiniteCanvasMode.gridObject;
   double _zoom = 1.0;
   Offset _canvasOffset = Offset.zero;
-  List<Offset> _freeFormPoints = [];
-  bool _isDrawingFreeForm =
-      false; // Indica si se está dibujando una forma libre
-  Offset? _dragStart; // Punto de inicio del arrastre
-  Offset? _objectDragStart; // Posición inicial del objeto al arrastrar
-  double gridSize = 10;
-  SpotObjectType spotObjectType = SpotObjectType.car;
+  final List<Offset> _freeFormPoints = [];
+  bool _isDrawingFreeForm = false;
+  Offset? _dragStart;
+  Offset? _objectDragStart;
+  double _gridSize = 50.0; // Tamaño de la cuadrícula en píxeles
 
   List<InfiniteCanvasObject> get objects => _objects;
   List<InfiniteCanvasObject> get selectedObjects => _selectedObjects;
@@ -29,16 +25,19 @@ class InfiniteCanvasController extends ChangeNotifier {
   double get zoom => _zoom;
   Offset get canvasOffset => _canvasOffset;
   List<Offset> get freeFormPoints => _freeFormPoints;
-
-  InfiniteCanvasController({
-    this.gridSize = 10,
-  });
+  double get gridSize => _gridSize;
+  Size viewportSize = Size.zero;
 
   void setCanvasMode(InfiniteCanvasMode mode) {
     _canvasMode = mode;
     if (mode != InfiniteCanvasMode.freeForm) {
-      _isDrawingFreeForm = false; // Finalizar el dibujo si se cambia de modo
+      _isDrawingFreeForm = false;
     }
+    notifyListeners();
+  }
+
+  void setGridSize(double gridSize) {
+    _gridSize = gridSize;
     notifyListeners();
   }
 
@@ -49,11 +48,9 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onPanStart(DragStartDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart =
-          details.localPosition; // Guardar el punto de inicio del arrastre
+      _dragStart = details.localPosition;
       if (_selectedObjects.isNotEmpty) {
-        _objectDragStart = _selectedObjects
-            .first.position; // Guardar la posición inicial del objeto
+        _objectDragStart = _selectedObjects.first.position;
       }
     }
     notifyListeners();
@@ -63,17 +60,8 @@ class InfiniteCanvasController extends ChangeNotifier {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
       final delta = (details.localPosition - _dragStart!) / _zoom;
 
-      // Ajustar el delta a la cuadrícula
-      final gridDelta = Offset(
-        (delta.dx / gridSize).round() * gridSize,
-        (delta.dy / gridSize).round() * gridSize,
-      );
-
       if (_selectedObjects.isNotEmpty && _objectDragStart != null) {
-        // Calcular la nueva posición temporal
-        final newPosition = _objectDragStart! + gridDelta;
-
-        // Verificar si la nueva posición colisiona con otros objetos
+        final newPosition = _objectDragStart! + delta;
         bool canMove = true;
         for (var object in _objects) {
           if (object != _selectedObjects.first && _checkCollision(_selectedObjects.first, newPosition, object)) {
@@ -81,16 +69,13 @@ class InfiniteCanvasController extends ChangeNotifier {
             break;
           }
         }
-
-        // Mover el objeto solo si no hay colisión
         if (canMove) {
           for (var object in _selectedObjects) {
             object.position = newPosition;
           }
         }
       } else {
-        // Mover el lienzo en incrementos de la cuadrícula
-        _canvasOffset += gridDelta * _zoom;
+        _canvasOffset += delta;
         _dragStart = details.localPosition;
       }
     }
@@ -99,16 +84,15 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onPanEnd(DragEndDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart = null; // Reiniciar el punto de inicio del arrastre
-      _objectDragStart = null; // Reiniciar la posición inicial del objeto
+      _dragStart = null;
+      _objectDragStart = null;
     }
     notifyListeners();
   }
 
   void onScaleStart(ScaleStartDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart =
-          details.focalPoint; // Guardar el punto de inicio de la escala
+      _dragStart = details.focalPoint;
     }
   }
 
@@ -132,7 +116,7 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onScaleEnd(ScaleEndDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart = null; // Reiniciar el punto de inicio de la escala
+      _dragStart = null;
     }
     notifyListeners();
   }
@@ -142,18 +126,14 @@ class InfiniteCanvasController extends ChangeNotifier {
 
     if (_canvasMode == InfiniteCanvasMode.freeForm) {
       if (!_isDrawingFreeForm) {
-        // Iniciar una nueva forma libre
         _freeFormPoints.clear();
-        _freeFormPoints.add(canvasPosition); // Agregar el primer punto
+        _freeFormPoints.add(canvasPosition);
         _isDrawingFreeForm = true;
       } else {
-        // Agregar un nuevo punto y unirlo al último punto
         final nearestPoint = _findNearestPoint(canvasPosition);
         if (nearestPoint != null) {
-          // Unirse al punto más cercano si está dentro del rango
           _freeFormPoints.add(nearestPoint);
         } else {
-          // Agregar el nuevo punto
           _freeFormPoints.add(canvasPosition);
         }
       }
@@ -165,7 +145,6 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onDoubleTap() {
     if (_canvasMode == InfiniteCanvasMode.freeForm && _isDrawingFreeForm) {
-      // Finalizar la forma libre al hacer doble clic
       _finishFreeFormDrawing();
     }
   }
@@ -184,59 +163,84 @@ class InfiniteCanvasController extends ChangeNotifier {
   }
 
   Offset? _findNearestPoint(Offset point) {
-    const double snapDistance = 10.0; // Distancia máxima para unirse a un punto
+    const double snapDistance = 10.0;
     for (var object in _objects) {
       if (object is FreeFormObject) {
         for (var p in object.points) {
           if ((p - point).distance <= snapDistance) {
-            return p; // Retornar el punto más cercano
+            return p;
           }
         }
       }
     }
-    return null; // No hay puntos cercanos
+    return null;
   }
 
   void selectObject(Offset position) {
     _selectedObjects.clear();
     for (var object in _objects.reversed) {
-      if (object.contains(position, Offset.zero, 1.0, gridSize)) {
+      if (object.contains(position, Offset.zero, 1.0, _gridSize)) {
         _selectedObjects.add(object);
         break;
       }
     }
     notifyListeners();
   }
+
   bool _checkCollision(InfiniteCanvasObject object1, Offset newPosition, InfiniteCanvasObject object2) {
     if (object1 is GridObject && object2 is GridObject) {
       final rect1 = Rect.fromLTWH(
         newPosition.dx,
         newPosition.dy,
-        object1.width * gridSize,
-        object1.height * gridSize,
+        object1.width * _gridSize,
+        object1.height * _gridSize,
       );
       final rect2 = Rect.fromLTWH(
         object2.position.dx,
         object2.position.dy,
-        object2.width * gridSize,
-        object2.height * gridSize,
+        object2.width * _gridSize,
+        object2.height * _gridSize,
       );
       return rect1.overlaps(rect2);
     }
     return false;
   }
+    Offset getCenterOfView(Size viewportSize) {
+    return Offset(
+      (viewportSize.width / 2 - _canvasOffset.dx) / _zoom,
+      (viewportSize.height / 2 - _canvasOffset.dy) / _zoom,
+    );
+  }
+
+  
 
   void addGridObjectNode(GridObject object) {
-    Offset offset = Offset.zero;
+    Offset offset = getCenterOfView(viewportSize);
     bool positionFound = false;
 
-    while (!positionFound) {
-      positionFound = true;
-      for (var existingObject in _objects) {
-        if (existingObject is GridObject && _checkCollision(object, offset, existingObject)) {
-          positionFound = false;
-          offset = Offset(offset.dx + object.width * gridSize, offset.dy);
-          break;
+    // Ajustar el offset para que el objeto esté centrado en la vista
+    offset -= Offset(object.width * _gridSize / 2, object.height * _gridSize / 2);
+
+    // Verificar si hay colisión en el centro de la vista
+    positionFound = true;
+    for (var existingObject in _objects) {
+      if (existingObject is GridObject && _checkCollision(object, offset, existingObject)) {
+        positionFound = false;
+        break;
+      }
+    }
+
+    // Si no hay espacio en el centro de la vista, buscar espacio a la derecha e inferior
+    if (!positionFound) {
+      offset = Offset(offset.dx + object.width * _gridSize, offset.dy + object.height * _gridSize);
+      while (!positionFound) {
+        positionFound = true;
+        for (var existingObject in _objects) {
+          if (existingObject is GridObject && _checkCollision(object, offset, existingObject)) {
+            positionFound = false;
+            offset = Offset(offset.dx + object.width * _gridSize, offset.dy);
+            break;
+          }
         }
       }
     }
@@ -313,8 +317,9 @@ class InfiniteCanvasController extends ChangeNotifier {
     _canvasOffset = Offset(dx, dy);
     notifyListeners();
   }
-  void setGridSize(double newGridSize) {
-    gridSize = newGridSize;
+
+  void updateViewportSize(Size newSize) {
+    viewportSize = newSize;
     notifyListeners();
   }
 }

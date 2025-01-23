@@ -15,21 +15,21 @@ abstract class GridObject extends InfiniteCanvasObject {
 
   @override
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double gridSize) {
+      double baseUnitSize) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / baseUnitSize).round() * baseUnitSize,
+      (position.dy / baseUnitSize).round() * baseUnitSize,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * baseUnitSize,
+      height * baseUnitSize,
     );
     paint.color = color;
     canvas.drawRect(rect, paint);
@@ -38,12 +38,13 @@ abstract class GridObject extends InfiniteCanvasObject {
   }
 
   @override
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize) {
     final transformedPoint = (point - canvasOffset) / scale;
     final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
     return rotatedPoint.dx >= 0 &&
-        rotatedPoint.dx <= width * gridSize &&
+        rotatedPoint.dx <= width * baseUnitSize &&
         rotatedPoint.dy >= 0 &&
-        rotatedPoint.dy <= height * gridSize;
+        rotatedPoint.dy <= height * baseUnitSize;
   }
 }

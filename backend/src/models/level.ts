@@ -3,7 +3,43 @@ import { t } from 'elysia';
 import { ParkingSchema } from './parking';
 
 // Esquemas JSON adicionales
-// No hay esquemas adicionales
+export const SpotSchema = t.Object(
+  {
+    id: t.String(
+    {
+      description: "Identificador único del lugar de estacionamiento",
+      required: true
+    }
+  ),
+  name: t.String(
+    {
+      description: "Nombre del lugar",
+      required: true
+    }
+  ),
+  posX: t.Number(
+    {
+      description: "Coordenada X del lugar",
+      required: true
+    }
+  ),
+  posY: t.Number(
+    {
+      description: "Coordenada Y del lugar",
+      required: true
+    }
+  ),
+  status: t.String(
+    {
+      description: "Estado del lugar (libre, ocupado, etc.)",
+      required: true
+    }
+  ),
+  },
+  {
+    description: 'Esquema adicional: SpotSchema'
+  }
+);
 
 // Modelo Principal
 export const LevelSchema = t.Object(
@@ -27,6 +63,9 @@ export const LevelSchema = t.Object(
     }
   ),
   parking: ParkingSchema,
+  spots: t.Array(SpotSchema),
+  indicators: t.Array(IndicatorSchema),
+  offices: t.Array(OfficeSchema),
   createdAt: t.Union([
     t.String(
       {

@@ -1,8 +1,5 @@
-import 'package:flutter/material.dart' as material;
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
-import 'package:window_manager/window_manager.dart';
 
 class AuthLayout extends StatelessWidget {
   final String title; // Título de la pantalla

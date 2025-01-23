@@ -9,8 +9,7 @@ class LevelCrud extends BaseCrud<Level, LevelCreate, LevelUpdate> {
 
   baseQuery() {
     return `
-select t_level.* , to_jsonb(t_parking.*) as "parking"
-from t_level
+select t_level.* , to_jsonb(t_parking.*) as "parking" from t_level
 inner join t_parking on t_parking.id = t_level."parkingId"
 `;
   }

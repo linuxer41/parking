@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
   final DIContainer diContainer;
   final AppTheme appTheme;
 
-  MyApp({required this.appState, required this.diContainer, required this.appTheme});
+  const MyApp({super.key, required this.appState, required this.diContainer, required this.appTheme});
 
   @override
   Widget build(BuildContext context) {

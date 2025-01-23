@@ -56,7 +56,7 @@ export const CompanySchema = t.Object(
       required: true
     }
   ),
-  user: UserSchema,
+  owner: UserSchema,
   params: CompanyParamsSchema,
   createdAt: t.Union([
     t.String(
@@ -125,7 +125,6 @@ export const CompanyCreateSchema = t.Object(
       required: false
     }
   ),
-  params: CompanyParamsSchema,
   },
   {
   description: 'Esquema para la creación de un Company'
@@ -167,7 +166,6 @@ export const CompanyUpdateSchema = t.Object(
       required: false
     }
   ),
-  params: CompanyParamsSchema,
   },
   {
   description: 'Esquema para la actualización de un Company'

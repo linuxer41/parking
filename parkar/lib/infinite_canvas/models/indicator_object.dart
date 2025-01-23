@@ -14,48 +14,58 @@ class IndicatorObject extends GridObject {
     required this.type,
     super.position = const Offset(0, 0),
   }) : super(
-          width: 0.25, // 25 cm de ancho
-          height: 0.5, // 50 cm de alto
+          width: 6, // 25 cm de ancho
+          height: 2, // 50 cm de alto
           color: type == InidicatorObjectType.exit ? Colors.red : Colors.green,
         );
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double scaledGrid) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / scaledGrid).round() * scaledGrid,
+      (position.dy / scaledGrid).round() * scaledGrid,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
-    // Dibujar el rectángulo
+    // Dibujar el rectángulo con bordes redondeados
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * scaledGrid,
+      height * scaledGrid,
     );
+    const radius = Radius.circular(8); // Bordes redondeados
+
+    // Color de fondo
     paint.color = color;
     paint.style = PaintingStyle.fill;
-    canvas.drawRect(rect, paint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), paint);
 
     // Dibujar el borde
     final borderPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    canvas.drawRect(rect, borderPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), borderPaint);
 
     // Dibujar el texto
     final textPainter = TextPainter(
       text: TextSpan(
         text: label,
         style: TextStyle(
-          color: Colors.white,
-          fontSize: (width * gridSize) / 2,
+          color: Colors.white, // Texto en blanco
+          fontSize: 10, // Tamaño del texto reducido
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black.withOpacity(0.5), // Sombra para mejorar la legibilidad
+              blurRadius: 2,
+              offset: const Offset(1, 1),
+            ),
+          ],
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -64,8 +74,8 @@ class IndicatorObject extends GridObject {
     textPainter.paint(
       canvas,
       Offset(
-        (width * gridSize - textPainter.width) / 2,
-        (height * gridSize - textPainter.height) / 2,
+        (width * scaledGrid - textPainter.width) / 2,
+        (height * scaledGrid - textPainter.height) / 2,
       ),
     );
 

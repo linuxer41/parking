@@ -28,7 +28,7 @@ export default function useEditor() {
       const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/api/v1/app/lots/${currentEditorId}`);
       const floor = response.data.floors[0];
       const resItems = floor ? [
-        ...floor.spaces.map((e:{ editorData: EditorItem}) => e.editorData),
+        ...floor?.spaces?.map((e:{ editorData: EditorItem}) => e.editorData),
         ...floor.offices.map((e:{ editorData: EditorItem}) => e.editorData),
         ...floor.entrances.map((e:{ editorData: EditorItem}) => e.editorData),
         ...floor.exits.map((e:{ editorData: EditorItem}) => e.editorData),

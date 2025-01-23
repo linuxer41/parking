@@ -13,7 +13,8 @@ class FreeFormObject extends InfiniteCanvasObject {
   }) : super(objectMode: InfiniteCanvasMode.freeForm);
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
+      double baseUnitSize) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
@@ -37,7 +38,8 @@ class FreeFormObject extends InfiniteCanvasObject {
   }
 
   @override
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize) {
     final transformedPoint = (point - canvasOffset) / scale;
     final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
 

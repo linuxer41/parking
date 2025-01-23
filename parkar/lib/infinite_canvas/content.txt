@@ -11,7 +11,6 @@ abstract class InfiniteCanvasObject {
   Offset position;
   Color color;
   double rotation;
-  
 
   InfiniteCanvasObject({
     required this.position,
@@ -21,9 +20,10 @@ abstract class InfiniteCanvasObject {
   });
 
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double gridSize);
+      double baseUnitSize);
 
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize);
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize);
 
   Offset rotatePoint(Offset point, double angle) {
     final radians = angle * (math.pi / 180);
@@ -53,7 +53,8 @@ class FreeFormObject extends InfiniteCanvasObject {
   }) : super(objectMode: InfiniteCanvasMode.freeForm);
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
+      double baseUnitSize) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
@@ -77,7 +78,8 @@ class FreeFormObject extends InfiniteCanvasObject {
   }
 
   @override
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize) {
     final transformedPoint = (point - canvasOffset) / scale;
     final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
 
@@ -113,21 +115,21 @@ abstract class GridObject extends InfiniteCanvasObject {
 
   @override
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double gridSize) {
+      double baseUnitSize) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / baseUnitSize).round() * baseUnitSize,
+      (position.dy / baseUnitSize).round() * baseUnitSize,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * baseUnitSize,
+      height * baseUnitSize,
     );
     paint.color = color;
     canvas.drawRect(rect, paint);
@@ -136,13 +138,14 @@ abstract class GridObject extends InfiniteCanvasObject {
   }
 
   @override
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize) {
     final transformedPoint = (point - canvasOffset) / scale;
     final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
     return rotatedPoint.dx >= 0 &&
-        rotatedPoint.dx <= width * gridSize &&
+        rotatedPoint.dx <= width * baseUnitSize &&
         rotatedPoint.dy >= 0 &&
-        rotatedPoint.dy <= height * gridSize;
+        rotatedPoint.dy <= height * baseUnitSize;
   }
 }
 
@@ -170,13 +173,13 @@ class IndicatorObject extends GridObject {
         );
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double scaledGrid) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / scaledGrid).round() * scaledGrid,
+      (position.dy / scaledGrid).round() * scaledGrid,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
@@ -184,8 +187,8 @@ class IndicatorObject extends GridObject {
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * scaledGrid,
+      height * scaledGrid,
     );
     paint.color = color;
     paint.style = PaintingStyle.fill;
@@ -204,7 +207,7 @@ class IndicatorObject extends GridObject {
         text: label,
         style: TextStyle(
           color: Colors.white,
-          fontSize: (width * gridSize) / 2,
+          fontSize: (width * scaledGrid) / 2,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -214,8 +217,8 @@ class IndicatorObject extends GridObject {
     textPainter.paint(
       canvas,
       Offset(
-        (width * gridSize - textPainter.width) / 2,
-        (height * gridSize - textPainter.height) / 2,
+        (width * scaledGrid - textPainter.width) / 2,
+        (height * scaledGrid - textPainter.height) / 2,
       ),
     );
 
@@ -243,13 +246,13 @@ class OfficeObject extends GridObject {
         );
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double scaledGrid) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / scaledGrid).round() * scaledGrid,
+      (position.dy / scaledGrid).round() * scaledGrid,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
@@ -257,8 +260,8 @@ class OfficeObject extends GridObject {
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * scaledGrid,
+      height * scaledGrid,
     );
     paint.color = color.withOpacity(0.3); // Transparencia
     paint.style = PaintingStyle.fill;
@@ -269,10 +272,10 @@ class OfficeObject extends GridObject {
       ..color = Colors.black
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    final dashWidth = 5; // Longitud del segmento
-    final dashSpace = 5; // Espacio entre segmentos
+    const dashWidth = 5; // Longitud del segmento
+    const dashSpace = 5; // Espacio entre segmentos
     double startX = 0;
-    while (startX < width * gridSize) {
+    while (startX < width * scaledGrid) {
       canvas.drawLine(
         Offset(startX, 0),
         Offset(startX + dashWidth, 0),
@@ -281,16 +284,16 @@ class OfficeObject extends GridObject {
       startX += dashWidth + dashSpace;
     }
     startX = 0;
-    while (startX < width * gridSize) {
+    while (startX < width * scaledGrid) {
       canvas.drawLine(
-        Offset(startX, height * gridSize),
-        Offset(startX + dashWidth, height * gridSize),
+        Offset(startX, height * scaledGrid),
+        Offset(startX + dashWidth, height * scaledGrid),
         borderPaint,
       );
       startX += dashWidth + dashSpace;
     }
     double startY = 0;
-    while (startY < height * gridSize) {
+    while (startY < height * scaledGrid) {
       canvas.drawLine(
         Offset(0, startY),
         Offset(0, startY + dashWidth),
@@ -299,10 +302,10 @@ class OfficeObject extends GridObject {
       startY += dashWidth + dashSpace;
     }
     startY = 0;
-    while (startY < height * gridSize) {
+    while (startY < height * scaledGrid) {
       canvas.drawLine(
-        Offset(width * gridSize, startY),
-        Offset(width * gridSize, startY + dashWidth),
+        Offset(width * scaledGrid, startY),
+        Offset(width * scaledGrid, startY + dashWidth),
         borderPaint,
       );
       startY += dashWidth + dashSpace;
@@ -314,7 +317,7 @@ class OfficeObject extends GridObject {
         text: label,
         style: TextStyle(
           color: Colors.black,
-          fontSize: (width * gridSize) / 4,
+          fontSize: (width * scaledGrid) / 4,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -324,8 +327,8 @@ class OfficeObject extends GridObject {
     textPainter.paint(
       canvas,
       Offset(
-        (width * gridSize - textPainter.width) / 2,
-        (height * gridSize - textPainter.height) / 2,
+        (width * scaledGrid - textPainter.width) / 2,
+        (height * scaledGrid - textPainter.height) / 2,
       ),
     );
 
@@ -380,13 +383,13 @@ class SpotObject extends GridObject {
 
   @override
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double gridSize) {
+      double scaledGrid) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / scaledGrid).round() * scaledGrid,
+      (position.dy / scaledGrid).round() * scaledGrid,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
@@ -394,10 +397,10 @@ class SpotObject extends GridObject {
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * scaledGrid,
+      height * scaledGrid,
     );
-    final radius = Radius.circular(10); // Bordes redondeados
+    final radius = const Radius.circular(10); // Bordes redondeados
 
     // Color de fondo basado en la categoría
     paint.color = isFree ? color : Colors.grey; // Si no está libre, se marca en gris
@@ -420,13 +423,13 @@ class SpotObject extends GridObject {
         text: label,
         style: TextStyle(
           color: Colors.white,
-          fontSize: (width * gridSize) / 4,
+          fontSize: (width * scaledGrid) / 4,
           fontWeight: FontWeight.bold,
           shadows: [
             Shadow(
               color: Colors.black.withOpacity(0.5),
               blurRadius: 2,
-              offset: Offset(1, 1),
+              offset: const Offset(1, 1),
             ),
           ],
         ),
@@ -437,8 +440,8 @@ class SpotObject extends GridObject {
     textPainter.paint(
       canvas,
       Offset(
-        (width * gridSize - textPainter.width) / 2,
-        (height * gridSize - textPainter.height) / 2,
+        (width * scaledGrid - textPainter.width) / 2,
+        (height * scaledGrid - textPainter.height) / 2,
       ),
     );
 
@@ -505,13 +508,14 @@ class TextObject extends InfiniteCanvasObject {
   }) : super(objectMode: InfiniteCanvasMode.text);
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale, double gridSize) {
+  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
+      double baseUnitSize) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / baseUnitSize).round() * baseUnitSize,
+      (position.dy / baseUnitSize).round() * baseUnitSize,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
@@ -524,6 +528,7 @@ class TextObject extends InfiniteCanvasObject {
 
     canvas.restore();
   }
+
   @override
   Size get size {
     // Calcular el tamaño del texto usando un TextPainter
@@ -536,7 +541,8 @@ class TextObject extends InfiniteCanvasObject {
   }
 
   @override
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize) {
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize) {
     final transformedPoint = (point - canvasOffset) / scale;
     final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
     final textPainter = TextPainter(
@@ -568,15 +574,13 @@ import 'tools/floating_buttons.dart';
 
 class InfiniteCanvas extends StatefulWidget {
   final InfiniteCanvasController? controller;
-  final double gridSize;
-  final double scalePerGrid;
+  final double gridSize; // Tamaño de la cuadrícula en píxeles
   final bool isEditable;
 
   const InfiniteCanvas({
     super.key,
     this.controller,
-    this.gridSize = 10,
-    this.scalePerGrid = 0.25,
+    this.gridSize = 20, // Tamaño de la cuadrícula en píxeles
     this.isEditable = true,
   });
 
@@ -591,6 +595,7 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
   void initState() {
     super.initState();
     controller = widget.controller ?? InfiniteCanvasController();
+    controller.setGridSize(widget.gridSize);
     controller.addListener(_onControllerChanged);
   }
 
@@ -699,22 +704,6 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                     controller.adjustZoom(pointerSignal.scrollDelta.dy < 0);
                   }
                 },
-                // onPointerDown: (details) {
-                //   if (details.kind == PointerDeviceKind.mouse || details.kind == PointerDeviceKind.touch) {
-                //     controller.onTapDown(TapDownDetails(
-                //       globalPosition: details.position,
-                //       localPosition: details.localPosition,
-                //     ));
-                //   }
-                // },
-                // onPointerUp: (details) {
-                //   if (details.kind == PointerDeviceKind.mouse || details.kind == PointerDeviceKind.touch) {
-                //     // Manejar doble clic
-                //     if (details.delta.distance == 0) {
-                //       controller.onDoubleTap();
-                //     }
-                //   }
-                // },
                 child: RawGestureDetector(
                   gestures: _buildGestures(),
                   child: CustomPaint(
@@ -722,11 +711,10 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                     painter: InfiniteCanvasPainter(
                       objects: controller.objects,
                       selectedObjects: controller.selectedObjects,
-                      gridSize: widget.gridSize,
+                      gridSize: controller.gridSize,
                       zoom: controller.zoom,
                       canvasOffset: controller.canvasOffset,
                       viewportSize: MediaQuery.of(context).size,
-                      scalePerGrid: widget.scalePerGrid,
                       gridColor: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -743,7 +731,6 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
               Modebar(controller: controller),
               if (controller.canvasMode == InfiniteCanvasMode.gridObject)
                 GridObjectBar(controller: controller),
-              
               if (controller.selectedObjects.isNotEmpty && widget.isEditable)
                 ActionBar(controller: controller),
               FloatingButtons(controller: controller),
@@ -757,7 +744,7 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    "Escala: ${widget.scalePerGrid.toStringAsFixed(2)} m/cuadrado",
+                    "Escala: ${controller.gridSize.toStringAsFixed(2)} m/cuadrado",
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold),
                   ),
@@ -770,7 +757,6 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
     );
   }
 }
-
 class CopyCommand extends Intent {}
 
 class PasteCommand extends Intent {}
@@ -779,8 +765,6 @@ class DeleteCommand extends Intent {}
 
 
 file: -- widgets\canvas_controller.dart
-// ignore_for_file: prefer_final_fields
-
 import 'package:flutter/material.dart';
 import '../models/free_form_object.dart';
 import '../models/canvas_object.dart';
@@ -791,18 +775,16 @@ import '../models/spot_object.dart';
 enum InfiniteCanvasMode { gridObject, text, freeForm }
 
 class InfiniteCanvasController extends ChangeNotifier {
-  List<InfiniteCanvasObject> _objects = [];
-  List<InfiniteCanvasObject> _selectedObjects = [];
+  final List<InfiniteCanvasObject> _objects = [];
+  final List<InfiniteCanvasObject> _selectedObjects = [];
   InfiniteCanvasMode _canvasMode = InfiniteCanvasMode.gridObject;
   double _zoom = 1.0;
   Offset _canvasOffset = Offset.zero;
-  List<Offset> _freeFormPoints = [];
-  bool _isDrawingFreeForm =
-      false; // Indica si se está dibujando una forma libre
-  Offset? _dragStart; // Punto de inicio del arrastre
-  Offset? _objectDragStart; // Posición inicial del objeto al arrastrar
-  double gridSize = 10;
-  SpotObjectType spotObjectType = SpotObjectType.car;
+  final List<Offset> _freeFormPoints = [];
+  bool _isDrawingFreeForm = false;
+  Offset? _dragStart;
+  Offset? _objectDragStart;
+  double _gridSize = 50.0; // Tamaño de la cuadrícula en píxeles
 
   List<InfiniteCanvasObject> get objects => _objects;
   List<InfiniteCanvasObject> get selectedObjects => _selectedObjects;
@@ -810,16 +792,18 @@ class InfiniteCanvasController extends ChangeNotifier {
   double get zoom => _zoom;
   Offset get canvasOffset => _canvasOffset;
   List<Offset> get freeFormPoints => _freeFormPoints;
-
-  InfiniteCanvasController({
-    this.gridSize = 10,
-  });
+  double get gridSize => _gridSize;
 
   void setCanvasMode(InfiniteCanvasMode mode) {
     _canvasMode = mode;
     if (mode != InfiniteCanvasMode.freeForm) {
-      _isDrawingFreeForm = false; // Finalizar el dibujo si se cambia de modo
+      _isDrawingFreeForm = false;
     }
+    notifyListeners();
+  }
+
+  void setGridSize(double gridSize) {
+    _gridSize = gridSize;
     notifyListeners();
   }
 
@@ -830,11 +814,9 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onPanStart(DragStartDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart =
-          details.localPosition; // Guardar el punto de inicio del arrastre
+      _dragStart = details.localPosition;
       if (_selectedObjects.isNotEmpty) {
-        _objectDragStart = _selectedObjects
-            .first.position; // Guardar la posición inicial del objeto
+        _objectDragStart = _selectedObjects.first.position;
       }
     }
     notifyListeners();
@@ -844,17 +826,8 @@ class InfiniteCanvasController extends ChangeNotifier {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
       final delta = (details.localPosition - _dragStart!) / _zoom;
 
-      // Ajustar el delta a la cuadrícula
-      final gridDelta = Offset(
-        (delta.dx / gridSize).round() * gridSize,
-        (delta.dy / gridSize).round() * gridSize,
-      );
-
       if (_selectedObjects.isNotEmpty && _objectDragStart != null) {
-        // Calcular la nueva posición temporal
-        final newPosition = _objectDragStart! + gridDelta;
-
-        // Verificar si la nueva posición colisiona con otros objetos
+        final newPosition = _objectDragStart! + delta;
         bool canMove = true;
         for (var object in _objects) {
           if (object != _selectedObjects.first && _checkCollision(_selectedObjects.first, newPosition, object)) {
@@ -862,16 +835,13 @@ class InfiniteCanvasController extends ChangeNotifier {
             break;
           }
         }
-
-        // Mover el objeto solo si no hay colisión
         if (canMove) {
           for (var object in _selectedObjects) {
             object.position = newPosition;
           }
         }
       } else {
-        // Mover el lienzo en incrementos de la cuadrícula
-        _canvasOffset += gridDelta * _zoom;
+        _canvasOffset += delta;
         _dragStart = details.localPosition;
       }
     }
@@ -880,16 +850,15 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onPanEnd(DragEndDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart = null; // Reiniciar el punto de inicio del arrastre
-      _objectDragStart = null; // Reiniciar la posición inicial del objeto
+      _dragStart = null;
+      _objectDragStart = null;
     }
     notifyListeners();
   }
 
   void onScaleStart(ScaleStartDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart =
-          details.focalPoint; // Guardar el punto de inicio de la escala
+      _dragStart = details.focalPoint;
     }
   }
 
@@ -913,7 +882,7 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onScaleEnd(ScaleEndDetails details) {
     if (_canvasMode != InfiniteCanvasMode.freeForm) {
-      _dragStart = null; // Reiniciar el punto de inicio de la escala
+      _dragStart = null;
     }
     notifyListeners();
   }
@@ -923,18 +892,14 @@ class InfiniteCanvasController extends ChangeNotifier {
 
     if (_canvasMode == InfiniteCanvasMode.freeForm) {
       if (!_isDrawingFreeForm) {
-        // Iniciar una nueva forma libre
         _freeFormPoints.clear();
-        _freeFormPoints.add(canvasPosition); // Agregar el primer punto
+        _freeFormPoints.add(canvasPosition);
         _isDrawingFreeForm = true;
       } else {
-        // Agregar un nuevo punto y unirlo al último punto
         final nearestPoint = _findNearestPoint(canvasPosition);
         if (nearestPoint != null) {
-          // Unirse al punto más cercano si está dentro del rango
           _freeFormPoints.add(nearestPoint);
         } else {
-          // Agregar el nuevo punto
           _freeFormPoints.add(canvasPosition);
         }
       }
@@ -946,7 +911,6 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onDoubleTap() {
     if (_canvasMode == InfiniteCanvasMode.freeForm && _isDrawingFreeForm) {
-      // Finalizar la forma libre al hacer doble clic
       _finishFreeFormDrawing();
     }
   }
@@ -965,42 +929,43 @@ class InfiniteCanvasController extends ChangeNotifier {
   }
 
   Offset? _findNearestPoint(Offset point) {
-    const double snapDistance = 10.0; // Distancia máxima para unirse a un punto
+    const double snapDistance = 10.0;
     for (var object in _objects) {
       if (object is FreeFormObject) {
         for (var p in object.points) {
           if ((p - point).distance <= snapDistance) {
-            return p; // Retornar el punto más cercano
+            return p;
           }
         }
       }
     }
-    return null; // No hay puntos cercanos
+    return null;
   }
 
   void selectObject(Offset position) {
     _selectedObjects.clear();
     for (var object in _objects.reversed) {
-      if (object.contains(position, Offset.zero, 1.0, gridSize)) {
+      if (object.contains(position, Offset.zero, 1.0, _gridSize)) {
         _selectedObjects.add(object);
         break;
       }
     }
     notifyListeners();
   }
+
   bool _checkCollision(InfiniteCanvasObject object1, Offset newPosition, InfiniteCanvasObject object2) {
     if (object1 is GridObject && object2 is GridObject) {
       final rect1 = Rect.fromLTWH(
         newPosition.dx,
         newPosition.dy,
-        object1.width * gridSize,
-        object1.height * gridSize,
+        object1.width * _gridSize,
+        object1.height * _gridSize,
       );
       final rect2 = Rect.fromLTWH(
         object2.position.dx,
         object2.position.dy,
-        object2.width * gridSize,
-        object2.height * gridSize,
+        object2.width * _gridSize,
+        object2.height * _gridSize,
       );
       return rect1.overlaps(rect2);
     }
@@ -1016,7 +981,7 @@ class InfiniteCanvasController extends ChangeNotifier {
       for (var existingObject in _objects) {
         if (existingObject is GridObject && _checkCollision(object, offset, existingObject)) {
           positionFound = false;
-          offset = Offset(offset.dx + object.width * gridSize, offset.dy);
+          offset = Offset(offset.dx + object.width * _gridSize, offset.dy);
           break;
         }
       }
@@ -1094,12 +1059,7 @@ class InfiniteCanvasController extends ChangeNotifier {
     _canvasOffset = Offset(dx, dy);
     notifyListeners();
   }
-  void setGridSize(double newGridSize) {
-    gridSize = newGridSize;
-    notifyListeners();
-  }
 }
-
 
 file: -- widgets\canvas_painter.dart
 import 'package:flutter/material.dart';
@@ -1113,7 +1073,6 @@ class InfiniteCanvasPainter extends CustomPainter {
   final double zoom;
   final Offset canvasOffset;
   final Size viewportSize;
-  final double scalePerGrid;
   final Color gridColor;
   final List<Offset> freeFormPoints;
 
@@ -1124,7 +1083,6 @@ class InfiniteCanvasPainter extends CustomPainter {
     required this.zoom,
     required this.canvasOffset,
     required this.viewportSize,
-    required this.scalePerGrid,
     required this.gridColor,
     required this.freeFormPoints,
   });
@@ -1165,30 +1123,8 @@ class InfiniteCanvasPainter extends CustomPainter {
     canvas.restore();
   }
 
-  // void _drawGrid(Canvas canvas, Size size) {
-  //   final paint = Paint()
-  //     ..color = gridColor
-  //     ..strokeWidth = 1 / zoom;
-
-  //   final startX = -canvasOffset.dx / zoom;
-  //   final endX = (size.width - canvasOffset.dx) / zoom;
-  //   final startY = -canvasOffset.dy / zoom;
-  //   final endY = (size.height - canvasOffset.dy) / zoom;
-
-  //   for (double x = (startX / gridSize).floor() * gridSize;
-  //       x <= endX;
-  //       x += gridSize) {
-  //     canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
-  //   }
-
-  //   for (double y = (startY / gridSize).floor() * gridSize;
-  //       y <= endY;
-  //       y += gridSize) {
-  //     canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
-  //   }
-  // }
   void _drawGrid(Canvas canvas, Size size) {
-    final paint = Paint()
+    final gridPaint = Paint()
       ..color = gridColor
       ..strokeWidth = 1 / zoom;
 
@@ -1198,11 +1134,19 @@ class InfiniteCanvasPainter extends CustomPainter {
     final endY = ((size.height - canvasOffset.dy) / zoom / gridSize).ceil() * gridSize;
 
     for (double x = startX; x <= endX; x += gridSize) {
-      canvas.drawLine(Offset(x, startY), Offset(x, endY), paint);
+      canvas.drawLine(
+        Offset(x, startY),
+        Offset(x, endY),
+        gridPaint,
+      );
     }
 
     for (double y = startY; y <= endY; y += gridSize) {
-      canvas.drawLine(Offset(startX, y), Offset(endX, y), paint);
+      canvas.drawLine(
+        Offset(startX, y),
+        Offset(endX, y),
+        gridPaint,
+      );
     }
   }
 
@@ -1211,7 +1155,6 @@ class InfiniteCanvasPainter extends CustomPainter {
     return true;
   }
 }
-
 
 file: -- widgets\mini_map\mini_map.dart
 import 'package:flutter/material.dart';
@@ -1256,7 +1199,7 @@ class MiniMap extends StatelessWidget {
               canvasOffset: controller.canvasOffset,
               zoom: controller.zoom,
               viewportSize: viewportSize,
-              gridSize: 10,
+              baseUnitSize: 10,
             ),
           ),
         ),
@@ -1276,14 +1219,14 @@ class MiniMapPainter extends CustomPainter {
   final Offset canvasOffset;
   final double zoom;
   final Size viewportSize;
-  final double gridSize;
+  final double baseUnitSize;
 
   MiniMapPainter({
     required this.objects,
     required this.canvasOffset,
     required this.zoom,
     required this.viewportSize,
-    required this.gridSize,
+    required this.baseUnitSize,
   });
 
   @override
@@ -1297,10 +1240,10 @@ class MiniMapPainter extends CustomPainter {
     // final gridPaint = Paint()
     //   ..color = Colors.grey.withOpacity(0.3)
     //   ..strokeWidth = 1;
-    // for (double x = 0; x <= size.width; x += gridSize * minimapScale) {
+    // for (double x = 0; x <= size.width; x += baseUnitSize * minimapScale) {
     //   canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     // }
-    // for (double y = 0; y <= size.height; y += gridSize * minimapScale) {
+    // for (double y = 0; y <= size.height; y += baseUnitSize * minimapScale) {
     //   canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     // }
 
@@ -1314,8 +1257,8 @@ class MiniMapPainter extends CustomPainter {
           position.dx <= size.width &&
           position.dy >= 0 &&
           position.dy <= size.height) {
-        object.draw(
-            canvas, Paint()..color = object.color, position, minimapScale, gridSize);
+        object.draw(canvas, Paint()..color = object.color, position,
+            minimapScale, baseUnitSize);
       }
     }
 
@@ -1367,8 +1310,8 @@ class ActionBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            const BoxShadow(
+          boxShadow: const [
+            BoxShadow(
                 color: Colors.black26, blurRadius: 5, offset: Offset(0, 3))
           ],
         ),
@@ -1424,14 +1367,14 @@ class FloatingButtons extends StatelessWidget {
         children: [
           FloatingActionButton(
             onPressed: controller.centerCanvas,
-            child: const Icon(Icons.center_focus_strong),
             tooltip: "Centrar lienzo",
+            child: const Icon(Icons.center_focus_strong),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
             onPressed: controller.resetZoom,
-            child: const Icon(Icons.zoom_out_map),
             tooltip: "Zoom predeterminado",
+            child: const Icon(Icons.zoom_out_map),
           ),
         ],
       ),

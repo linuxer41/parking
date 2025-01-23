@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-
+import 'package:flutter/services.dart'; // Para cargar imágenes desde assets
+import 'dart:ui' as ui; // Para usar ui.Image
 import 'grid_object.dart';
 
 enum SpotObjectType { car, bus, truck, van, motorcycle, bicycle }
@@ -9,48 +10,78 @@ enum SpotObjectCategory { standart, vip, electric, handicap }
 class SpotObject extends GridObject {
   final SpotObjectType type;
   final SpotObjectCategory category;
-  String label;
+  String label; // Código del spot (ejemplo: A4)
   bool isFree;
+  bool isSelected;
+  Color? tintColor; // Nuevo: Color para aplicar a la imagen
+  String? vehiclePlate; // Placa del vehículo (null si está libre)
 
   // Tamaños predefinidos para cada tipo de spot
   static const Map<SpotObjectType, Size> spotSizes = {
-    SpotObjectType.car: Size(2.5, 5), // 2.5m x 5m
-    SpotObjectType.bus: Size(3, 12),  // 3m x 12m
-    SpotObjectType.truck: Size(3, 8), // 3m x 8m
-    SpotObjectType.van: Size(2.5, 6), // 2.5m x 6m
-    SpotObjectType.motorcycle: Size(1, 2), // 1m x 2m
-    SpotObjectType.bicycle: Size(0.8, 1.5), // 0.8m x 1.5m
+    SpotObjectType.car: Size(2 * 2, 4 * 2),
+    SpotObjectType.bus: Size(2.5 * 2, 12 * 2),
+    SpotObjectType.truck: Size(2.5 * 2, 8 * 2),
+    SpotObjectType.van: Size(2 * 2, 5 * 2),
+    SpotObjectType.motorcycle: Size(1 * 2, 2 * 2),
+    SpotObjectType.bicycle: Size(5 * 2, 1.5 * 2),
   };
 
   // Colores predefinidos para cada categoría
   static const Map<SpotObjectCategory, Color> categoryColors = {
-    SpotObjectCategory.standart: Colors.blue,
-    SpotObjectCategory.vip: Colors.purple,
-    SpotObjectCategory.electric: Colors.green,
-    SpotObjectCategory.handicap: Colors.orange,
+    SpotObjectCategory.standart: Color(0xFF4A90E2), // Azul suave
+    SpotObjectCategory.vip: Color(0xFFDAA520), // Dorado
+    SpotObjectCategory.electric: Color(0xFF32CD32), // Verde lima
+    SpotObjectCategory.handicap: Color(0xFFFF6347), // Coral
   };
+
+  // Nombres de las imágenes locales para cada tipo de spot
+  static const Map<SpotObjectType, String> spotImages = {
+    SpotObjectType.car: 'assets/spot/Car.png',
+    SpotObjectType.bus: 'assets/spot/Bus.png',
+    SpotObjectType.truck: 'assets/spot/Truck.png',
+    SpotObjectType.van: 'assets/spot/Van.png',
+    SpotObjectType.motorcycle: 'assets/spot/Motorcycle.png',
+    SpotObjectType.bicycle: 'assets/spot/Bicycle.png',
+  };
+
+  // Mapa para almacenar las imágenes cargadas
+  static final Map<SpotObjectType, ui.Image> _loadedImages = {};
 
   SpotObject({
     super.position = const Offset(0, 0),
-    this.label = "",
+    required this.label, // Código del spot (ejemplo: A4)
     this.isFree = true,
+    this.isSelected = false,
+    this.tintColor, // Nuevo: Color para aplicar a la imagen
+    this.vehiclePlate, // Placa del vehículo (null si está libre)
     required this.type,
     required this.category,
   }) : super(
-          width: spotSizes[type]!.width, // Tamaño basado en el tipo
-          height: spotSizes[type]!.height, // Tamaño basado en el tipo
-          color: categoryColors[category]!, // Color basado en la categoría
+          width: spotSizes[type]!.width,
+          height: spotSizes[type]!.height,
+          color: categoryColors[category]!,
         );
+
+  // Método para cargar las imágenes (debe llamarse antes de usar los objetos)
+  static Future<void> loadImages() async {
+    for (final entry in spotImages.entries) {
+      final imagePath = entry.value;
+      final ByteData imageData = await rootBundle.load(imagePath);
+      final codec = await ui.instantiateImageCodec(imageData.buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+      _loadedImages[entry.key] = frame.image;
+    }
+  }
 
   @override
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double gridSize) {
+      double scaledGrid) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / gridSize).round() * gridSize,
-      (position.dy / gridSize).round() * gridSize,
+      (position.dx / scaledGrid).round() * scaledGrid,
+      (position.dy / scaledGrid).round() * scaledGrid,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
@@ -58,95 +89,163 @@ class SpotObject extends GridObject {
     final rect = Rect.fromLTWH(
       0,
       0,
-      width * gridSize,
-      height * gridSize,
+      width * scaledGrid,
+      height * scaledGrid,
     );
-    final radius = Radius.circular(10); // Bordes redondeados
-
-    // Color de fondo basado en la categoría
-    paint.color = isFree ? color : Colors.grey; // Si no está libre, se marca en gris
+    const radius = Radius.circular(4);
+    paint.color = isFree ? color : color.withAlpha(128);
     paint.style = PaintingStyle.fill;
     canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), paint);
 
     // Dibujar el borde con sombra
     final borderPaint = Paint()
-      ..color = Colors.black
+      ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 1;
     canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), borderPaint);
 
-    // Dibujar un icono o símbolo según el tipo de spot
-    _drawSpotIcon(canvas, rect);
+    // Dibujar la imagen solo si el spot está ocupado
+    if (!isFree) {
+      _drawSpotImage(canvas, rect, tintColor: tintColor);
+    }
 
     // Dibujar el texto
-    final textPainter = TextPainter(
+    _drawLabel(canvas, rect);
+
+    canvas.restore(); // Equilibrar canvas.save()
+  }
+
+  void _drawSpotImage(Canvas canvas, Rect rect, {Color? tintColor = Colors.blue}) {
+    final image = _loadedImages[type]; // Obtener la imagen cargada
+    if (image == null) return; // Si la imagen no está cargada, no hacer nada
+
+    // Calcular la relación de aspecto de la imagen original
+    final imageAspectRatio = image.width / image.height;
+
+    // Calcular el tamaño máximo que la imagen puede tener dentro del rectángulo
+    final maxImageWidth = rect.width * 0.95; // 95% del ancho del rectángulo
+    final maxImageHeight = rect.height * 0.95; // 95% del alto del rectángulo
+
+    // Calcular el tamaño de la imagen respetando su relación de aspecto
+    double imageWidth, imageHeight;
+    if (maxImageWidth / maxImageHeight > imageAspectRatio) {
+      // Si el espacio disponible es más ancho que la imagen, ajustar por altura
+      imageHeight = maxImageHeight;
+      imageWidth = imageHeight * imageAspectRatio;
+    } else {
+      // Si el espacio disponible es más alto que la imagen, ajustar por ancho
+      imageWidth = maxImageWidth;
+      imageHeight = imageWidth / imageAspectRatio;
+    }
+
+    // Calcular la posición de la imagen (centrada horizontalmente y verticalmente)
+    final imageOffset = Offset(
+      (rect.width - imageWidth) / 2, // Centrar horizontalmente
+      (rect.height - imageHeight) / 2, // Centrar verticalmente
+    );
+
+    // Dibujar la imagen original primero
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(imageOffset.dx, imageOffset.dy, imageWidth, imageHeight),
+      Paint(),
+    );
+
+    // Si se proporciona un tintColor, aplicar un filtro solo a los colores naranja y rojo
+    if (tintColor != null) {
+      // Crear una máscara para los colores naranja y rojo
+      final maskPaint = Paint()
+        ..colorFilter = ColorFilter.mode(tintColor, BlendMode.srcIn)
+        ..blendMode = BlendMode.srcIn;
+
+      // Dibujar la imagen nuevamente, pero solo los píxeles que coincidan con la máscara
+      canvas.saveLayer(
+        Rect.fromLTWH(imageOffset.dx, imageOffset.dy, imageWidth, imageHeight),
+        maskPaint,
+      );
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Rect.fromLTWH(imageOffset.dx, imageOffset.dy, imageWidth, imageHeight),
+        Paint()..colorFilter = ColorFilter.mode(
+          Colors.white.withOpacity(0.5), // Ajusta la opacidad según sea necesario
+          BlendMode.srcIn,
+        ),
+      );
+      canvas.restore();
+    }
+  }
+
+  void _drawLabel(Canvas canvas, Rect rect) {
+    // Texto del código del spot (label)
+    final spotCodePainter = TextPainter(
       text: TextSpan(
-        text: label,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: (width * gridSize) / 4,
+        text: label, // Código del spot (ejemplo: A4)
+        style: const TextStyle(
+          color: Colors.white, // Texto en blanco
+          fontSize: 12,
           fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black.withOpacity(0.5),
-              blurRadius: 2,
-              offset: Offset(1, 1),
-            ),
-          ],
         ),
       ),
       textDirection: TextDirection.ltr,
     );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        (width * gridSize - textPainter.width) / 2,
-        (height * gridSize - textPainter.height) / 2,
+    spotCodePainter.layout();
+
+    // Texto de la placa o "LIBRE"
+    final plateOrFreePainter = TextPainter(
+      text: TextSpan(
+        text: isFree ? "LIBRE" : vehiclePlate ?? "", // Placa o "LIBRE"
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+      textDirection: TextDirection.ltr,
     );
+    plateOrFreePainter.layout();
 
-    canvas.restore();
-  }
+    // Posicionamiento del texto
+    if (isFree) {
+      // Si el spot está libre, centrar ambos textos
+      final totalHeight = spotCodePainter.height + plateOrFreePainter.height + 4; // Espacio entre textos
+      final startY = (rect.height - totalHeight) / 2;
 
-  void _drawSpotIcon(Canvas canvas, Rect rect) {
-    final iconPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+      // Dibujar el código del spot
+      spotCodePainter.paint(
+        canvas,
+        Offset(
+          (rect.width - spotCodePainter.width) / 2,
+          startY,
+        ),
+      );
 
-    switch (type) {
-      case SpotObjectType.car:
-        _drawCarIcon(canvas, rect, iconPaint);
-        break;
-      default:
-        _drawBusIcon(canvas, rect, iconPaint);
-        break;
-        
+      // Dibujar "LIBRE"
+      plateOrFreePainter.paint(
+        canvas,
+        Offset(
+          (rect.width - plateOrFreePainter.width) / 2,
+          startY + spotCodePainter.height + 4, // Espacio entre textos
+        ),
+      );
+    } else {
+      // Si el spot está ocupado, el código del spot va arriba y la placa abajo
+      spotCodePainter.paint(
+        canvas,
+        Offset(
+          (rect.width - spotCodePainter.width) / 2,
+          rect.height * 0.1, // Espacio desde la parte superior
+        ),
+      );
+
+      plateOrFreePainter.paint(
+        canvas,
+        Offset(
+          (rect.width - plateOrFreePainter.width) / 2,
+          rect.height * 0.85, // Espacio desde la parte superior
+        ),
+      );
     }
   }
-
-  void _drawCarIcon(Canvas canvas, Rect rect, Paint paint) {
-    // Dibujar un icono de auto simple
-    final path = Path();
-    path.moveTo(rect.left + rect.width * 0.2, rect.top + rect.height * 0.5);
-    path.lineTo(rect.left + rect.width * 0.8, rect.top + rect.height * 0.5);
-    path.lineTo(rect.left + rect.width * 0.7, rect.top + rect.height * 0.7);
-    path.lineTo(rect.left + rect.width * 0.3, rect.top + rect.height * 0.7);
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  void _drawBusIcon(Canvas canvas, Rect rect, Paint paint) {
-    // Dibujar un icono de bus simple
-    final path = Path();
-    path.addRect(Rect.fromLTWH(
-      rect.left + rect.width * 0.1,
-      rect.top + rect.height * 0.3,
-      rect.width * 0.8,
-      rect.height * 0.4,
-    ));
-    canvas.drawPath(path, paint);
-  }
-
-  // Métodos similares para _drawTruckIcon, _drawVanIcon, _drawMotorcycleIcon, _drawBicycleIcon
 }

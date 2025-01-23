@@ -40,7 +40,7 @@ class MiniMap extends StatelessWidget {
               canvasOffset: controller.canvasOffset,
               zoom: controller.zoom,
               viewportSize: viewportSize,
-              gridSize: 10,
+              baseUnitSize: 10,
             ),
           ),
         ),

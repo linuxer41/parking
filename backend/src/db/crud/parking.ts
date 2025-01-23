@@ -20,25 +20,7 @@ inner join t_company on t_company.id = t_parking."companyId"
     const sql =  `select t_parking.* , to_jsonb(t_company.*) as "company",
   (
       SELECT
-          json_agg(
-              to_jsonb(t_level.*) || jsonb_build_object(
-                  'areas', (
-                      SELECT
-                          json_agg(
-                              to_jsonb(t_area.*) || jsonb_build_object(
-                                  'spots', (
-                                      SELECT
-                                          json_agg(to_jsonb(t_spot.*))
-                                      FROM t_spot
-                                      WHERE t_spot."areaId" = t_area.id
-                                  )
-                              )
-                          )
-                      FROM t_area
-                      WHERE t_area."levelId" = t_level.id
-                  )
-              )
-          )
+          json_agg(to_jsonb(t_level.*))
       FROM t_level
       WHERE t_level."parkingId" = t_parking.id
   ) AS levels

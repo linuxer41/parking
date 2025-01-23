@@ -39,7 +39,7 @@ function SpotBookingPopoverForm() {
 
   function handleBookParkingSpot() {
     const changedState = produce(currentParkingLot, draft => {
-      const parkingSpace = draft?.floors[0].spaces.find(space => space.id === selectedObject?.id);
+      const parkingSpace = draft?.floors[0]?.spaces.find(space => space.id === selectedObject?.id);
       if ( parkingSpace ) {
         parkingSpace.bookings.push({
           bookingRefId: "asdawdasd",

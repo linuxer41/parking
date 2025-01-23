@@ -106,7 +106,7 @@ function ParkingSpaceRendererPage() {
             currentParkingLot && (
               <>
                 {
-                  ...currentParkingLot.floors[0].spaces.map(space => (
+                  ...currentParkingLot.floors[0]?.spaces.map(space => (
                     <ParkingSpace
                       position={space.position}
                       rotation={space.rotation}

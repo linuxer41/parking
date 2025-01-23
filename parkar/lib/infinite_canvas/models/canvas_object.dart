@@ -10,7 +10,6 @@ abstract class InfiniteCanvasObject {
   Offset position;
   Color color;
   double rotation;
-  
 
   InfiniteCanvasObject({
     required this.position,
@@ -20,9 +19,10 @@ abstract class InfiniteCanvasObject {
   });
 
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double gridSize);
+      double baseUnitSize);
 
-  bool contains(Offset point, Offset canvasOffset, double scale, double gridSize);
+  bool contains(
+      Offset point, Offset canvasOffset, double scale, double baseUnitSize);
 
   Offset rotatePoint(Offset point, double angle) {
     final radians = angle * (math.pi / 180);

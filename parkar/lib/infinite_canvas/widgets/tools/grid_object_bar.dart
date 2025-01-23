@@ -34,6 +34,8 @@ class GridObjectBar extends StatelessWidget {
                 SpotObject(
                   type: SpotObjectType.car,
                   category: SpotObjectCategory.standart,
+                  label: 'A1',
+                  vehiclePlate: 'ABC123',
                 ),
               ),
               tooltip: "Spot",
@@ -42,7 +44,7 @@ class GridObjectBar extends StatelessWidget {
               icon: const Icon(Icons.directions_car),
               onPressed: () => controller.addGridObjectNode(
                 IndicatorObject(
-                  label: '',
+                  label: 'Entrada',
                   type: InidicatorObjectType.entrance,
                 ),
               ),
@@ -52,7 +54,7 @@ class GridObjectBar extends StatelessWidget {
               icon: const Icon(Icons.directions_car),
               onPressed: () => controller.addGridObjectNode(
                 IndicatorObject(
-                  label: '',
+                  label: 'Salida',
                   type: InidicatorObjectType.exit,
                 ),
               ),
@@ -62,7 +64,7 @@ class GridObjectBar extends StatelessWidget {
               icon: const Icon(Icons.directions_car),
               onPressed: () => controller.addGridObjectNode(
                 OfficeObject(
-                  label: '',
+                  label: 'Oficina',
                 ),
               ),
               tooltip: "Oficina",

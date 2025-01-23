@@ -28,9 +28,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         displayInfoBar(
           context,
           builder: (context, close) {
-            return InfoBar(
-              title: const Text('Error'),
-              content: const Text('Las contraseñas no coinciden.'),
+            return const InfoBar(
+              title: Text('Error'),
+              content: Text('Las contraseñas no coinciden.'),
               severity: InfoBarSeverity.error,
             );
           },
@@ -82,9 +82,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       displayInfoBar(
         context,
         builder: (context, close) {
-          return InfoBar(
-            title: const Text('Error'),
-            content: const Text('Todos los campos son obligatorios.'),
+          return const InfoBar(
+            title: Text('Error'),
+            content: Text('Todos los campos son obligatorios.'),
             severity: InfoBarSeverity.error,
           );
         },

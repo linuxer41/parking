@@ -17,6 +17,8 @@ class MenuItem {
 }
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -53,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
           'Historial',
           overflow: TextOverflow.ellipsis,
         ),
-        body: Text('Historial'),
+        body: const Text('Historial'),
       ),
       PaneItem(
         icon: const Icon(FluentIcons.settings),
@@ -61,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
           'Ajustes',
           overflow: TextOverflow.ellipsis,
         ),
-        body: Text('Ajustes'),
+        body: const Text('Ajustes'),
       ),
     ];
     return NavigationView(

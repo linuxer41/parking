@@ -104,7 +104,7 @@ async function main() {
   };
 
   let level = await db.level.findUnique({
-    where: { id: defaultLevel.id },
+    where: { name: defaultLevel.name },
   });
   if (!level) {
     level = await db.level.create({ data: defaultLevel });
@@ -119,6 +119,7 @@ async function main() {
     coordinates: { x0: x0, y0: y0, x1: x0 + 2, y1: y0 + 4 },
     status: "free",
     parkingId: parking.id,
+    levelId: level.id,
   }});
 
   let spots = await db.spot.findMany({

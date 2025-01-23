@@ -25,7 +25,7 @@ import { IParkingSpace } from "@/types/parking";
 function ToolBarReports() {
   const { currentParkingLot } = useRenderer();
 
-  const parkingLotSpaces = currentParkingLot?.floors[0].spaces;
+  const parkingLotSpaces = currentParkingLot?.floors[0]?.spaces || [];
 
   if ( !parkingLotSpaces ) return;
   
