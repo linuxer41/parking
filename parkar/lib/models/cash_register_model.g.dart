@@ -62,11 +62,15 @@ Map<String, dynamic> _$CashRegisterCreateModelToJson(
 CashRegisterUpdateModel _$CashRegisterUpdateModelFromJson(
         Map<String, dynamic> json) =>
     CashRegisterUpdateModel(
-      number: (json['number'] as num).toInt(),
-      employeeId: json['employeeId'] as String,
-      startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
-      status: json['status'] as String,
+      number: (json['number'] as num?)?.toInt(),
+      employeeId: json['employeeId'] as String?,
+      startDate: json['startDate'] == null
+          ? null
+          : DateTime.parse(json['startDate'] as String),
+      endDate: json['endDate'] == null
+          ? null
+          : DateTime.parse(json['endDate'] as String),
+      status: json['status'] as String?,
     );
 
 Map<String, dynamic> _$CashRegisterUpdateModelToJson(
@@ -74,7 +78,7 @@ Map<String, dynamic> _$CashRegisterUpdateModelToJson(
     <String, dynamic>{
       'number': instance.number,
       'employeeId': instance.employeeId,
-      'startDate': instance.startDate.toIso8601String(),
-      'endDate': instance.endDate.toIso8601String(),
+      'startDate': instance.startDate?.toIso8601String(),
+      'endDate': instance.endDate?.toIso8601String(),
       'status': instance.status,
     };

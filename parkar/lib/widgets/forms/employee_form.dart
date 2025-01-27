@@ -47,13 +47,13 @@ class _EmployeeFormState extends State<EmployeeForm> {
             userId: _userIdController.text,
             companyId: _companyIdController.text,
             role: _roleController.text,
-            assignedParkings: []
+            assignedParkings: [],
           );
           await _service.create(newModel);
         } else {
           final updatedModel = EmployeeUpdateModel(
             role: _roleController.text,
-            assignedParkings: []
+            assignedParkings: [],
           );
           await _service.update(widget.model!.id, updatedModel);
         }

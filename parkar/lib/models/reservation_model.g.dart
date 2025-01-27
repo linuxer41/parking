@@ -78,14 +78,18 @@ Map<String, dynamic> _$ReservationCreateModelToJson(
 ReservationUpdateModel _$ReservationUpdateModelFromJson(
         Map<String, dynamic> json) =>
     ReservationUpdateModel(
-      number: (json['number'] as num).toInt(),
-      employeeId: json['employeeId'] as String,
-      vehicleId: json['vehicleId'] as String,
-      spotId: json['spotId'] as String,
-      startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
-      status: json['status'] as String,
-      amount: (json['amount'] as num).toDouble(),
+      number: (json['number'] as num?)?.toInt(),
+      employeeId: json['employeeId'] as String?,
+      vehicleId: json['vehicleId'] as String?,
+      spotId: json['spotId'] as String?,
+      startDate: json['startDate'] == null
+          ? null
+          : DateTime.parse(json['startDate'] as String),
+      endDate: json['endDate'] == null
+          ? null
+          : DateTime.parse(json['endDate'] as String),
+      status: json['status'] as String?,
+      amount: (json['amount'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$ReservationUpdateModelToJson(
@@ -95,8 +99,8 @@ Map<String, dynamic> _$ReservationUpdateModelToJson(
       'employeeId': instance.employeeId,
       'vehicleId': instance.vehicleId,
       'spotId': instance.spotId,
-      'startDate': instance.startDate.toIso8601String(),
-      'endDate': instance.endDate.toIso8601String(),
+      'startDate': instance.startDate?.toIso8601String(),
+      'endDate': instance.endDate?.toIso8601String(),
       'status': instance.status,
       'amount': instance.amount,
     };

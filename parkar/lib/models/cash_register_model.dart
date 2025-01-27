@@ -68,18 +68,18 @@ class CashRegisterCreateModel extends JsonConvertible<CashRegisterCreateModel> {
 
 @JsonSerializable()
 class CashRegisterUpdateModel extends JsonConvertible<CashRegisterUpdateModel> {
-  final int number;
-  final String employeeId;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String status;
+  final int? number;
+  final String? employeeId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? status;
 
   CashRegisterUpdateModel({
-    required this.number,
-    required this.employeeId,
-    required this.startDate,
-    required this.endDate,
-    required this.status,
+    this.number,
+    this.employeeId,
+    this.startDate,
+    this.endDate,
+    this.status,
   });
 
   factory CashRegisterUpdateModel.fromJson(Map<String, dynamic> json) =>

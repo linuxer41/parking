@@ -51,12 +51,12 @@ class UserCreateModel extends JsonConvertible<UserCreateModel> {
 
 @JsonSerializable()
 class UserUpdateModel extends JsonConvertible<UserUpdateModel> {
-  final String name;
-  final String email;
+  final String? name;
+  final String? email;
 
   UserUpdateModel({
-    required this.name,
-    required this.email,
+    this.name,
+    this.email,
   });
 
   factory UserUpdateModel.fromJson(Map<String, dynamic> json) =>

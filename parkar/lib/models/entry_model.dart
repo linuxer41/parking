@@ -74,18 +74,18 @@ class EntryCreateModel extends JsonConvertible<EntryCreateModel> {
 
 @JsonSerializable()
 class EntryUpdateModel extends JsonConvertible<EntryUpdateModel> {
-  final int number;
-  final String employeeId;
-  final String vehicleId;
-  final String spotId;
-  final DateTime dateTime;
+  final int? number;
+  final String? employeeId;
+  final String? vehicleId;
+  final String? spotId;
+  final DateTime? dateTime;
 
   EntryUpdateModel({
-    required this.number,
-    required this.employeeId,
-    required this.vehicleId,
-    required this.spotId,
-    required this.dateTime,
+    this.number,
+    this.employeeId,
+    this.vehicleId,
+    this.spotId,
+    this.dateTime,
   });
 
   factory EntryUpdateModel.fromJson(Map<String, dynamic> json) =>

@@ -19,6 +19,9 @@ class _LevelFormState extends State<LevelForm> {
 
   final _nameController = TextEditingController();
   final _parkingIdController = TextEditingController();
+  final _spotsController = TextEditingController();
+  final _signagesController = TextEditingController();
+  final _facilitiesController = TextEditingController();
 
   @override
   void initState() {
@@ -47,6 +50,9 @@ class _LevelFormState extends State<LevelForm> {
         } else {
           final updatedModel = LevelUpdateModel(
             name: _nameController.text,
+            spots: [],
+            signages: [],
+            facilities: [],
           );
           await _service.update(widget.model!.id, updatedModel);
         }
@@ -96,6 +102,57 @@ class _LevelFormState extends State<LevelForm> {
                 controller: _parkingIdController,
                 decoration: const InputDecoration(
                   labelText: 'ID del estacionamiento al que pertenece el nivel',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _spotsController,
+                decoration: const InputDecoration(
+                  labelText: 'Lugares asociados al nivel',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _signagesController,
+                decoration: const InputDecoration(
+                  labelText: 'Indicadores asociados al nivel',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _facilitiesController,
+                decoration: const InputDecoration(
+                  labelText: 'Oficinas asociadas al nivel',
                 ),
                 validator: (value) {
                   if (true && (value == null || value.isEmpty)) {

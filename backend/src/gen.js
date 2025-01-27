@@ -89,7 +89,7 @@ const entities = {
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
     createFields: ['name', 'companyId'],
-    updateFields: ['name'],
+    updateFields: ['name', 'vehicleTypes', 'params', 'prices', 'subscriptionPlans'],
     imports: ['company'],
     jsonSchemas: {
       VehicleTypeSchema: {
@@ -146,7 +146,7 @@ const entities = {
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
     createFields: ['name', 'parkingId'],
-    updateFields: ['name'],
+    updateFields: ['name', 'spots', 'signages', 'facilities'],
     imports: ['parking'],
     jsonSchemas: {
       SpotSchema: {
@@ -371,29 +371,35 @@ function toSnakeCase(str) {
 
 function getTypeDef(field) {
   const { type, description, required, isArray, composite } = field;
+  
+  // Construir el tipo base con required conservado para documentación
+  let baseType;
+  
   if (type === 'Date') {
-    return `t.Union([
-    t.String(
-      {
+    baseType = `t.Union([
+      t.String({
         description: '${description}',
         required: ${required}
-      }
-    ),
-    t.Date(
-      {
+      }),
+      t.Date({
         description: '${description}',
         required: ${required}
       })
-  ])`;
+    ])`;
+  } else {
+    baseType = composite 
+      ? `${type}Schema`
+      : `t.${type}({
+          description: "${description}",
+          required: ${required}
+        })`;
   }
-  const baseType = composite ? `${type}Schema` : `t.${type}(
-    {
-      description: "${description}",
-      required: ${required}
-    }
-  )`;
 
-  return isArray ? `t.Array(${baseType})` : baseType;
+  // Aplicar Array si es necesario
+  let finalType = isArray ? `t.Array(${baseType})` : baseType;
+
+  // Envolver en Optional al final si no es requerido
+  return required ? finalType : `t.Optional(${finalType})`;
 }
 
 /**

@@ -59,16 +59,18 @@ Map<String, dynamic> _$ExitCreateModelToJson(ExitCreateModel instance) =>
 
 ExitUpdateModel _$ExitUpdateModelFromJson(Map<String, dynamic> json) =>
     ExitUpdateModel(
-      number: (json['number'] as num).toInt(),
-      employeeId: json['employeeId'] as String,
-      dateTime: DateTime.parse(json['dateTime'] as String),
-      amount: (json['amount'] as num).toDouble(),
+      number: (json['number'] as num?)?.toInt(),
+      employeeId: json['employeeId'] as String?,
+      dateTime: json['dateTime'] == null
+          ? null
+          : DateTime.parse(json['dateTime'] as String),
+      amount: (json['amount'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$ExitUpdateModelToJson(ExitUpdateModel instance) =>
     <String, dynamic>{
       'number': instance.number,
       'employeeId': instance.employeeId,
-      'dateTime': instance.dateTime.toIso8601String(),
+      'dateTime': instance.dateTime?.toIso8601String(),
       'amount': instance.amount,
     };

@@ -62,11 +62,13 @@ Map<String, dynamic> _$EntryCreateModelToJson(EntryCreateModel instance) =>
 
 EntryUpdateModel _$EntryUpdateModelFromJson(Map<String, dynamic> json) =>
     EntryUpdateModel(
-      number: (json['number'] as num).toInt(),
-      employeeId: json['employeeId'] as String,
-      vehicleId: json['vehicleId'] as String,
-      spotId: json['spotId'] as String,
-      dateTime: DateTime.parse(json['dateTime'] as String),
+      number: (json['number'] as num?)?.toInt(),
+      employeeId: json['employeeId'] as String?,
+      vehicleId: json['vehicleId'] as String?,
+      spotId: json['spotId'] as String?,
+      dateTime: json['dateTime'] == null
+          ? null
+          : DateTime.parse(json['dateTime'] as String),
     );
 
 Map<String, dynamic> _$EntryUpdateModelToJson(EntryUpdateModel instance) =>
@@ -75,5 +77,5 @@ Map<String, dynamic> _$EntryUpdateModelToJson(EntryUpdateModel instance) =>
       'employeeId': instance.employeeId,
       'vehicleId': instance.vehicleId,
       'spotId': instance.spotId,
-      'dateTime': instance.dateTime.toIso8601String(),
+      'dateTime': instance.dateTime?.toIso8601String(),
     };

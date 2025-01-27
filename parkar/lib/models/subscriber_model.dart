@@ -77,16 +77,16 @@ class SubscriberCreateModel extends JsonConvertible<SubscriberCreateModel> {
 
 @JsonSerializable()
 class SubscriberUpdateModel extends JsonConvertible<SubscriberUpdateModel> {
-  final String planId;
-  final DateTime startDate;
-  final DateTime endDate;
-  final bool isActive;
+  final String? planId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool? isActive;
 
   SubscriberUpdateModel({
-    required this.planId,
-    required this.startDate,
-    required this.endDate,
-    required this.isActive,
+    this.planId,
+    this.startDate,
+    this.endDate,
+    this.isActive,
   });
 
   factory SubscriberUpdateModel.fromJson(Map<String, dynamic> json) =>

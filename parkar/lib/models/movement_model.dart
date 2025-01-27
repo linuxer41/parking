@@ -57,14 +57,14 @@ class MovementCreateModel extends JsonConvertible<MovementCreateModel> {
 
 @JsonSerializable()
 class MovementUpdateModel extends JsonConvertible<MovementUpdateModel> {
-  final String type;
-  final double amount;
-  final String description;
+  final String? type;
+  final double? amount;
+  final String? description;
 
   MovementUpdateModel({
-    required this.type,
-    required this.amount,
-    required this.description,
+    this.type,
+    this.amount,
+    this.description,
   });
 
   factory MovementUpdateModel.fromJson(Map<String, dynamic> json) =>

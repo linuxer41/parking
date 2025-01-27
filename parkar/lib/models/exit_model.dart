@@ -71,16 +71,16 @@ class ExitCreateModel extends JsonConvertible<ExitCreateModel> {
 
 @JsonSerializable()
 class ExitUpdateModel extends JsonConvertible<ExitUpdateModel> {
-  final int number;
-  final String employeeId;
-  final DateTime dateTime;
-  final double amount;
+  final int? number;
+  final String? employeeId;
+  final DateTime? dateTime;
+  final double? amount;
 
   ExitUpdateModel({
-    required this.number,
-    required this.employeeId,
-    required this.dateTime,
-    required this.amount,
+    this.number,
+    this.employeeId,
+    this.dateTime,
+    this.amount,
   });
 
   factory ExitUpdateModel.fromJson(Map<String, dynamic> json) =>

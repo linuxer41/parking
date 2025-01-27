@@ -86,24 +86,24 @@ class ReservationCreateModel extends JsonConvertible<ReservationCreateModel> {
 
 @JsonSerializable()
 class ReservationUpdateModel extends JsonConvertible<ReservationUpdateModel> {
-  final int number;
-  final String employeeId;
-  final String vehicleId;
-  final String spotId;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String status;
-  final double amount;
+  final int? number;
+  final String? employeeId;
+  final String? vehicleId;
+  final String? spotId;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? status;
+  final double? amount;
 
   ReservationUpdateModel({
-    required this.number,
-    required this.employeeId,
-    required this.vehicleId,
-    required this.spotId,
-    required this.startDate,
-    required this.endDate,
-    required this.status,
-    required this.amount,
+    this.number,
+    this.employeeId,
+    this.vehicleId,
+    this.spotId,
+    this.startDate,
+    this.endDate,
+    this.status,
+    this.amount,
   });
 
   factory ReservationUpdateModel.fromJson(Map<String, dynamic> json) =>

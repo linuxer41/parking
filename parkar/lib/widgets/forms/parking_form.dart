@@ -19,12 +19,17 @@ class _ParkingFormState extends State<ParkingForm> {
 
   final _nameController = TextEditingController();
   final _companyIdController = TextEditingController();
+  final _vehicleTypesController = TextEditingController();
+  final _paramsController = TextEditingController();
+  final _pricesController = TextEditingController();
+  final _subscriptionPlansController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     if (widget.model != null) {
       _nameController.text = widget.model!.name.toString();
+      _paramsController.text = widget.model!.params.toString();
     }
   }
 
@@ -32,6 +37,7 @@ class _ParkingFormState extends State<ParkingForm> {
   void dispose() {
     _nameController.dispose();
     _companyIdController.dispose();
+    _paramsController.dispose();
     super.dispose();
   }
 
@@ -47,6 +53,10 @@ class _ParkingFormState extends State<ParkingForm> {
         } else {
           final updatedModel = ParkingUpdateModel(
             name: _nameController.text,
+            vehicleTypes: [],
+            // params: _paramsController.text,
+            prices: [],
+            subscriptionPlans: [],
           );
           await _service.update(widget.model!.id, updatedModel);
         }
@@ -96,6 +106,74 @@ class _ParkingFormState extends State<ParkingForm> {
                 controller: _companyIdController,
                 decoration: const InputDecoration(
                   labelText: 'ID de la empresa a la que pertenece el estacionamiento',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _vehicleTypesController,
+                decoration: const InputDecoration(
+                  labelText: 'Tipos de vehículos permitidos en el estacionamiento',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _paramsController,
+                decoration: const InputDecoration(
+                  labelText: 'Parámetros adicionales del estacionamiento',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _pricesController,
+                decoration: const InputDecoration(
+                  labelText: 'Precios del estacionamiento',
+                ),
+                validator: (value) {
+                  if (true && (value == null || value.isEmpty)) {
+                    return 'Este campo es obligatorio';
+                  }
+                  
+                  
+                  
+                  return null;
+                },
+              ),
+              
+              
+              TextFormField(
+                controller: _subscriptionPlansController,
+                decoration: const InputDecoration(
+                  labelText: 'Planes de suscripción del estacionamiento',
                 ),
                 validator: (value) {
                   if (true && (value == null || value.isEmpty)) {

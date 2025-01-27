@@ -57,14 +57,14 @@ class VehicleCreateModel extends JsonConvertible<VehicleCreateModel> {
 
 @JsonSerializable()
 class VehicleUpdateModel extends JsonConvertible<VehicleUpdateModel> {
-  final String typeId;
-  final String plate;
-  final bool isSubscriber;
+  final String? typeId;
+  final String? plate;
+  final bool? isSubscriber;
 
   VehicleUpdateModel({
-    required this.typeId,
-    required this.plate,
-    required this.isSubscriber,
+    this.typeId,
+    this.plate,
+    this.isSubscriber,
   });
 
   factory VehicleUpdateModel.fromJson(Map<String, dynamic> json) =>

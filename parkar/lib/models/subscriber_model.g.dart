@@ -71,17 +71,21 @@ Map<String, dynamic> _$SubscriberCreateModelToJson(
 SubscriberUpdateModel _$SubscriberUpdateModelFromJson(
         Map<String, dynamic> json) =>
     SubscriberUpdateModel(
-      planId: json['planId'] as String,
-      startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
-      isActive: json['isActive'] as bool,
+      planId: json['planId'] as String?,
+      startDate: json['startDate'] == null
+          ? null
+          : DateTime.parse(json['startDate'] as String),
+      endDate: json['endDate'] == null
+          ? null
+          : DateTime.parse(json['endDate'] as String),
+      isActive: json['isActive'] as bool?,
     );
 
 Map<String, dynamic> _$SubscriberUpdateModelToJson(
         SubscriberUpdateModel instance) =>
     <String, dynamic>{
       'planId': instance.planId,
-      'startDate': instance.startDate.toIso8601String(),
-      'endDate': instance.endDate.toIso8601String(),
+      'startDate': instance.startDate?.toIso8601String(),
+      'endDate': instance.endDate?.toIso8601String(),
       'isActive': instance.isActive,
     };

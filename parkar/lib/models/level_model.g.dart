@@ -53,12 +53,24 @@ Map<String, dynamic> _$LevelCreateModelToJson(LevelCreateModel instance) =>
 
 LevelUpdateModel _$LevelUpdateModelFromJson(Map<String, dynamic> json) =>
     LevelUpdateModel(
-      name: json['name'] as String,
+      name: json['name'] as String?,
+      spots: (json['spots'] as List<dynamic>?)
+          ?.map((e) => SpotModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      signages: (json['signages'] as List<dynamic>?)
+          ?.map((e) => SignageModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      facilities: (json['facilities'] as List<dynamic>?)
+          ?.map((e) => FacilityModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$LevelUpdateModelToJson(LevelUpdateModel instance) =>
     <String, dynamic>{
       'name': instance.name,
+      'spots': instance.spots,
+      'signages': instance.signages,
+      'facilities': instance.facilities,
     };
 
 SpotModel _$SpotModelFromJson(Map<String, dynamic> json) => SpotModel(
@@ -94,6 +106,7 @@ SignageModel _$SignageModelFromJson(Map<String, dynamic> json) => SignageModel(
       posZ: (json['posZ'] as num).toDouble(),
       scale: (json['scale'] as num).toDouble(),
       rotation: (json['rotation'] as num).toDouble(),
+      direction: (json['direction'] as num).toDouble(),
       signageType: (json['signageType'] as num).toInt(),
     );
 
@@ -105,6 +118,7 @@ Map<String, dynamic> _$SignageModelToJson(SignageModel instance) =>
       'posZ': instance.posZ,
       'scale': instance.scale,
       'rotation': instance.rotation,
+      'direction': instance.direction,
       'signageType': instance.signageType,
     };
 

@@ -50,9 +50,9 @@ Map<String, dynamic> _$MovementCreateModelToJson(
 
 MovementUpdateModel _$MovementUpdateModelFromJson(Map<String, dynamic> json) =>
     MovementUpdateModel(
-      type: json['type'] as String,
-      amount: (json['amount'] as num).toDouble(),
-      description: json['description'] as String,
+      type: json['type'] as String?,
+      amount: (json['amount'] as num?)?.toDouble(),
+      description: json['description'] as String?,
     );
 
 Map<String, dynamic> _$MovementUpdateModelToJson(

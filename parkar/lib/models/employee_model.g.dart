@@ -59,9 +59,9 @@ Map<String, dynamic> _$EmployeeCreateModelToJson(
 
 EmployeeUpdateModel _$EmployeeUpdateModelFromJson(Map<String, dynamic> json) =>
     EmployeeUpdateModel(
-      role: json['role'] as String,
-      assignedParkings: (json['assignedParkings'] as List<dynamic>)
-          .map((e) => e as String)
+      role: json['role'] as String?,
+      assignedParkings: (json['assignedParkings'] as List<dynamic>?)
+          ?.map((e) => e as String)
           .toList(),
     );
 

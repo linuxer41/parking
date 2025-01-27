@@ -56,12 +56,29 @@ Map<String, dynamic> _$ParkingCreateModelToJson(ParkingCreateModel instance) =>
 
 ParkingUpdateModel _$ParkingUpdateModelFromJson(Map<String, dynamic> json) =>
     ParkingUpdateModel(
-      name: json['name'] as String,
+      name: json['name'] as String?,
+      vehicleTypes: (json['vehicleTypes'] as List<dynamic>?)
+          ?.map((e) => VehicleTypeModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      params: json['params'] == null
+          ? null
+          : ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
+      prices: (json['prices'] as List<dynamic>?)
+          ?.map((e) => PriceModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      subscriptionPlans: (json['subscriptionPlans'] as List<dynamic>?)
+          ?.map(
+              (e) => SubscriptionPlanModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
     <String, dynamic>{
       'name': instance.name,
+      'vehicleTypes': instance.vehicleTypes,
+      'params': instance.params,
+      'prices': instance.prices,
+      'subscriptionPlans': instance.subscriptionPlans,
     };
 
 VehicleTypeModel _$VehicleTypeModelFromJson(Map<String, dynamic> json) =>

@@ -22,7 +22,7 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     required this.id,
     required this.name,
     required this.companyId,
-     this.company,
+    this.company,
     required this.vehicleTypes,
     required this.params,
     required this.prices,
@@ -57,10 +57,18 @@ class ParkingCreateModel extends JsonConvertible<ParkingCreateModel> {
 
 @JsonSerializable()
 class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
-  final String name;
+  final String? name;
+  final List<VehicleTypeModel>? vehicleTypes;
+  final ParkingParamsModel? params;
+  final List<PriceModel>? prices;
+  final List<SubscriptionPlanModel>? subscriptionPlans;
 
   ParkingUpdateModel({
-    required this.name,
+    this.name,
+    this.vehicleTypes,
+    this.params,
+    this.prices,
+    this.subscriptionPlans,
   });
 
   factory ParkingUpdateModel.fromJson(Map<String, dynamic> json) =>

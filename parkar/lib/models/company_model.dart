@@ -22,11 +22,11 @@ class CompanyModel extends JsonConvertible<CompanyModel> {
     required this.id,
     required this.name,
     required this.email,
-     this.phone,
-     this.logoUrl,
+    this.phone,
+    this.logoUrl,
     required this.userId,
-     this.owner,
-     this.params,
+    this.owner,
+    this.params,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -49,8 +49,8 @@ class CompanyCreateModel extends JsonConvertible<CompanyCreateModel> {
   CompanyCreateModel({
     required this.name,
     required this.email,
-     this.phone,
-     this.logoUrl,
+    this.phone,
+    this.logoUrl,
     required this.userId,
   });
 
@@ -63,18 +63,18 @@ class CompanyCreateModel extends JsonConvertible<CompanyCreateModel> {
 
 @JsonSerializable()
 class CompanyUpdateModel extends JsonConvertible<CompanyUpdateModel> {
-  final String name;
-  final String email;
+  final String? name;
+  final String? email;
   final String? phone;
   final String? logoUrl;
-  final String userId;
+  final String? userId;
 
   CompanyUpdateModel({
-    required this.name,
-    required this.email,
-     this.phone,
-     this.logoUrl,
-    required this.userId,
+    this.name,
+    this.email,
+    this.phone,
+    this.logoUrl,
+    this.userId,
   });
 
   factory CompanyUpdateModel.fromJson(Map<String, dynamic> json) =>

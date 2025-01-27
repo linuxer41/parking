@@ -57,11 +57,11 @@ Map<String, dynamic> _$CompanyCreateModelToJson(CompanyCreateModel instance) =>
 
 CompanyUpdateModel _$CompanyUpdateModelFromJson(Map<String, dynamic> json) =>
     CompanyUpdateModel(
-      name: json['name'] as String,
-      email: json['email'] as String,
+      name: json['name'] as String?,
+      email: json['email'] as String?,
       phone: json['phone'] as String?,
       logoUrl: json['logoUrl'] as String?,
-      userId: json['userId'] as String,
+      userId: json['userId'] as String?,
     );
 
 Map<String, dynamic> _$CompanyUpdateModelToJson(CompanyUpdateModel instance) =>

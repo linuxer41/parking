@@ -47,9 +47,9 @@ Map<String, dynamic> _$VehicleCreateModelToJson(VehicleCreateModel instance) =>
 
 VehicleUpdateModel _$VehicleUpdateModelFromJson(Map<String, dynamic> json) =>
     VehicleUpdateModel(
-      typeId: json['typeId'] as String,
-      plate: json['plate'] as String,
-      isSubscriber: json['isSubscriber'] as bool,
+      typeId: json['typeId'] as String?,
+      plate: json['plate'] as String?,
+      isSubscriber: json['isSubscriber'] as bool?,
     );
 
 Map<String, dynamic> _$VehicleUpdateModelToJson(VehicleUpdateModel instance) =>

@@ -9,64 +9,48 @@ import { CompanySchema } from './company';
 // Modelo Principal
 export const EmployeeSchema = t.Object(
   {
-    id: t.String(
-    {
-      description: "Identificador único del empleado",
-      required: true
-    }
-  ),
-  userId: t.String(
-    {
-      description: "ID del usuario asociado al empleado",
-      required: true
-    }
-  ),
-  user: UserSchema,
-  companyId: t.String(
-    {
-      description: "ID de la empresa a la que pertenece el empleado",
-      required: true
-    }
-  ),
-  company: CompanySchema,
-  role: t.String(
-    {
-      description: "Rol del empleado",
-      required: true
-    }
-  ),
-  assignedParkings: t.Array(t.String(
-    {
-      description: "Estacionamientos asignados al empleado",
-      required: true
-    }
-  )),
+    id: t.String({
+          description: "Identificador único del empleado",
+          required: true
+        }),
+  userId: t.String({
+          description: "ID del usuario asociado al empleado",
+          required: true
+        }),
+  user: t.Optional(UserSchema),
+  companyId: t.String({
+          description: "ID de la empresa a la que pertenece el empleado",
+          required: true
+        }),
+  company: t.Optional(CompanySchema),
+  role: t.String({
+          description: "Rol del empleado",
+          required: true
+        }),
+  assignedParkings: t.Array(t.String({
+          description: "Estacionamientos asignados al empleado",
+          required: true
+        })),
   createdAt: t.Union([
-    t.String(
-      {
+      t.String({
         description: 'Fecha de creación del registro',
         required: true
-      }
-    ),
-    t.Date(
-      {
+      }),
+      t.Date({
         description: 'Fecha de creación del registro',
         required: true
       })
-  ]),
+    ]),
   updatedAt: t.Union([
-    t.String(
-      {
+      t.String({
         description: 'Fecha de última actualización del registro',
         required: true
-      }
-    ),
-    t.Date(
-      {
+      }),
+      t.Date({
         description: 'Fecha de última actualización del registro',
         required: true
       })
-  ]),
+    ]),
   },
   {
     description: 'Esquema principal para la entidad Employee'
@@ -78,30 +62,22 @@ export type Employee = typeof EmployeeSchema.static;
 // Modelo de Creación
 export const EmployeeCreateSchema = t.Object(
   {
-    userId: t.String(
-    {
-      description: "ID del usuario asociado al empleado",
-      required: true
-    }
-  ),
-  companyId: t.String(
-    {
-      description: "ID de la empresa a la que pertenece el empleado",
-      required: true
-    }
-  ),
-  role: t.String(
-    {
-      description: "Rol del empleado",
-      required: true
-    }
-  ),
-  assignedParkings: t.Array(t.String(
-    {
-      description: "Estacionamientos asignados al empleado",
-      required: true
-    }
-  )),
+    userId: t.String({
+          description: "ID del usuario asociado al empleado",
+          required: true
+        }),
+  companyId: t.String({
+          description: "ID de la empresa a la que pertenece el empleado",
+          required: true
+        }),
+  role: t.String({
+          description: "Rol del empleado",
+          required: true
+        }),
+  assignedParkings: t.Array(t.String({
+          description: "Estacionamientos asignados al empleado",
+          required: true
+        })),
   },
   {
   description: 'Esquema para la creación de un Employee'
@@ -113,18 +89,14 @@ export type EmployeeCreate = typeof EmployeeCreateSchema.static;
 // Modelo de Actualización
 export const EmployeeUpdateSchema = t.Object(
   {
-  role: t.String(
-    {
-      description: "Rol del empleado",
-      required: true
-    }
-  ),
-  assignedParkings: t.Array(t.String(
-    {
-      description: "Estacionamientos asignados al empleado",
-      required: true
-    }
-  )),
+  role: t.String({
+          description: "Rol del empleado",
+          required: true
+        }),
+  assignedParkings: t.Array(t.String({
+          description: "Estacionamientos asignados al empleado",
+          required: true
+        })),
   },
   {
   description: 'Esquema para la actualización de un Employee'

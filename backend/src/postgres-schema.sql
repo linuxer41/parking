@@ -84,7 +84,7 @@ CREATE TABLE t_vehicle (
   "id" text primary key not null,
   "parkingId" text not null,
   "typeId" text not null,
-  "plate" text not null unique,
+  "plate" text not null,
   "isSubscriber" boolean not null,
   "createdAt" timestamptz default now() not null,
   "updatedAt" timestamptz default now()

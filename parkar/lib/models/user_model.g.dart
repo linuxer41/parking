@@ -40,8 +40,8 @@ Map<String, dynamic> _$UserCreateModelToJson(UserCreateModel instance) =>
 
 UserUpdateModel _$UserUpdateModelFromJson(Map<String, dynamic> json) =>
     UserUpdateModel(
-      name: json['name'] as String,
-      email: json['email'] as String,
+      name: json['name'] as String?,
+      email: json['email'] as String?,
     );
 
 Map<String, dynamic> _$UserUpdateModelToJson(UserUpdateModel instance) =>

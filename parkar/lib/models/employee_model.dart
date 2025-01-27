@@ -21,9 +21,9 @@ class EmployeeModel extends JsonConvertible<EmployeeModel> {
   EmployeeModel({
     required this.id,
     required this.userId,
-     this.user,
+    this.user,
     required this.companyId,
-     this.company,
+    this.company,
     required this.role,
     required this.assignedParkings,
     required this.createdAt,
@@ -60,12 +60,12 @@ class EmployeeCreateModel extends JsonConvertible<EmployeeCreateModel> {
 
 @JsonSerializable()
 class EmployeeUpdateModel extends JsonConvertible<EmployeeUpdateModel> {
-  final String role;
-  final List<String> assignedParkings;
+  final String? role;
+  final List<String>? assignedParkings;
 
   EmployeeUpdateModel({
-    required this.role,
-    required this.assignedParkings,
+    this.role,
+    this.assignedParkings,
   });
 
   factory EmployeeUpdateModel.fromJson(Map<String, dynamic> json) =>

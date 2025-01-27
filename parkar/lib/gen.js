@@ -72,7 +72,7 @@ const entities = {
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
     createFields: ['name', 'companyId'],
-    updateFields: ['name'],
+    updateFields: ['name', 'vehicleTypes', 'params', 'prices', 'subscriptionPlans'],
     imports: ['company'],
     jsonSchemas: {
       VehicleTypeSchema: {
@@ -129,7 +129,7 @@ const entities = {
       updatedAt: { type: 'Date', composite: false, description: 'Fecha de última actualización del registro', required: true, isArray: false },
     },
     createFields: ['name', 'parkingId'],
-    updateFields: ['name'],
+    updateFields: ['name', 'spots', 'signages', 'facilities'],
     imports: ['parking'],
     jsonSchemas: {
       SpotSchema: {
@@ -156,6 +156,7 @@ const entities = {
           posZ: { type: 'Number', composite: false, description: 'Coordenada Z del indicador', required: true, isArray: false },
           scale: { type: 'Number', composite: false, description: 'Escala del indicador', required: true, isArray: false },
           rotation: { type: 'Number', composite: false, description: 'Rotación del indicador', required: true, isArray: false },
+          direction: { type: 'Number', composite: false, description: 'Dirección del icono de la señal (0-360)', required: true, isArray: false },
           signageType: { type: "Integer", composite: false, description: 'Tipo de indicador (entrada, salida, etc.)', required: true, isArray: false },
         },
         createFields: ['posX', 'posY', 'indicatorType',],
@@ -319,7 +320,7 @@ const entities = {
 };
 
 // Función para convertir tipos de datos
-const parseType = (type, composite, isArray, required) => {
+const parseType = (type, composite, isArray, required, isUpdate = false) => {
   // Convertir tipos específicos
   if (type === 'Date') {
     type = 'DateTime'; // Convertir 'Date' a 'DateTime' en Dart
@@ -342,7 +343,7 @@ const parseType = (type, composite, isArray, required) => {
     type = `List<${type}>`; // Convertir a List<Modelo> si es un array
   }
 
-  return required ? type : `${type}?`;
+  return isUpdate ? `${type}?` : (required ? type : `${type}?`);
 };
 
 // Funciones de utilidad
@@ -393,7 +394,7 @@ class ${entity}Model extends JsonConvertible<${entity}Model> {
 
   ${entity}Model({
     ${Object.entries(fields)
-      .map(([field, { required }]) => `${required ? 'required' : ''} this.${field},`)
+      .map(([field, { required }]) => `${required ? 'required ' : ''}this.${field},`)
       .join('\n    ')}
   });
 
@@ -413,7 +414,7 @@ class ${entity}CreateModel extends JsonConvertible<${entity}CreateModel> {
 
   ${entity}CreateModel({
     ${Object.entries(createFields)
-      .map(([field, { required }]) => `${required ? 'required' : ''} this.${field},`)
+      .map(([field, { required }]) => `${required ? 'required ' : ''}this.${field},`)
       .join('\n    ')}
   });
 
@@ -428,12 +429,12 @@ class ${entity}CreateModel extends JsonConvertible<${entity}CreateModel> {
 class ${entity}UpdateModel extends JsonConvertible<${entity}UpdateModel> {
   ${Object.entries(updateFields)
     .map(([field, { type, composite, isArray, required }]) => 
-      `final ${parseType(type, composite, isArray, required)} ${field};`)
+      `final ${parseType(type, composite, isArray, required, true)} ${field};`)
     .join('\n  ')}
 
   ${entity}UpdateModel({
     ${Object.entries(updateFields)
-      .map(([field, { required }]) => `${required ? 'required' : ''} this.${field},`)
+      .map(([field, { required }]) => `this.${field},`)
       .join('\n    ')}
   });
 
@@ -534,7 +535,7 @@ class _${entity}FormState extends State<${entity}Form> {
             ${Object.entries(fields)
               .filter(([field]) => createFields.includes(field))
               .map(([field, { type, isArray }]) => {
-                if (isArray) return `${field}: []`;
+                if (isArray) return `${field}: [],`;
 
                 if (type === 'Integer') return `${field}: int.parse(_${field}Controller.text),`;
                 else if (type === 'Numeric') return `${field}: double.parse(_${field}Controller.text),`;
@@ -549,7 +550,7 @@ class _${entity}FormState extends State<${entity}Form> {
             ${Object.entries(fields)
               .filter(([field]) => updateFields.includes(field))
               .map(([field, { type, isArray }]) => {
-                if (isArray) return `${field}: []`;
+                if (isArray) return `${field}: [],`;
                 
                 if (type === 'Integer') return `${field}: int.parse(_${field}Controller.text),`;
                 else if (type === 'Numeric') return `${field}: double.parse(_${field}Controller.text),`;

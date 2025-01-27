@@ -21,7 +21,7 @@ class LevelModel extends JsonConvertible<LevelModel> {
     required this.id,
     required this.name,
     required this.parkingId,
-     this.parking,
+    this.parking,
     required this.spots,
     required this.signages,
     required this.facilities,
@@ -55,10 +55,16 @@ class LevelCreateModel extends JsonConvertible<LevelCreateModel> {
 
 @JsonSerializable()
 class LevelUpdateModel extends JsonConvertible<LevelUpdateModel> {
-  final String name;
+  final String? name;
+  final List<SpotModel>? spots;
+  final List<SignageModel>? signages;
+  final List<FacilityModel>? facilities;
 
   LevelUpdateModel({
-    required this.name,
+    this.name,
+    this.spots,
+    this.signages,
+    this.facilities,
   });
 
   factory LevelUpdateModel.fromJson(Map<String, dynamic> json) =>
@@ -111,6 +117,7 @@ class SignageModel extends JsonConvertible<SignageModel> {
   final double posZ;
   final double scale;
   final double rotation;
+  final double direction;
   final int signageType;
 
   SignageModel({
@@ -120,6 +127,7 @@ class SignageModel extends JsonConvertible<SignageModel> {
     required this.posZ,
     required this.scale,
     required this.rotation,
+    required this.direction,
     required this.signageType,
   });
 
