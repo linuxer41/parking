@@ -50,3 +50,43 @@ class ParkingCompositeModel extends ParkingModel {
   @override
   Map<String, dynamic> toJson() => _$ParkingCompositeModelToJson(this);
 }
+
+
+// enum LevelDataActionType { add, update, delete }
+
+// @JsonSerializable()
+// class LevelDataGroupModel {
+//   final List<SpotModel> spots;
+//   final List<FacilityModel> facilities;
+//   final List<SignageModel> signages;
+
+//   LevelDataGroupModel(
+//       {
+//         required this.spots,
+//       required this.facilities,
+//       required this.signages});
+
+//   factory LevelDataGroupModel.fromJson(Map<String, dynamic> json) =>
+//       _$LevelDataGroupModelFromJson(json);
+
+//   @override
+//   Map<String, dynamic> toJson() => _$LevelDataGroupModelToJson(this);
+// }
+
+// @JsonSerializable()
+// class LevelDataHandleModel {
+//   final LevelDataGroupModel toAdd;
+//   final List<LevelDataGroupModel> toUpdate;
+//   final List<LevelDataGroupModel> toDelete;
+
+//   LevelDataHandleModel(
+//       {required this.toAdd,
+//       required this.toUpdate,
+//       required this.toDelete});
+
+//   factory LevelDataHandleModel.fromJson(Map<String, dynamic> json) =>
+//       _$LevelDataHandleModelFromJson(json);
+
+//   @override
+//   Map<String, dynamic> toJson() => _$LevelDataHandleModelToJson(this);
+// }

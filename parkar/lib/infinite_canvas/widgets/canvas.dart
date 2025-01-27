@@ -25,7 +25,7 @@ class InfiniteCanvas extends StatefulWidget {
   });
 
   @override
-  _InfiniteCanvasState createState() => _InfiniteCanvasState();
+  State<InfiniteCanvas> createState() => _InfiniteCanvasState();
 }
 
 class _InfiniteCanvasState extends State<InfiniteCanvas> {
@@ -36,7 +36,8 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
   void initState() {
     super.initState();
     SpotObject.loadImages().then((_) {
-      setState(() {}); // Actualizar el estado cuando las imágenes estén cargadas
+      setState(
+          () {}); // Actualizar el estado cuando las imágenes estén cargadas
     });
     controller = widget.controller ?? InfiniteCanvasController();
     controller.setGridSize(widget.gridSize);
@@ -49,7 +50,7 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
     super.dispose();
   }
 
-    @override
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     viewportSize = MediaQuery.of(context).size;
@@ -91,8 +92,8 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
               final position =
                   (details.localPosition - controller.canvasOffset) /
                       controller.zoom;
-              if (controller.canvasMode == InfiniteCanvasMode.text) {
-                _showEditTextDialog(position);
+              if (controller.canvasMode == DrawingMode.text) {
+                // _showEditTextDialog(position);
               } else {
                 controller.selectObject(position);
               }
@@ -100,31 +101,6 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
         },
       ),
     };
-  }
-
-  void _showEditTextDialog(Offset position) {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Agregar texto"),
-          content: TextField(
-            controller: textController,
-            decoration: const InputDecoration(hintText: "Escribe algo..."),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                controller.addText(position, textController.text);
-                Navigator.of(context).pop();
-              },
-              child: const Text("Agregar"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -160,17 +136,11 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                   child: CustomPaint(
                     size: Size.infinite,
                     painter: InfiniteCanvasPainter(
-                      objects: controller.objects,
-                      selectedObjects: controller.selectedObjects,
-                      gridSize: controller.gridSize,
-                      zoom: controller.zoom,
-                      canvasOffset: controller.canvasOffset,
-                      viewportSize: MediaQuery.of(context).size,
+                      controller: controller,
                       gridColor: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.2),
-                      freeFormPoints: controller.freeFormPoints,
+                          .withAlpha(128),
                     ),
                   ),
                 ),
@@ -179,25 +149,26 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
               //   controller: controller,
               //   viewportSize: MediaQuery.of(context).size,
               // ),
-              Modebar(controller: controller),
-              if (controller.canvasMode == InfiniteCanvasMode.gridObject)
-                GridObjectBar(controller: controller),
-              if (controller.selectedObjects.isNotEmpty && widget.isEditable)
+              if (controller.editMode)
+              Positioned(
+                top: 100,
+                right: 10,
+                child: GridObjectBar(
+                  controller: controller,
+                  orientation: Axis.vertical,
+                ),
+              ),
+              if (controller.editMode && controller.selectedObjects.isNotEmpty && widget.isEditable)
                 ActionBar(controller: controller),
               FloatingButtons(controller: controller),
               Positioned(
-                bottom: 20,
-                left: 20,
+                bottom: 10,
+                left: 10,
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    "Escala: ${controller.gridSize.toStringAsFixed(2)} m/cuadrado",
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                  child: const Text(
+                    "Escala: 0.5m/cuadro",
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -208,6 +179,7 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
     );
   }
 }
+
 class CopyCommand extends Intent {}
 
 class PasteCommand extends Intent {}

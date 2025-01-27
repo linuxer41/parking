@@ -28,29 +28,21 @@ class Modebar extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.directions_car),
               onPressed: () =>
-                  controller.setCanvasMode(InfiniteCanvasMode.gridObject),
-              color: controller.canvasMode == InfiniteCanvasMode.gridObject
-                  ? Colors.blue
-                  : Colors.grey,
+                  controller.setCanvasMode(DrawingMode.gridObject),
+              color:
+                  controller.canvasMode == DrawingMode.gridObject
+                      ? Colors.blue
+                      : Colors.grey,
               tooltip: "Agregar vehículo",
             ),
             IconButton(
               icon: const Icon(Icons.text_fields),
               onPressed: () =>
-                  controller.setCanvasMode(InfiniteCanvasMode.text),
-              color: controller.canvasMode == InfiniteCanvasMode.text
+                  controller.setCanvasMode(DrawingMode.text),
+              color: controller.canvasMode == DrawingMode.text
                   ? Colors.blue
                   : Colors.grey,
               tooltip: "Agregar texto",
-            ),
-            IconButton(
-              icon: const Icon(Icons.brush),
-              onPressed: () =>
-                  controller.setCanvasMode(InfiniteCanvasMode.freeForm),
-              color: controller.canvasMode == InfiniteCanvasMode.freeForm
-                  ? Colors.blue
-                  : Colors.grey,
-              tooltip: "Dibujar forma libre",
             ),
           ],
         ),

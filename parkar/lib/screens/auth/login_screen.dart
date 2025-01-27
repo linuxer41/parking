@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart' as material;
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parkar/services/parking_service.dart';
 import '../../models/user_model.dart';
@@ -25,12 +24,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   Future<void> _submitForm() async {
-    if (_emailController.text.isNotEmpty &&
-        _passwordController.text.isNotEmpty) {
+    if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
       final appState = AppStateContainer.of(context);
       final authService = AppStateContainer.di(context).resolve<AuthService>();
       final userService = AppStateContainer.di(context).resolve<UserService>();
       final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+
       try {
         final response = await authService.login(
           _emailController.text,
@@ -39,31 +38,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (!mounted) return;
 
-        displayInfoBar(
-          context,
-          builder: (context, close) {
-            return InfoBar(
-              title: const Text('Éxito'),
-              content: Text(response['message']),
-              severity: InfoBarSeverity.success,
-            );
-          },
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message']),
+            backgroundColor: Colors.green,
+          ),
         );
+
         final user = UserModel.fromJson(response['data']['user']);
         appState.setAccessToken(response['data']['authToken']);
         appState.setRefreshToken(response['data']['refreshToken']);
         appState.setUser(user);
 
         final companies = await userService.getCompanies(user.id);
-        // if has only one company, set it as the default company
+        // Si solo hay una compañía, seleccionarla por defecto
         if (companies.length == 1) {
-          // if has only one branch, set it as the default branch
+          // Si solo hay un parqueo, seleccionarlo por defecto
           if (companies.first.parkings.length == 1) {
             appState.setCompany(companies.first);
             final targetParking = companies.first.parkings.first;
-            final detailedParkig = await parkingService.getDetailed(targetParking.id);
-            appState.setParking(detailedParkig);
-            // appState.setParking(companies.first.parkings.first);
+            final detailedParking = await parkingService.getDetailed(targetParking.id);
+            appState.setParking(detailedParking);
+            appState.setLevel(detailedParking.levels.first);
             if (mounted) context.go('/home');
             return;
           }
@@ -71,15 +67,11 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) context.go('/init');
       } catch (e) {
         if (mounted) {
-          displayInfoBar(
-            context,
-            builder: (context, close) {
-              return InfoBar(
-                title: const Text('Error'),
-                content: Text('Error al iniciar sesión: $e'),
-                severity: InfoBarSeverity.error,
-              );
-            },
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al iniciar sesión: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -91,38 +83,47 @@ class _LoginScreenState extends State<LoginScreen> {
     return AuthLayout(
       title: 'Iniciar Sesión',
       children: [
-        TextBox(
+        TextField(
           controller: _emailController,
-          placeholder: 'Email',
-        ),
-        const SizedBox(height: 16),
-        TextBox(
-          controller: _passwordController,
-          placeholder: 'Contraseña',
-          obscureText: _obscurePassword,
-          suffix: IconButton(
-            icon: Icon(_obscurePassword ? FluentIcons.view : FluentIcons.hide3),
-            onPressed: () {
-              setState(() {
-                _obscurePassword = !_obscurePassword;
-              });
-            },
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            border: OutlineInputBorder(),
           ),
         ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _passwordController,
+          decoration: InputDecoration(
+            labelText: 'Contraseña',
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+          ),
+          obscureText: _obscurePassword,
+        ),
         const SizedBox(height: 24),
-        FilledButton(
+        ElevatedButton(
           onPressed: _submitForm,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
           child: const Text('Iniciar Sesión'),
         ),
         const SizedBox(height: 16),
-        material.TextButton(
+        TextButton(
           onPressed: () {
             context.go('/forgot-password');
           },
           child: const Text('¿Olvidaste tu contraseña?'),
         ),
         const SizedBox(height: 8),
-        material.TextButton(
+        TextButton(
           onPressed: () {
             context.go('/register');
           },

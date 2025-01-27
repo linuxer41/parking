@@ -11,7 +11,7 @@ class BaseService<
     CreateModel extends JsonConvertible<CreateModel>,
     UpdateModel extends JsonConvertible<UpdateModel>> {
   final http.Client httpClient = http.Client();
-  final String baseUrl = 'http://localhost:3001';
+  final String baseUrl = 'http://192.168.1.2:3001';
   final String path; // Definir el path como propiedad de la clase
   final FromJsonFactory<Model> fromJsonFactory; // Función factory para Model
 

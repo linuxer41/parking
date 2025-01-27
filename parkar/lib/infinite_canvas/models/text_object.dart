@@ -12,17 +12,19 @@ class TextObject extends InfiniteCanvasObject {
     required this.text,
     required super.color,
     this.style = const TextStyle(color: Colors.black, fontSize: 16),
-  }) : super(objectMode: InfiniteCanvasMode.text);
+    super.id,
+    super.objectType = InfiniteCanvasObjectType.text,
+  });
 
   @override
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double baseUnitSize) {
+      double gridSize) {
     canvas.save();
     canvas.translate(canvasOffset.dx, canvasOffset.dy);
     canvas.scale(scale);
     canvas.translate(
-      (position.dx / baseUnitSize).round() * baseUnitSize,
-      (position.dy / baseUnitSize).round() * baseUnitSize,
+      (position.dx / gridSize).round() * gridSize,
+      (position.dy / gridSize).round() * gridSize,
     );
     canvas.rotate(rotation * (math.pi / 180));
 
@@ -49,7 +51,7 @@ class TextObject extends InfiniteCanvasObject {
 
   @override
   bool contains(
-      Offset point, Offset canvasOffset, double scale, double baseUnitSize) {
+      Offset point, Offset canvasOffset, double scale, double gridSize) {
     final transformedPoint = (point - canvasOffset) / scale;
     final rotatedPoint = rotatePoint(transformedPoint - position, -rotation);
     final textPainter = TextPainter(

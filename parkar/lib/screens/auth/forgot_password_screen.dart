@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart' as material;
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../widgets/auth/auth_layout.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
@@ -12,18 +10,24 @@ class ForgotPasswordScreen extends StatelessWidget {
     return AuthLayout(
       title: 'Recuperar Contraseña',
       children: [
-        const TextBox(
-          placeholder: 'Email',
+        const TextField(
+          decoration: InputDecoration(
+            labelText: 'Email',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
-        FilledButton(
+        ElevatedButton(
           onPressed: () {
             // Lógica para enviar el correo de recuperación
           },
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
           child: const Text('Enviar'),
         ),
         const SizedBox(height: 8),
-        material.TextButton(
+        TextButton(
           onPressed: () {
             context.go('/login');
           },

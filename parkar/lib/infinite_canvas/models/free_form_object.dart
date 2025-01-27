@@ -10,7 +10,9 @@ class FreeFormObject extends InfiniteCanvasObject {
     required super.position,
     required super.color,
     required this.points,
-  }) : super(objectMode: InfiniteCanvasMode.freeForm);
+    super.id,
+    super.objectType = InfiniteCanvasObjectType.freeForm,
+  });
 
   @override
   void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,

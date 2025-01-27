@@ -1,20 +1,11 @@
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../models/user_model.dart';
-import '../../state/app_state_container.dart';
-import '../../infinite_canvas/widgets/canvas.dart' as infinity_canvas;
+import 'package:parkar/models/user_model.dart';
+import 'package:parkar/screens/home/profile_screen.dart';
+import 'package:parkar/state/app_state_container.dart';
 
-class MenuItem {
-  final String title;
-  final IconData icon;
-  final Widget? body;
-
-  const MenuItem({
-    required this.title,
-    required this.icon,
-    this.body,
-  });
-}
+import '../../tree/game.dart';
+import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,150 +15,111 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int topIndex = 0; // Índice del elemento seleccionado
-  PaneDisplayMode displayMode =
-      PaneDisplayMode.auto; // Modo de visualización del panel
+  int _selectedIndex = 0; // Índice del elemento seleccionado
+
+  // Lista de elementos de navegación
+  final List<Widget> _screens = [
+     DashboardScreen(),
+    const FlutterGame(),
+    const Center(child: Text('Ajustes')),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final appState = AppStateContainer.of(context); // Accede al estado global
     final UserModel? currentUser = appState.user; // Usuario actual
-    final String currentParking =
-        appState.currentParking?.name ?? "No seleccionado"; // Parqueo actual
-    final theme = FluentTheme.of(context); // Tema actual
+    final bool isMobile = MediaQuery.of(context).size.width < 600; // Detectar móvil
 
-
-    // Lista de elementos de navegación
-    final List<NavigationPaneItem> items = [
-      PaneItem(
-        icon: const Icon(FluentIcons.home),
-        title: const Text(
-          'Inicio',
-          overflow: TextOverflow.ellipsis,
-        ),
-        body: const infinity_canvas.InfiniteCanvas(),
-      ),
-
-      PaneItemSeparator(),
-      PaneItem(
-        icon: const Icon(FluentIcons.history),
-        title: const Text(
-          'Historial',
-          overflow: TextOverflow.ellipsis,
-        ),
-        body: const Text('Historial'),
-      ),
-      PaneItem(
-        icon: const Icon(FluentIcons.settings),
-        title: const Text(
-          'Ajustes',
-          overflow: TextOverflow.ellipsis,
-        ),
-        body: const Text('Ajustes'),
-      ),
-    ];
-    return NavigationView(
-      pane: NavigationPane(
-        selected: topIndex,
-        onChanged: (index) => setState(() => topIndex = index),
-        displayMode: displayMode,
-        items: items,
-        header: Column(
-          children: [
-            // Tarjeta para mostrar el usuario actual
-            Card(
-              backgroundColor: theme.accentColor
-                  .withOpacity(0.1), // Fondo con color de acento
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(FluentIcons.contact,
-                      size: 32, color: Color.fromARGB(255, 231, 8, 8)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Usuario actual',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.inactiveColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          currentUser?.name ?? "No autenticado",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.accentColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+    setState(() {
+        _screens.add(ProfileSettings(
+        onEditProfile: ()=>{},
+        onLogout: () {
+          appState.logout();
+          context.go('/login');
+        },
+        onToggleTheme: () {
+          
+        },
+        userName: currentUser?.name,
+        userEmail: currentUser?.email,
+      ));
+    });
+    return Scaffold(
+      body: Row(
+        children: [
+          if (!isMobile) // Sidebar para escritorio
+            Container(
+              // margin: const EdgeInsets.only(top: 16, bottom: 16),
+              // decoration: BoxDecoration(
+              //   border: Border(
+              //     right: BorderSide(
+              //       color: Theme.of(context).dividerColor.withAlpha(128),
+              //       width: 1,
+              //     ),
+              //   ),
+              // ),
+              child: NavigationRail(
+                labelType: NavigationRailLabelType.all,
+                // indicatorColor: Theme.of(context).colorScheme,
+                // extended: true,
+                elevation: 2,
+                groupAlignment: 0,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) {
+                  setState(() => _selectedIndex = index);
+                },
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home),
+                    label: Text('Inicio'),
                   ),
-                  IconButton(
-                    icon: const Icon(FluentIcons.sign_out),
-                    onPressed: () {
-                      // Lógica para cerrar sesión
-                      appState
-                          .logout(); // Suponiendo que tienes un método `logout` en tu estado global
-                      GoRouter.of(context).go("/login"); // Redirigir al login
-                    },
+                  NavigationRailDestination(
+                    icon: Icon(Icons.history),
+                    label: Text('Historial'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.settings),
+                    label: Text('Ajustes'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person),
+                    label: Text('perfil'),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8), // Espacio entre las tarjetas
-            // Tarjeta para mostrar el parqueo actual
-            Card(
-              backgroundColor: theme.accentColor
-                  .withOpacity(0.1), // Fondo con color de acento
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(FluentIcons.parking_location,
-                      size: 32, color: Color.fromARGB(255, 31, 235, 13)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Parqueo actual',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.inactiveColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          currentParking,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.accentColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(FluentIcons.edit),
-                    onPressed: () {
-                      // Navegar a la pantalla de selección de parqueo
-                      GoRouter.of(context).go("/init");
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          Expanded(
+            child: _screens[_selectedIndex],
+          ),
+        ],
       ),
+      bottomNavigationBar: isMobile
+          ? NavigationBar(
+            // labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: (index) {
+        setState(() => _selectedIndex = index);
+      },
+      destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: 'Inicio',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.history_outlined),
+                  selectedIcon: Icon(Icons.history),
+                  label: 'Historial',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: 'Ajustes',
+                ),
+              ],
+            )
+          : null,
     );
   }
+
 }

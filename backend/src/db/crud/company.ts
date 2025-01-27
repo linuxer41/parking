@@ -10,7 +10,7 @@ class CompanyCrud extends BaseCrud<Company, CompanyCreate, CompanyUpdate> {
 
   baseQuery() {
     return `
-select t_company.* , to_jsonb(t_user.*) as "user"
+select t_company.* , to_jsonb(t_user.*) as "owner"
 from t_company
 inner join t_user on t_user.id = t_company."userId"
 `;
@@ -18,6 +18,7 @@ inner join t_user on t_user.id = t_company."userId"
   async getUserCompaniesDetailed(id: string) {
     const sql = `
         SELECT c.*,
+        to_jsonb(u.*) as "owner",
         (
             SELECT json_agg(
                 to_jsonb(p.*)

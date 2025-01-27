@@ -3,16 +3,33 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart'; // Para cargar imágenes desde assets
 import 'dart:ui' as ui; // Para usar ui.Image
 import 'grid_object.dart';
+import 'helpers/selected_inidcator.dart';
 
 enum SpotObjectType { car, bus, truck, van, motorcycle, bicycle }
+
 enum SpotObjectCategory { standart, vip, electric, handicap }
+
+SpotObjectType intToSpotObjectType(int value) {
+  if (value >= 0 && value < SpotObjectType.values.length) {
+    return SpotObjectType.values[value];
+  } else {
+    return SpotObjectType.car;
+  }
+}
+
+SpotObjectCategory intToSpotObjectCategory(int value) {
+  if (value >= 0 && value < SpotObjectCategory.values.length) {
+    return SpotObjectCategory.values[value];
+  } else {
+    return SpotObjectCategory.standart;
+  }
+}
 
 class SpotObject extends GridObject {
   final SpotObjectType type;
   final SpotObjectCategory category;
   String label; // Código del spot (ejemplo: A4)
   bool isFree;
-  bool isSelected;
   Color? tintColor; // Nuevo: Color para aplicar a la imagen
   String? vehiclePlate; // Placa del vehículo (null si está libre)
 
@@ -28,20 +45,20 @@ class SpotObject extends GridObject {
 
   // Colores predefinidos para cada categoría
   static const Map<SpotObjectCategory, Color> categoryColors = {
-    SpotObjectCategory.standart: Color(0xFF4A90E2), // Azul suave
-    SpotObjectCategory.vip: Color(0xFFDAA520), // Dorado
-    SpotObjectCategory.electric: Color(0xFF32CD32), // Verde lima
-    SpotObjectCategory.handicap: Color(0xFFFF6347), // Coral
+  SpotObjectCategory.standart: Color(0xFF4A90E2), // Azul suave
+  SpotObjectCategory.vip: Color(0xFFDAA520), // Dorado
+  SpotObjectCategory.electric: Color(0xFF32CD32), // Verde lima
+  SpotObjectCategory.handicap: Color(0xFFFF6347), // Coral
   };
 
   // Nombres de las imágenes locales para cada tipo de spot
   static const Map<SpotObjectType, String> spotImages = {
     SpotObjectType.car: 'assets/spot/Car.png',
-    SpotObjectType.bus: 'assets/spot/Bus.png',
+    SpotObjectType.bus: 'assets/spot/Mini_van.png',
     SpotObjectType.truck: 'assets/spot/Truck.png',
-    SpotObjectType.van: 'assets/spot/Van.png',
-    SpotObjectType.motorcycle: 'assets/spot/Motorcycle.png',
-    SpotObjectType.bicycle: 'assets/spot/Bicycle.png',
+    SpotObjectType.van: 'assets/spot/Mini_van.png',
+    SpotObjectType.motorcycle: 'assets/spot/Truck.png',
+    SpotObjectType.bicycle: 'assets/spot/Truck.png',
   };
 
   // Mapa para almacenar las imágenes cargadas
@@ -49,16 +66,15 @@ class SpotObject extends GridObject {
 
   SpotObject({
     super.position = const Offset(0, 0),
-    required this.label, // Código del spot (ejemplo: A4)
+    this.label= '', // Código del spot (ejemplo: A4)
     this.isFree = true,
-    this.isSelected = false,
     this.tintColor, // Nuevo: Color para aplicar a la imagen
     this.vehiclePlate, // Placa del vehículo (null si está libre)
     required this.type,
     required this.category,
+    super.id,
   }) : super(
-          width: spotSizes[type]!.width,
-          height: spotSizes[type]!.height,
+          size: Size(spotSizes[type]!.width, spotSizes[type]!.height),
           color: categoryColors[category]!,
         );
 
@@ -67,43 +83,22 @@ class SpotObject extends GridObject {
     for (final entry in spotImages.entries) {
       final imagePath = entry.value;
       final ByteData imageData = await rootBundle.load(imagePath);
-      final codec = await ui.instantiateImageCodec(imageData.buffer.asUint8List());
+      final codec =
+          await ui.instantiateImageCodec(imageData.buffer.asUint8List());
       final frame = await codec.getNextFrame();
       _loadedImages[entry.key] = frame.image;
     }
   }
 
   @override
-  void draw(Canvas canvas, Paint paint, Offset canvasOffset, double scale,
-      double scaledGrid) {
-    canvas.save();
-    canvas.translate(canvasOffset.dx, canvasOffset.dy);
-    canvas.scale(scale);
-    canvas.translate(
-      (position.dx / scaledGrid).round() * scaledGrid,
-      (position.dy / scaledGrid).round() * scaledGrid,
-    );
-    canvas.rotate(rotation * (math.pi / 180));
-
-    // Dibujar el rectángulo con bordes redondeados
-    final rect = Rect.fromLTWH(
-      0,
-      0,
-      width * scaledGrid,
-      height * scaledGrid,
-    );
-    const radius = Radius.circular(4);
-    paint.color = isFree ? color : color.withAlpha(128);
-    paint.style = PaintingStyle.fill;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), paint);
-
-    // Dibujar el borde con sombra
-    final borderPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), borderPaint);
-
+  void drawContent(
+    Canvas canvas,
+    Paint paint,
+    Rect rect,
+    Offset canvasOffset,
+    double gridSize,
+    double scale,
+  ) {
     // Dibujar la imagen solo si el spot está ocupado
     if (!isFree) {
       _drawSpotImage(canvas, rect, tintColor: tintColor);
@@ -111,11 +106,14 @@ class SpotObject extends GridObject {
 
     // Dibujar el texto
     _drawLabel(canvas, rect);
-
-    canvas.restore(); // Equilibrar canvas.save()
   }
 
-  void _drawSpotImage(Canvas canvas, Rect rect, {Color? tintColor = Colors.blue}) {
+  void toggleStatus() {
+    isFree = !isFree;
+  }
+
+  void _drawSpotImage(Canvas canvas, Rect rect,
+      {Color? tintColor = Colors.blue}) {
     final image = _loadedImages[type]; // Obtener la imagen cargada
     if (image == null) return; // Si la imagen no está cargada, no hacer nada
 
@@ -168,10 +166,12 @@ class SpotObject extends GridObject {
         image,
         Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
         Rect.fromLTWH(imageOffset.dx, imageOffset.dy, imageWidth, imageHeight),
-        Paint()..colorFilter = ColorFilter.mode(
-          Colors.white.withOpacity(0.5), // Ajusta la opacidad según sea necesario
-          BlendMode.srcIn,
-        ),
+        Paint()
+          ..colorFilter = ColorFilter.mode(
+            Colors.white
+                .withOpacity(0.5), // Ajusta la opacidad según sea necesario
+            BlendMode.srcIn,
+          ),
       );
       canvas.restore();
     }
@@ -209,7 +209,9 @@ class SpotObject extends GridObject {
     // Posicionamiento del texto
     if (isFree) {
       // Si el spot está libre, centrar ambos textos
-      final totalHeight = spotCodePainter.height + plateOrFreePainter.height + 4; // Espacio entre textos
+      final totalHeight = spotCodePainter.height +
+          plateOrFreePainter.height +
+          4; // Espacio entre textos
       final startY = (rect.height - totalHeight) / 2;
 
       // Dibujar el código del spot

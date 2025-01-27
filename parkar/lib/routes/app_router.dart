@@ -51,7 +51,7 @@ final _protectedRoutes = [
   ),
   GoRoute(
     path: '/home',
-    builder: (context, state) => HomeScreen(),
+    builder: (context, state) => const HomeScreen(),
     redirect: (context, state) => _checkAuth(context, requireBranchId: true),
   ),
 ];

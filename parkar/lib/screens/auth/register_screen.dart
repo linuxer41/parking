@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart' as material;
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../services/auth_service.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/auth/auth_layout.dart';
@@ -25,15 +23,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordController.text.isNotEmpty &&
         _confirmPasswordController.text.isNotEmpty) {
       if (_passwordController.text != _confirmPasswordController.text) {
-        displayInfoBar(
-          context,
-          builder: (context, close) {
-            return const InfoBar(
-              title: Text('Error'),
-              content: Text('Las contraseñas no coinciden.'),
-              severity: InfoBarSeverity.error,
-            );
-          },
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Las contraseñas no coinciden.'),
+            backgroundColor: Colors.red,
+          ),
         );
         return;
       }
@@ -49,15 +43,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (!mounted) return;
 
-        displayInfoBar(
-          context,
-          builder: (context, close) {
-            return InfoBar(
-              title: const Text('Éxito'),
-              content: Text(response['message']),
-              severity: InfoBarSeverity.success,
-            );
-          },
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message']),
+            backgroundColor: Colors.green,
+          ),
         );
 
         // Redirigir a la vista de creación de compañía
@@ -66,28 +56,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       } catch (e) {
         if (mounted) {
-          displayInfoBar(
-            context,
-            builder: (context, close) {
-              return InfoBar(
-                title: const Text('Error'),
-                content: Text('Error al registrarse: $e'),
-                severity: InfoBarSeverity.error,
-              );
-            },
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al registrarse: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
     } else {
-      displayInfoBar(
-        context,
-        builder: (context, close) {
-          return const InfoBar(
-            title: Text('Error'),
-            content: Text('Todos los campos son obligatorios.'),
-            severity: InfoBarSeverity.error,
-          );
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Todos los campos son obligatorios.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -97,34 +79,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return AuthLayout(
       title: 'Registro',
       children: [
-        TextBox(
+        TextField(
           controller: _nameController,
-          placeholder: 'Nombre',
+          decoration: const InputDecoration(
+            labelText: 'Nombre',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
-        TextBox(
+        TextField(
           controller: _emailController,
-          placeholder: 'Email',
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
-        TextBox(
+        TextField(
           controller: _passwordController,
-          placeholder: 'Contraseña',
+          decoration: const InputDecoration(
+            labelText: 'Contraseña',
+            border: OutlineInputBorder(),
+          ),
           obscureText: true,
         ),
         const SizedBox(height: 16),
-        TextBox(
+        TextField(
           controller: _confirmPasswordController,
-          placeholder: 'Confirmar Contraseña',
+          decoration: const InputDecoration(
+            labelText: 'Confirmar Contraseña',
+            border: OutlineInputBorder(),
+          ),
           obscureText: true,
         ),
         const SizedBox(height: 24),
-        FilledButton(
+        ElevatedButton(
           onPressed: _submitForm,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
           child: const Text('Registrarse'),
         ),
         const SizedBox(height: 16),
-        material.TextButton(
+        TextButton(
           onPressed: () {
             context.go('/login');
           },

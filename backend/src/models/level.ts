@@ -29,6 +29,24 @@ export const SpotSchema = t.Object(
       required: true
     }
   ),
+  posZ: t.Number(
+    {
+      description: "Coordenada Z del lugar",
+      required: true
+    }
+  ),
+  rotation: t.Number(
+    {
+      description: "Rotación del lugar",
+      required: true
+    }
+  ),
+  scale: t.Number(
+    {
+      description: "Escala del lugar",
+      required: true
+    }
+  ),
   vehicleId: t.String(
     {
       description: "ID del vehículo que se encuentra en el lugar",
@@ -41,7 +59,7 @@ export const SpotSchema = t.Object(
       required: true
     }
   ),
-  spotLevel: t.Integer(
+  spotCategory: t.Integer(
     {
       description: "vip, normal, etc.",
       required: true
@@ -56,7 +74,7 @@ export const SpotSchema = t.Object(
 export type Spot = typeof SpotSchema.static;
 
 
-export const IndicatorSchema = t.Object(
+export const SignageSchema = t.Object(
   {
     id: t.String(
     {
@@ -76,7 +94,31 @@ export const IndicatorSchema = t.Object(
       required: true
     }
   ),
-  indicatorType: t.Integer(
+  posZ: t.Number(
+    {
+      description: "Coordenada Z del indicador",
+      required: true
+    }
+  ),
+  scale: t.Number(
+    {
+      description: "Escala del indicador",
+      required: true
+    }
+  ),
+  rotation: t.Number(
+    {
+      description: "Rotación del indicador",
+      required: true
+    }
+  ),
+  direction: t.Number(
+    {
+      description: "Dirección del icono de la señal (0-360)",
+      required: true
+    }
+  ),
+  signageType: t.Integer(
     {
       description: "Tipo de indicador (entrada, salida, etc.)",
       required: true
@@ -84,14 +126,14 @@ export const IndicatorSchema = t.Object(
   ),
   },
   {
-    description: 'Esquema adicional: IndicatorSchema'
+    description: 'Esquema adicional: SignageSchema'
   }
 );
 
-export type Indicator = typeof IndicatorSchema.static;
+export type Signage = typeof SignageSchema.static;
 
 
-export const OfficeSchema = t.Object(
+export const FacilitySchema = t.Object(
   {
     id: t.String(
     {
@@ -117,13 +159,37 @@ export const OfficeSchema = t.Object(
       required: true
     }
   ),
+  posZ: t.Number(
+    {
+      description: "Coordenada Z de la oficina",
+      required: true
+    }
+  ),
+  rotation: t.Number(
+    {
+      description: "Rotación de la oficina",
+      required: true
+    }
+  ),
+  scale: t.Number(
+    {
+      description: "Escala de la oficina",
+      required: true
+    }
+  ),
+  facilityType: t.Integer(
+    {
+      description: "Tipo de oficina (oficina, oficina de entrada, etc.)",
+      required: true
+    }
+  ),
   },
   {
-    description: 'Esquema adicional: OfficeSchema'
+    description: 'Esquema adicional: FacilitySchema'
   }
 );
 
-export type Office = typeof OfficeSchema.static;
+export type Facility = typeof FacilitySchema.static;
 
 
 // Modelo Principal
@@ -149,8 +215,8 @@ export const LevelSchema = t.Object(
   ),
   parking: ParkingSchema,
   spots: t.Array(SpotSchema),
-  indicators: t.Array(IndicatorSchema),
-  offices: t.Array(OfficeSchema),
+  signages: t.Array(SignageSchema),
+  facilities: t.Array(FacilitySchema),
   createdAt: t.Union([
     t.String(
       {

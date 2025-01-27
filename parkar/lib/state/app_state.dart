@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:parkar/models/composite_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:parkar/state/theme.dart';
+import '../state/theme.dart';
+import '../models/composite_models.dart';
+import '../models/level_model.dart';
 import '../models/company_model.dart';
 import '../models/employee_model.dart';
 import '../models/user_model.dart';
@@ -13,6 +14,7 @@ class AppState extends ChangeNotifier {
   CompanyModel? _company;
   EmployeeModel? _employee;
   ParkingCompositeModel? _currentParking;
+  LevelModel? _currentLevel;
   String? _authToken;
   String? _refreshToken;
   AppTheme _theme = AppTheme();
@@ -21,6 +23,7 @@ class AppState extends ChangeNotifier {
   CompanyModel? get company => _company;
   EmployeeModel? get employee => _employee;
   ParkingCompositeModel? get currentParking => _currentParking;
+  LevelModel? get currentLevel => _currentLevel;
   String? get authToken => _authToken;
   String? get refreshToken => _refreshToken;
   AppTheme? get theme => _theme;
@@ -70,6 +73,16 @@ class AppState extends ChangeNotifier {
     if (parkingJson != null) {
       try {
         _currentParking = ParkingCompositeModel.fromJson(jsonDecode(parkingJson));
+      } catch (e) {
+        // pass
+      }
+    }
+
+    // Cargar datos del nivel
+    final levelJson = prefs.getString('level');
+    if (levelJson != null) {
+      try {
+        _currentLevel = LevelModel.fromJson(jsonDecode(levelJson));
       } catch (e) {
         // pass
       }
@@ -129,6 +142,15 @@ class AppState extends ChangeNotifier {
       }
     }
 
+    // Guardar datos del nivel
+    if (_currentLevel != null) {
+      try {
+        await prefs.setString('level', jsonEncode(_currentLevel!.toJson()));
+      } catch (e) {
+        // pass
+      }
+    }
+
     // Guardar tema (si es necesario)
     await prefs.setString('themeMode', _theme.toString());
   }
@@ -157,6 +179,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setLevel(LevelModel? level) {
+    _currentLevel = level;
+    saveState(); // Guardar el estado después de cambiar el parking
+    notifyListeners();
+  }
+
   void setAccessToken(String? authToken) {
     _authToken = authToken;
     saveState(); // Guardar el estado después de cambiar el token
@@ -180,6 +208,7 @@ class AppState extends ChangeNotifier {
     _company = null;
     _employee = null;
     _currentParking = null;
+    _currentLevel = null;
     _authToken = null;
     _refreshToken = null;
     _theme = AppTheme();

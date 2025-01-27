@@ -3,7 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_windows
   flutter_acrylic
+  flutter_angle
   screen_retriever_windows
   system_theme
   window_manager

@@ -1,82 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:parkar/infinite_canvas/widgets/canvas_controller.dart';
 import '../models/canvas_object.dart';
+import '../models/grid_object.dart';
 
 /// Pintor personalizado para el lienzo.
 class InfiniteCanvasPainter extends CustomPainter {
-  final List<InfiniteCanvasObject> objects;
-  final List<InfiniteCanvasObject> selectedObjects;
-  final double gridSize;
-  final double zoom;
-  final Offset canvasOffset;
-  final Size viewportSize;
+  final InfiniteCanvasController controller;
   final Color gridColor;
-  final List<Offset> freeFormPoints;
 
   InfiniteCanvasPainter({
-    required this.objects,
-    required this.selectedObjects,
-    required this.gridSize,
-    required this.zoom,
-    required this.canvasOffset,
-    required this.viewportSize,
     required this.gridColor,
-    required this.freeFormPoints,
+    required this.controller,
   });
 
-  @override
+@override
   void paint(Canvas canvas, Size size) {
     canvas.save();
-    canvas.translate(canvasOffset.dx, canvasOffset.dy);
-    canvas.scale(zoom);
+    canvas.translate(controller.canvasOffset.dx, controller.canvasOffset.dy);
+    canvas.scale(controller.zoom);
 
-    _drawGrid(canvas, size);
-        // Dibujar un indicador redondo en el centro
-    const double radius = 5;
-    final center = Offset((size.width / 2) - (radius / 2), (size.height / 2) - (radius / 2));
-    final centerPaint = Paint()
-      ..color = Colors.blue
-      ..style = PaintingStyle.stroke;
-    canvas.drawCircle(center, radius, centerPaint);
-
-    for (var object in objects) {
-      object.draw(canvas, Paint()..color = object.color, Offset.zero, 1.0, gridSize);
-
-      if (selectedObjects.contains(object)) {
-        final borderPaint = Paint()
-          ..color = const Color.fromARGB(255, 3, 222, 69)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2 / zoom;
-        object.draw(canvas, borderPaint, Offset.zero, 1.0, gridSize);
-      }
+    if (controller.showGrid) {
+      _drawGrid(canvas, size);
     }
 
-    if (freeFormPoints.isNotEmpty) {
-      final path = Path();
-      path.moveTo(freeFormPoints[0].dx, freeFormPoints[0].dy);
-      for (var point in freeFormPoints) {
-        path.lineTo(point.dx, point.dy);
+    for (var object in controller.objects) {
+      if (controller.selectedObjects.lastOrNull == object) {
+        if (object is GridObject) {
+          object.selected = true;
+        }
+      } else {
+        if (object is GridObject) {
+          object.selected = false;
+        }
       }
-      final paint = Paint()
-        ..color = Colors.purple
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2 / zoom;
-      canvas.drawPath(path, paint);
+
+      // Dibujar el objeto con animación de movimiento
+      if (controller.isAnimating.value && object == controller.objects.last) {
+        final startPosition = Offset(size.width / 2, size.height / 2); // Centro de la pantalla
+        final endPosition = object.position;
+
+        // Interpolación lineal para la posición
+        final animatedPosition = Offset.lerp(startPosition, endPosition, 0.5)!;
+
+        object.draw(canvas, Paint()..color = object.color, animatedPosition, controller.gridSize, 1.0);
+      } else {
+        object.draw(canvas, Paint()..color = object.color, Offset.zero, controller.gridSize, 1.0);
+      }
     }
 
     canvas.restore();
   }
-
   void _drawGrid(Canvas canvas, Size size) {
     final gridPaint = Paint()
       ..color = gridColor
-      ..strokeWidth = 1 / zoom;
+      ..strokeWidth = 1 / controller.zoom;
 
-    final startX = (-canvasOffset.dx / zoom / gridSize).floor() * gridSize;
-    final endX = ((size.width - canvasOffset.dx) / zoom / gridSize).ceil() * gridSize;
-    final startY = (-canvasOffset.dy / zoom / gridSize).floor() * gridSize;
-    final endY = ((size.height - canvasOffset.dy) / zoom / gridSize).ceil() * gridSize;
+    final startX = (-controller.canvasOffset.dx / controller.zoom / controller.gridSize).floor() * controller.gridSize;
+    final endX =
+        ((size.width - controller.canvasOffset.dx) / controller.zoom / controller.gridSize).ceil() * controller.gridSize;
+    final startY = (-controller.canvasOffset.dy / controller.zoom / controller.gridSize).floor() * controller.gridSize;
+    final endY =
+        ((size.height - controller.canvasOffset.dy) / controller.zoom / controller.gridSize).ceil() * controller.gridSize;
 
-    for (double x = startX; x <= endX; x += gridSize) {
+    for (double x = startX; x <= endX; x += controller.gridSize) {
       canvas.drawLine(
         Offset(x, startY),
         Offset(x, endY),
@@ -84,7 +70,7 @@ class InfiniteCanvasPainter extends CustomPainter {
       );
     }
 
-    for (double y = startY; y <= endY; y += gridSize) {
+    for (double y = startY; y <= endY; y += controller.gridSize) {
       canvas.drawLine(
         Offset(startX, y),
         Offset(endX, y),

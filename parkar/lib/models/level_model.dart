@@ -12,8 +12,8 @@ class LevelModel extends JsonConvertible<LevelModel> {
   final String parkingId;
   final ParkingModel? parking;
   final List<SpotModel> spots;
-  final List<IndicatorModel> indicators;
-  final List<OfficeModel> offices;
+  final List<SignageModel> signages;
+  final List<FacilityModel> facilities;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,8 +23,8 @@ class LevelModel extends JsonConvertible<LevelModel> {
     required this.parkingId,
      this.parking,
     required this.spots,
-    required this.indicators,
-    required this.offices,
+    required this.signages,
+    required this.facilities,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -75,18 +75,24 @@ class SpotModel extends JsonConvertible<SpotModel> {
   final String name;
   final double posX;
   final double posY;
+  final double posZ;
+  final double rotation;
+  final double scale;
   final String? vehicleId;
   final int spotType;
-  final int spotLevel;
+  final int spotCategory;
 
   SpotModel({
     required this.id,
     required this.name,
     required this.posX,
     required this.posY,
+    required this.posZ,
+    required this.rotation,
+    required this.scale,
      this.vehicleId,
     required this.spotType,
-    required this.spotLevel,
+    required this.spotCategory,
   });
 
   factory SpotModel.fromJson(Map<String, dynamic> json) =>
@@ -98,45 +104,59 @@ class SpotModel extends JsonConvertible<SpotModel> {
 
 
 @JsonSerializable()
-class IndicatorModel extends JsonConvertible<IndicatorModel> {
+class SignageModel extends JsonConvertible<SignageModel> {
   final String id;
   final double posX;
   final double posY;
-  final int indicatorType;
+  final double posZ;
+  final double scale;
+  final double rotation;
+  final int signageType;
 
-  IndicatorModel({
+  SignageModel({
     required this.id,
     required this.posX,
     required this.posY,
-    required this.indicatorType,
+    required this.posZ,
+    required this.scale,
+    required this.rotation,
+    required this.signageType,
   });
 
-  factory IndicatorModel.fromJson(Map<String, dynamic> json) =>
-      _$IndicatorModelFromJson(json);
+  factory SignageModel.fromJson(Map<String, dynamic> json) =>
+      _$SignageModelFromJson(json);
 
   @override
-  Map<String, dynamic> toJson() => _$IndicatorModelToJson(this);
+  Map<String, dynamic> toJson() => _$SignageModelToJson(this);
 }
 
 
 @JsonSerializable()
-class OfficeModel extends JsonConvertible<OfficeModel> {
+class FacilityModel extends JsonConvertible<FacilityModel> {
   final String id;
   final String name;
   final double posX;
   final double posY;
+  final double posZ;
+  final double rotation;
+  final double scale;
+  final int facilityType;
 
-  OfficeModel({
+  FacilityModel({
     required this.id,
     required this.name,
     required this.posX,
     required this.posY,
+    required this.posZ,
+    required this.rotation,
+    required this.scale,
+    required this.facilityType,
   });
 
-  factory OfficeModel.fromJson(Map<String, dynamic> json) =>
-      _$OfficeModelFromJson(json);
+  factory FacilityModel.fromJson(Map<String, dynamic> json) =>
+      _$FacilityModelFromJson(json);
 
   @override
-  Map<String, dynamic> toJson() => _$OfficeModelToJson(this);
+  Map<String, dynamic> toJson() => _$FacilityModelToJson(this);
 }
 

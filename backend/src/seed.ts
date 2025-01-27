@@ -1,7 +1,6 @@
 import { db } from './db';
-import { Company } from './models/company';
-import { Indicator, Office, Spot } from './models/level';
-import { Parking, ParkingCreate, Price, SubscriptionPlan } from './models/parking';
+import { Facility, Signage, Spot } from './models/level';
+import { Price, SubscriptionPlan } from './models/parking';
 
 
 function getUUID() {
@@ -143,71 +142,126 @@ async function main() {
   }
 
 
-  const defaultIndicators: Indicator[] = [];
-  const defaultOffices: Office[] = [];
+  const defaultSignages: Signage[] = [];
+  const defaultFacilities: Facility[] = [];
   const defaultSpots: Spot[] = [];
-  
+
   // Configuración
   const cuadroSize = 15; // Cada cuadro son 15 píxeles
   const spotWidth = 4 * cuadroSize; // Ancho de un spot (60 píxeles)
   const spotHeight = 8 * cuadroSize; // Largo de un spot (120 píxeles)
   const columnSpacing = 1 * cuadroSize; // Separación entre columnas (15 píxeles)
   const rowSpacing = 5 * cuadroSize; // Separación entre filas (75 píxeles)
-  
+
   // Dimensiones de los indicadores y oficinas
   const indicatorWidth = 4 * cuadroSize; // Ancho del indicador (60 píxeles)
   const indicatorHeight = 2 * cuadroSize; // Alto del indicador (30 píxeles)
   const officeSize = 8 * cuadroSize; // Tamaño de la oficina (120 píxeles de ancho y alto)
-  
+
   // Número de filas y columnas
-  const rows = 2; // 2 filas de spots
+  const rows = 3; // 3 filas (1 fila de spots, 1 fila de señales, 1 fila de spots)
   const columns = 15; // 15 columnas de spots
-  
-  // Generar los spots
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < columns; col++) {
+
+  // Posición inicial
+  let offsetX = 0;
+  let offsetY = 0;
+
+  // Agregar la primera oficina en la posición inicial
+  defaultFacilities.push({
+      id: getUUID(),
+      posX: offsetX,
+      posY: offsetY,
+      posZ: 0,
+      rotation: 0,
+      scale: 1,
+      name: "Oficina",
+      facilityType: 0, // Oficina
+  });
+
+  // Ajustar el offsetY para la siguiente fila
+  offsetY += officeSize + rowSpacing;
+
+  // Generar los spots en la primera fila
+  for (let col = 0; col < columns; col++) {
       const posX = col * (spotWidth + columnSpacing);
-      const posY = row * (spotHeight + rowSpacing);
-  
+      const posY = offsetY;
+
       defaultSpots.push({
-        id: getUUID(),
-        name: `Lugar ${row * columns + col + 1}`,
-        posX,
-        posY,
-        vehicleId: '',
-        spotType: 0,
-        spotLevel: 0,
+          id: getUUID(),
+          name: `A ${col + 1}`,
+          posX,
+          posY,
+          posZ: 0,
+          rotation: 0,
+          scale: 1,
+          vehicleId: '',
+          spotType: 0,
+          spotCategory: 0,
       });
-    }
   }
-  
-  // Generar los indicadores (entrada y salida)
-  for (let row = 0; row < rows - 1; row++) {
-    const posY = (row + 1) * (spotHeight + rowSpacing) - rowSpacing / 2;
-  
-    // Indicador de entrada (izquierda)
-    defaultIndicators.push({
+
+  // Ajustar el offsetY para la fila de señales
+  offsetY += spotHeight + rowSpacing;
+
+  // Generar los indicadores (entrada y salida) en la segunda fila
+  const posYSignals = offsetY - rowSpacing / 2;
+
+  // Indicador de entrada (izquierda)
+  defaultSignages.push({
       id: getUUID(),
       posX: 0,
-      posY: posY - indicatorHeight / 2, // Ajustar la posición Y para centrar el indicador
-      indicatorType: 0, // Entrada
-    });
-  
-    // Indicador de salida (derecha)
-    defaultIndicators.push({
+      posY: posYSignals - indicatorHeight / 2,
+      posZ: 0,
+      rotation: 0,
+      scale: 1,
+      direction: 0, // derecha
+      signageType: 0, // Entrada
+  });
+
+  // Indicador de salida (derecha)
+  defaultSignages.push({
       id: getUUID(),
       posX: columns * (spotWidth + columnSpacing) - indicatorWidth,
-      posY: posY - indicatorHeight / 2, // Ajustar la posición Y para centrar el indicador
-      indicatorType: 1, // salida
-    });
+      posY: posYSignals - indicatorHeight / 2,
+      posZ: 0,
+      rotation: 0,
+      scale: 1,
+      direction: 0, // derecha
+      signageType: 1, // Salida
+  });
+
+  // Ajustar el offsetY para la tercera fila de spots
+  offsetY += rowSpacing;
+
+  // Generar los spots en la tercera fila
+  for (let col = 0; col < columns; col++) {
+      const posX = col * (spotWidth + columnSpacing);
+      const posY = offsetY;
+
+      defaultSpots.push({
+          id: getUUID(),
+          name: `B ${ col + 1}`,
+          posX,
+          posY,
+          posZ: 0,
+          rotation: 0,
+          scale: 1,
+          vehicleId: '',
+          spotType: 0,
+          spotCategory: 0,
+      });
   }
-  
-  // Generar la oficina (parte superior derecha)
-  defaultOffices.push({
-    id: getUUID(),
-    posX: columns * (spotWidth + columnSpacing) - officeSize,
-    posY: 0,
-    name: "Oficina",
+
+  // Generar la oficina en la parte superior derecha
+  defaultFacilities.push({
+      id: getUUID(),
+      posX: columns * (spotWidth + columnSpacing) - officeSize,
+      posY: 0,
+      posZ: 0,
+      rotation: 0,
+      scale: 1,
+      name: "Oficina",
+      facilityType: 0, // Oficina
   });
 
   // Verificar e insertar nivel
@@ -216,8 +270,8 @@ async function main() {
     name: "Nivel 1",
     parkingId: parking.id,
     spots: defaultSpots,
-    indicators: defaultIndicators,
-    offices: defaultOffices,
+    signages: defaultSignages,
+    facilities: defaultFacilities,
   };
 
   let level = await db.level.findUnique({

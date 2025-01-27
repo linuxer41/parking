@@ -7,14 +7,14 @@ class MiniMapPainter extends CustomPainter {
   final Offset canvasOffset;
   final double zoom;
   final Size viewportSize;
-  final double baseUnitSize;
+  final double gridSize;
 
   MiniMapPainter({
     required this.objects,
     required this.canvasOffset,
     required this.zoom,
     required this.viewportSize,
-    required this.baseUnitSize,
+    required this.gridSize,
   });
 
   @override
@@ -28,10 +28,10 @@ class MiniMapPainter extends CustomPainter {
     // final gridPaint = Paint()
     //   ..color = Colors.grey.withOpacity(0.3)
     //   ..strokeWidth = 1;
-    // for (double x = 0; x <= size.width; x += baseUnitSize * minimapScale) {
+    // for (double x = 0; x <= size.width; x += gridSize * minimapScale) {
     //   canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     // }
-    // for (double y = 0; y <= size.height; y += baseUnitSize * minimapScale) {
+    // for (double y = 0; y <= size.height; y += gridSize * minimapScale) {
     //   canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     // }
 
@@ -45,8 +45,8 @@ class MiniMapPainter extends CustomPainter {
           position.dx <= size.width &&
           position.dy >= 0 &&
           position.dy <= size.height) {
-        object.draw(canvas, Paint()..color = object.color, position,
-            minimapScale, baseUnitSize);
+        object.draw(canvas, Paint()..color = object.color, position, gridSize,
+            minimapScale);
       }
     }
 
