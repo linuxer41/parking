@@ -22,7 +22,8 @@ class InfiniteCanvasController extends ChangeNotifier {
   final List<ChangedObject> _changedObjects = [];
   final ValueNotifier<int> objectCountNotifier = ValueNotifier(0);
   final ValueNotifier<int> changesCountNotifier = ValueNotifier(0);
-  final ValueNotifier<bool> _isAnimating = ValueNotifier(false); // Control de animación
+  final ValueNotifier<bool> _isAnimating =
+      ValueNotifier(false); // Control de animación
 
   ValueNotifier<bool> get isAnimating => _isAnimating;
   DrawingMode _canvasMode = DrawingMode.gridObject;
@@ -33,6 +34,7 @@ class InfiniteCanvasController extends ChangeNotifier {
   double _gridSize = 15.0;
   bool _showGrid = false;
   bool _editMode = false;
+  Offset _mousePosition = Offset.zero;
   Size viewportSize = Size.zero;
 
   // Callbacks
@@ -53,6 +55,13 @@ class InfiniteCanvasController extends ChangeNotifier {
   bool get showGrid => _showGrid;
   bool get editMode => _editMode;
 
+  Offset get mousePosition => _mousePosition;
+
+  void updateMousePosition(Offset position) {
+    _mousePosition = position;
+    notifyListeners();
+  }
+
   void clear() {
     _objects.clear();
     _selectedObjects.clear();
@@ -63,7 +72,9 @@ class InfiniteCanvasController extends ChangeNotifier {
   }
 
   // Método para agregar/actualizar objetos modificados
-  void _addToChangedObjects({required InfiniteCanvasObject object, ChangeType type = ChangeType.add}) {
+  void _addToChangedObjects(
+      {required InfiniteCanvasObject object,
+      ChangeType type = ChangeType.add}) {
     if (!editMode) return;
     final changedObject = ChangedObject(object: object, type: type);
     final index = _changedObjects.indexWhere((o) => o.object.id == object.id);
@@ -145,26 +156,50 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onPanUpdate(DragUpdateDetails details) {
     final delta = (details.localPosition - _dragStart!) / _zoom;
-    if ( _editMode && _selectedObjects.isNotEmpty && _objectDragStart != null) {
-      final newPosition = _objectDragStart! + delta;
-      bool canMove = true;
-      for (var object in _objects) {
-        if (object != _selectedObjects.first &&
-            _checkCollision(_selectedObjects.first, newPosition, object)) {
-          canMove = false;
-          break;
+    
+    if (_editMode && _selectedObjects.isNotEmpty && _objectDragStart != null) {
+      // Calcular el cambio acumulado desde la última actualización de posición
+      final currentDelta = Offset(
+        (_objectDragStart!.dx + delta.dx),
+        (_objectDragStart!.dy + delta.dy),
+      );
+      
+      // Calcular la diferencia entre la posición actual y la última posición actualizada
+      final diffX = (currentDelta.dx - _selectedObjects.first.position.dx).abs();
+      final diffY = (currentDelta.dy - _selectedObjects.first.position.dy).abs();
+      
+      // Solo actualizar si el cambio en X o Y supera el GRID_SIZE
+      if (diffX >= gridSize || diffY >= gridSize) {
+        // Redondear a la cuadrícula más cercana
+        final newPosition = Offset(
+          (currentDelta.dx / gridSize).round() * gridSize,
+          (currentDelta.dy / gridSize).round() * gridSize,
+        );
+        
+        bool canMove = true;
+        // Verificar colisiones
+        for (var object in _objects) {
+          if (object != _selectedObjects.first &&
+              _checkCollision(_selectedObjects.first, newPosition, object)) {
+            canMove = false;
+            break;
+          }
         }
-      }
-      if (canMove) {
-        for (var object in _selectedObjects) {
-          object.position = newPosition;
-          _addToChangedObjects(object: object, type: ChangeType.update);
+        
+        // Actualizar posición si no hay colisiones
+        if (canMove) {
+          for (var object in _selectedObjects) {
+            object.position = newPosition;
+            _addToChangedObjects(object: object, type: ChangeType.update);
+          }
         }
       }
     } else {
+      // Mover el canvas
       _canvasOffset += delta;
       _dragStart = details.localPosition;
     }
+    
     notifyListeners();
   }
 
@@ -301,12 +336,12 @@ class InfiniteCanvasController extends ChangeNotifier {
     _selectedObjects.clear();
     _selectedObjects.add(object);
     _objects.add(object);
-    _addToChangedObjects(object:object, type: ChangeType.add);
+    _addToChangedObjects(object: object, type: ChangeType.add);
     _isAnimating.value = true;
-      Future.delayed(const Duration(milliseconds: 150), () {
+    Future.delayed(const Duration(milliseconds: 150), () {
       _isAnimating.value = false; // Finalizar animación después de 300ms
     });
-    
+
     notifyListeners();
   }
 
@@ -354,7 +389,6 @@ class InfiniteCanvasController extends ChangeNotifier {
       notifyListeners();
     }
   }
-
 
   void centerCanvas() {
     _canvasOffset = Offset.zero;

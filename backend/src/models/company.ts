@@ -109,18 +109,18 @@ export type CompanyCreate = typeof CompanyCreateSchema.static;
 // Modelo de Actualización
 export const CompanyUpdateSchema = t.Object(
   {
-  name: t.String({
+  name: t.Optional(t.String({
           description: "Nombre de la empresa",
           required: true
-        }),
-  userId: t.String({
+        })),
+  userId: t.Optional(t.String({
           description: "ID del usuario que creó la empresa",
           required: true
-        }),
-  email: t.String({
+        })),
+  email: t.Optional(t.String({
           description: "Correo electrónico de la empresa",
           required: true
-        }),
+        })),
   phone: t.Optional(t.String({
           description: "Número de teléfono de la empresa",
           required: false

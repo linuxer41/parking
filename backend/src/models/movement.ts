@@ -87,18 +87,18 @@ export type MovementCreate = typeof MovementCreateSchema.static;
 // Modelo de Actualización
 export const MovementUpdateSchema = t.Object(
   {
-  type: t.String({
+  type: t.Optional(t.String({
           description: "Tipo de movimiento (ingreso, egreso)",
           required: true
-        }),
-  amount: t.Numeric({
+        })),
+  amount: t.Optional(t.Numeric({
           description: "Monto del movimiento",
           required: true
-        }),
-  description: t.String({
+        })),
+  description: t.Optional(t.String({
           description: "Descripción del movimiento",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un Movement'

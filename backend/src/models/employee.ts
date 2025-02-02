@@ -89,14 +89,14 @@ export type EmployeeCreate = typeof EmployeeCreateSchema.static;
 // Modelo de Actualización
 export const EmployeeUpdateSchema = t.Object(
   {
-  role: t.String({
+  role: t.Optional(t.String({
           description: "Rol del empleado",
           required: true
-        }),
-  assignedParkings: t.Array(t.String({
+        })),
+  assignedParkings: t.Optional(t.Array(t.String({
           description: "Estacionamientos asignados al empleado",
           required: true
-        })),
+        }))),
   },
   {
   description: 'Esquema para la actualización de un Employee'

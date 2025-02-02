@@ -181,7 +181,7 @@ class SpotObject extends GridObject {
     // Texto del código del spot (label)
     final spotCodePainter = TextPainter(
       text: TextSpan(
-        text: label, // Código del spot (ejemplo: A4)
+        text: "${label}x${position.dx},${position.dy}", // Código del spot (ejemplo: A4)
         style: const TextStyle(
           color: Colors.white, // Texto en blanco
           fontSize: 12,

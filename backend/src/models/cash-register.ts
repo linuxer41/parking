@@ -129,15 +129,15 @@ export type CashRegisterCreate = typeof CashRegisterCreateSchema.static;
 // Modelo de Actualización
 export const CashRegisterUpdateSchema = t.Object(
   {
-  number: t.Integer({
+  number: t.Optional(t.Integer({
           description: "Número de la caja",
           required: true
-        }),
-  employeeId: t.String({
+        })),
+  employeeId: t.Optional(t.String({
           description: "ID del empleado asociado",
           required: true
-        }),
-  startDate: t.Union([
+        })),
+  startDate: t.Optional(t.Union([
       t.String({
         description: 'Fecha de inicio de la caja',
         required: true
@@ -146,8 +146,8 @@ export const CashRegisterUpdateSchema = t.Object(
         description: 'Fecha de inicio de la caja',
         required: true
       })
-    ]),
-  endDate: t.Union([
+    ])),
+  endDate: t.Optional(t.Union([
       t.String({
         description: 'Fecha de fin de la caja',
         required: true
@@ -156,11 +156,11 @@ export const CashRegisterUpdateSchema = t.Object(
         description: 'Fecha de fin de la caja',
         required: true
       })
-    ]),
-  status: t.String({
+    ])),
+  status: t.Optional(t.String({
           description: "Estado de la caja (activa, inactiva, etc.)",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un CashRegister'

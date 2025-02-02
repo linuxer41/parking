@@ -145,10 +145,62 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                   ),
                 ),
               ),
+              // Listener(
+              //   onPointerMove: (PointerMoveEvent event) {
+              //     // Actualiza la posición del mouse en el controlador
+              //     controller.updateMousePosition(event.localPosition);
+              //   },
+              //   child: CustomPaint(
+              //     size: Size.infinite,
+              //     painter: InfiniteCanvasPainter(
+              //       controller: controller,
+              //       gridColor: Theme.of(context)
+              //           .colorScheme
+              //           .onSurface
+              //           .withAlpha(128),
+              //     ),
+              //   ),
+              // ),
               // MiniMap(
               //   controller: controller,
               //   viewportSize: MediaQuery.of(context).size,
               // ),
+              Positioned(
+                bottom: 10,
+                right: 10,
+                child: ValueListenableBuilder<Offset>(
+                  valueListenable: ValueNotifier(controller.mousePosition),
+                  builder: (context, position, child) {
+                    // Convertir la posición del mouse a coordenadas del lienzo
+                    final canvasPosition = (position - controller.canvasOffset) / controller.zoom;
+                    final x = (canvasPosition.dx / controller.gridSize).toStringAsFixed(2);
+                    final y = (canvasPosition.dy / controller.gridSize).toStringAsFixed(2);
+
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 5,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        "X: $x, Y: $y",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
               if (controller.editMode)
               Positioned(
                 top: 100,

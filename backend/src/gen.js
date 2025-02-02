@@ -369,7 +369,7 @@ function toSnakeCase(str) {
 }
 
 
-function getTypeDef(field) {
+function getTypeDef(field, isUpdate = false) {
   const { type, description, required, isArray, composite } = field;
   
   // Construir el tipo base con required conservado para documentación
@@ -399,7 +399,7 @@ function getTypeDef(field) {
   let finalType = isArray ? `t.Array(${baseType})` : baseType;
 
   // Envolver en Optional al final si no es requerido
-  return required ? finalType : `t.Optional(${finalType})`;
+  return isUpdate ? `t.Optional(${finalType})` : (required ? finalType : `t.Optional(${finalType})`);
 }
 
 /**
@@ -595,7 +595,7 @@ export const ${entity}UpdateSchema = t.Object(
   {
   ${updateFields
     .map((field) => {
-      return `${field}: ${getTypeDef(fields[field])},`;
+      return `${field}: ${getTypeDef(fields[field], true)},`;
     })
     .join('\n  ')}
   },

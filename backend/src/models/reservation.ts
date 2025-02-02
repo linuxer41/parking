@@ -3,7 +3,7 @@ import { t } from 'elysia';
 import { ParkingSchema } from './parking';
 import { EmployeeSchema } from './employee';
 import { VehicleSchema } from './vehicle';
-import { LevelSchema } from './level';
+import { LevelSchema, SpotSchema } from './level';
 
 // Esquemas JSON adicionales
 // No hay esquemas adicionales
@@ -157,23 +157,23 @@ export type ReservationCreate = typeof ReservationCreateSchema.static;
 // Modelo de Actualización
 export const ReservationUpdateSchema = t.Object(
   {
-  number: t.Integer({
+  number: t.Optional(t.Integer({
           description: "Número de la reserva",
           required: true
-        }),
-  employeeId: t.String({
+        })),
+  employeeId: t.Optional(t.String({
           description: "ID del empleado asociado",
           required: true
-        }),
-  vehicleId: t.String({
+        })),
+  vehicleId: t.Optional(t.String({
           description: "ID del vehículo que realiza la reserva",
           required: true
-        }),
-  spotId: t.String({
+        })),
+  spotId: t.Optional(t.String({
           description: "ID del puesto reservado",
           required: true
-        }),
-  startDate: t.Union([
+        })),
+  startDate: t.Optional(t.Union([
       t.String({
         description: 'Fecha y hora de inicio de la reserva',
         required: true
@@ -182,8 +182,8 @@ export const ReservationUpdateSchema = t.Object(
         description: 'Fecha y hora de inicio de la reserva',
         required: true
       })
-    ]),
-  endDate: t.Union([
+    ])),
+  endDate: t.Optional(t.Union([
       t.String({
         description: 'Fecha y hora de fin de la reserva',
         required: true
@@ -192,15 +192,15 @@ export const ReservationUpdateSchema = t.Object(
         description: 'Fecha y hora de fin de la reserva',
         required: true
       })
-    ]),
-  status: t.String({
+    ])),
+  status: t.Optional(t.String({
           description: "Estado de la reserva (activa, cancelada, etc.)",
           required: true
-        }),
-  amount: t.Numeric({
+        })),
+  amount: t.Optional(t.Numeric({
           description: "Monto de la reserva",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un Reservation'

@@ -1,0 +1,910 @@
+file: -- components\collider.dart
+
+import 'dart:ui';
+
+class ColliderComponent {
+  Rect rect;
+
+  ColliderComponent({required this.rect});
+}
+    
+
+file: -- components\draggable.dart
+
+class DraggableComponent {}
+    
+
+file: -- components\renderable.dart
+class RenderableComponent {
+  String imagePath;
+  bool isOccupied;
+
+  RenderableComponent({required this.imagePath, this.isOccupied = false});
+}
+
+file: -- components\transform.dart
+
+import 'package:flutter/material.dart';
+
+class TransformComponent {
+  double x;
+  double y;
+  double z;
+  Size size;
+  double scale;
+  double rotation;
+
+  TransformComponent({
+    required this.x,
+    required this.y,
+    this.z = 0.0,
+    this.scale = 1.0,
+    this.rotation = 0.0,
+    this.size = const Size(1, 1),
+  });
+}
+    
+
+file: -- core\entity_system.dart
+import '../components/transform.dart';
+import '../components/renderable.dart';
+import '../components/collider.dart';
+import '../components/draggable.dart';
+
+class Entity {
+  String id;
+  TransformComponent transform;
+  RenderableComponent? renderable;
+  ColliderComponent? collider;
+  DraggableComponent? draggable;
+
+  Entity({
+    required this.id,
+    required this.transform,
+    this.renderable,
+    this.collider,
+    this.draggable,
+  });
+}
+
+class EntitySystem {
+  List<Entity> entities = [];
+
+  void addEntity(Entity entity) {
+    entities.add(entity);
+  }
+
+  void update() {
+    for (var entity in entities) {
+      // Actualizar la posición de la entidad si tiene un componente de transformación
+      if (entity.transform != null) {
+        // Aquí puedes agregar lógica de actualización para cada entidad
+      }
+    }
+  }
+}
+
+file: -- core\game_engine.dart
+import 'dart:async';
+import 'entity_system.dart';
+import 'rendering/renderer.dart';
+import 'physics/collision.dart';
+import 'input/gesture_handler.dart';
+
+class GameEngine {
+  final EntitySystem entitySystem;
+  final Renderer renderer;
+  final CollisionDetector collisionDetector;
+  final GestureHandler gestureHandler;
+
+  GameEngine({
+    required this.entitySystem,
+    required this.renderer,
+    required this.collisionDetector,
+    required this.gestureHandler,
+  });
+
+  void start() {
+    Timer.periodic(const Duration(milliseconds: 16), (timer) {
+      update();
+      render();
+    });
+  }
+
+  void update() {
+    // Actualizar la lógica del juego
+    entitySystem.update();
+    collisionDetector.update();
+    gestureHandler.update(); // Actualizar la lógica de entrada
+  }
+
+  void render() {
+    // Renderizar el juego
+    renderer.render();
+  }
+}
+
+file: -- core\input\gesture_handler.dart
+// core/input/gesture_handler.dart
+import 'package:flutter/material.dart';
+import '../entity_system.dart';
+import '../rendering/renderer.dart';
+
+class GestureHandler {
+  Entity? selectedEntity;
+  Offset? lastPosition;
+  final Renderer renderer;
+  final EntitySystem entitySystem;
+
+  GestureHandler({required this.renderer, required this.entitySystem});
+
+  void handleTapDown(TapDownDetails details) {
+    // Convertir coordenadas de pantalla a coordenadas de mundo
+    final worldPos = _screenToWorldPosition(details.localPosition);
+    selectedEntity = findEntityAtPosition(worldPos);
+    print("Entidad seleccionada: ${selectedEntity?.id}");
+    lastPosition = details.localPosition;
+  }
+
+  void handleScaleStart(ScaleStartDetails details) {
+    lastPosition = details.focalPoint;
+  }
+
+  void handleScaleUpdate(ScaleUpdateDetails details) {
+    if (lastPosition == null) {
+      lastPosition = details.focalPoint;
+      return;
+    }
+
+    final delta = details.focalPoint - lastPosition!;
+    lastPosition = details.focalPoint;
+
+    if (selectedEntity != null && selectedEntity!.draggable != null) {
+      // Mover la entidad seleccionada
+      selectedEntity!.transform.x += delta.dx / renderer.camera.zoom;
+      selectedEntity!.transform.y += delta.dy / renderer.camera.zoom;
+      
+      // Actualizar el rectángulo del colisionador
+      if (selectedEntity!.collider != null) {
+        selectedEntity!.collider!.rect = Rect.fromLTWH(
+          selectedEntity!.transform.x,
+          selectedEntity!.transform.y,
+          selectedEntity!.collider!.rect.width,
+          selectedEntity!.collider!.rect.height,
+        );
+      }
+    } else {
+      // Mover la cámara
+      renderer.camera.translate(-delta.dx / renderer.camera.zoom, -delta.dy / renderer.camera.zoom);
+    }
+
+    // Manejar zoom
+    if (details.scale != 1.0) {
+      final oldZoom = renderer.camera.zoom;
+      renderer.camera.zoom *= details.scale;
+      // Limitar el zoom entre 0.5 y 3.0
+      renderer.camera.zoom = renderer.camera.zoom.clamp(0.5, 3.0);
+      
+      // Ajustar la posición de la cámara para mantener el punto focal
+      if (oldZoom != renderer.camera.zoom) {
+        final focalPoint = _screenToWorldPosition(details.focalPoint);
+        final scale = renderer.camera.zoom / oldZoom;
+        renderer.camera.x = focalPoint.dx - (focalPoint.dx - renderer.camera.x) * scale;
+        renderer.camera.y = focalPoint.dy - (focalPoint.dy - renderer.camera.y) * scale;
+      }
+    }
+  }
+
+  void handleScaleEnd(ScaleEndDetails details) {
+    lastPosition = null;
+  }
+
+  Offset _screenToWorldPosition(Offset screenPos) {
+    return Offset(
+      (screenPos.dx + renderer.camera.x) / renderer.camera.zoom,
+      (screenPos.dy + renderer.camera.y) / renderer.camera.zoom,
+    );
+  }
+
+  Entity? findEntityAtPosition(Offset position) {
+    // Recorrer las entidades en orden inverso para seleccionar la que está encima
+    for (var entity in entitySystem.entities.reversed) {
+      if (entity.collider != null) {
+        final rect = entity.collider!.rect;
+        if (rect.contains(position)) {
+          return entity;
+        }
+      }
+    }
+    return null;
+  }
+
+  void update() {
+    // Actualizar lógica adicional si es necesario
+  }
+}
+
+file: -- core\physics\collision.dart
+
+import 'package:flutter/material.dart';
+import 'spatial_grid.dart';
+
+class CollisionDetector {
+  final SpatialGrid spatialGrid;
+
+  CollisionDetector({required this.spatialGrid});
+
+  void update() {
+    // Aquí puedes agregar lógica de detección de colisiones
+  }
+}
+    
+
+file: -- core\physics\spatial_grid.dart
+
+import 'package:flutter/material.dart';
+
+class SpatialGrid {
+  // Implementación de una cuadrícula espacial para optimizar la detección de colisiones
+}
+    
+
+file: -- core\rendering\camera.dart
+
+import 'package:flutter/material.dart';
+
+class Camera {
+  double x = 0;
+  double y = 0;
+  double zoom = 1.0;
+
+  void translate(double dx, double dy) {
+    x += dx;
+    y += dy;
+  }
+
+  void zoomIn() {
+    zoom += 0.1;
+  }
+
+  void zoomOut() {
+    zoom -= 0.1;
+  }
+}
+    
+
+file: -- core\rendering\renderer.dart
+
+import 'camera.dart';
+import 'sprite_batch.dart';
+
+class Renderer {
+  final Camera camera;
+
+  Renderer({required this.camera});
+
+  void render() {
+    // Aquí puedes agregar lógica de renderizado
+    // spriteBatch.render(camera);
+  }
+}
+
+file: -- core\rendering\sprite_batch.dart
+import 'camera.dart';
+
+class SpriteBatch {
+  final List<Sprite> sprites = [];
+
+  void addSprite(Sprite sprite) {
+    sprites.add(sprite);
+  }
+
+  void render(Camera camera) {
+    // Aquí puedes agregar lógica de dibujo
+    // Por ejemplo, dibujar cada sprite con la transformación de la cámara
+  }
+}
+
+class Sprite {
+  String imagePath;
+  double x;
+  double y;
+  double width;
+  double height;
+
+  Sprite({
+    required this.imagePath,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+}
+    
+
+file: -- core\screen_controller.dart
+// core/screen_controller.dart
+import 'dart:ui';
+
+import '../entities/facility.dart';
+import '../entities/signage.dart';
+import '../entities/spot.dart';
+import '../core/entity_system.dart';
+import '../components/transform.dart';
+
+class ScreenController {
+  final EntitySystem entitySystem;
+
+  ScreenController({required this.entitySystem});
+
+  void addParkingSpot(Offset position, SpotType type, {bool isOccupied = false}) {
+    entitySystem.addEntity(ParkingSpot(
+      id: 'spot_${DateTime.now().millisecondsSinceEpoch}',
+      transform: TransformComponent(x: position.dx, y: position.dy),
+      type: type,
+      isOccupied: isOccupied,
+    ));
+  }
+
+  void addFacility(Offset position, FacilityType type) {
+    entitySystem.addEntity(Facility(
+      id: 'facility_${DateTime.now().millisecondsSinceEpoch}',
+      transform: TransformComponent(x: position.dx, y: position.dy),
+      type: type,
+    ));
+  }
+
+  void addSignage(Offset position, SignageType type) {
+    entitySystem.addEntity(Signage(
+      id: 'signage_${DateTime.now().millisecondsSinceEpoch}',
+      transform: TransformComponent(x: position.dx, y: position.dy),
+      type: type,
+    ));
+  }
+
+  void removeEntity(String id) {
+    entitySystem.entities.removeWhere((entity) => entity.id == id);
+  }
+
+  void selectEntity(Entity? entity) {
+    // Aquí puedes agregar lógica adicional para manejar la selección
+    print("Entidad seleccionada: ${entity?.id}");
+  }
+}
+
+file: -- entities\facility.dart
+import '../components/transform.dart';
+import '../components/renderable.dart';
+import '../components/collider.dart';
+import '../components/draggable.dart';
+import '../core/entity_system.dart';
+import 'package:flutter/material.dart';
+
+enum FacilityType {
+  elevator,
+  staircase,
+  paymentKiosk,
+  restroom
+}
+
+class Facility extends Entity {
+  final FacilityType type;
+  
+  Facility({
+    required String id,
+    required TransformComponent transform,
+    required this.type,
+  }) : super(
+    id: id,
+    transform: transform,
+    renderable: RenderableComponent(imagePath: ''),
+    collider: ColliderComponent(
+      rect: Rect.fromLTWH(transform.x, transform.y, 40, 40)
+    ),
+    draggable: DraggableComponent()
+  );
+
+  Color get facilityColor {
+    switch (type) {
+      case FacilityType.elevator: return Colors.grey;
+      case FacilityType.staircase: return Colors.brown;
+      case FacilityType.paymentKiosk: return Colors.yellow;
+      case FacilityType.restroom: return Colors.lightBlue;
+    }
+  }
+}
+
+file: -- entities\signage.dart
+import '../components/transform.dart';
+import '../components/renderable.dart';
+import '../components/collider.dart';
+import '../components/draggable.dart';
+import '../core/entity_system.dart';
+import 'package:flutter/material.dart';
+
+enum SignageType {
+  exit,
+  entrance,
+  via,
+  parking,
+  noParking,
+  disabled
+}
+
+class Signage extends Entity {
+  final SignageType type;
+  
+  Signage({
+    required String id,
+    required TransformComponent transform,
+    required this.type,
+  }) : super(
+    id: id,
+    transform: transform,
+    renderable: RenderableComponent(imagePath: ''),
+    collider: ColliderComponent(
+      rect: Rect.fromLTWH(transform.x, transform.y, 20, 20)
+    ),
+    draggable: DraggableComponent()
+  );
+
+  Color get signageColor {
+    switch (type) {
+      case SignageType.exit: return Colors.red;
+      case SignageType.entrance: return Colors.green;
+      case SignageType.via: return Colors.orange;
+      case SignageType.parking: return Colors.blue;
+      case SignageType.noParking: return Colors.red.shade300;
+      case SignageType.disabled: return Colors.indigo;
+    }
+  }
+}
+
+file: -- entities\spot.dart
+import '../components/transform.dart';
+import '../components/renderable.dart';
+import '../components/collider.dart';
+import '../components/draggable.dart';
+import '../core/entity_system.dart';
+import 'package:flutter/material.dart';
+
+enum SpotType {
+  car,     // 4x6 size
+  bike,    // 2x4 size
+  truck,   // 6x8 size
+  compact  // 3x5 size
+}
+
+class ParkingSpot extends Entity {
+  final SpotType type;
+  
+  ParkingSpot({
+    required String id,
+    required TransformComponent transform,
+    required this.type,
+    bool isOccupied = false,
+  }) : super(
+    id: id,
+    transform: transform,
+    renderable: RenderableComponent(
+      imagePath: isOccupied ? 'assets/car.png' : '',
+      isOccupied: isOccupied
+    ),
+    collider: ColliderComponent(
+      rect: Rect.fromLTWH(
+        transform.x,
+        transform.y,
+        _getSpotWidth(type),
+        _getSpotHeight(type)
+      )
+    ),
+    draggable: DraggableComponent()
+  );
+
+  static double _getSpotWidth(SpotType type) {
+    switch (type) {
+      case SpotType.car: return 40.0;
+      case SpotType.bike: return 20.0;
+      case SpotType.truck: return 60.0;
+      case SpotType.compact: return 30.0;
+    }
+  }
+
+  static double _getSpotHeight(SpotType type) {
+    switch (type) {
+      case SpotType.car: return 60.0;
+      case SpotType.bike: return 40.0;
+      case SpotType.truck: return 80.0;
+      case SpotType.compact: return 50.0;
+    }
+  }
+
+  Color get spotColor {
+    switch (type) {
+      case SpotType.car: return Colors.green;
+      case SpotType.bike: return Colors.blue;
+      case SpotType.truck: return Colors.orange;
+      case SpotType.compact: return Colors.purple;
+    }
+  }
+}
+
+file: -- utils\fps_monitor.dart
+// utils/fps_monitor.dart
+import 'package:flutter/material.dart';
+
+class FPSMonitor {
+  int _frameCount = 0;
+  double _fps = 0;
+  DateTime _lastTime = DateTime.now();
+  final ValueNotifier<double> fpsNotifier = ValueNotifier(0.0);
+
+  void update() {
+    _frameCount++;
+    final DateTime now = DateTime.now();
+    final Duration difference = now.difference(_lastTime);
+    
+    if (difference.inSeconds >= 1) {
+      _fps = _frameCount / difference.inSeconds;
+      _frameCount = 0;
+      _lastTime = now;
+      fpsNotifier.value = _fps;
+    }
+  }
+
+  double get fps => _fps;
+}
+
+file: -- utils\grid.dart
+
+class Grid {
+  // Implementación de la lógica de la cuadrícula
+}
+    
+
+file: -- utils\math_utils.dart
+
+class MathUtils {
+  // Implementación de herramientas matemáticas
+}
+    
+
+file: -- utils\uuid_generator.dart
+
+class UuidGenerator {
+  // Implementación de la generación de IDs
+}
+    
+
+file: -- widgets\game_viewport.dart
+import 'package:flutter/material.dart';
+
+import '../components/transform.dart';
+import '../core/entity_system.dart';
+import '../core/game_engine.dart';
+import '../core/input/gesture_handler.dart';
+import '../core/physics/collision.dart';
+import '../core/physics/spatial_grid.dart';
+import '../core/rendering/camera.dart';
+import '../core/rendering/renderer.dart';
+import '../core/screen_controller.dart';
+import '../entities/facility.dart';
+import '../entities/signage.dart';
+import '../entities/spot.dart';
+import '../utils/fps_monitor.dart';
+
+class GameViewport extends StatefulWidget {
+  const GameViewport({super.key});
+
+  @override
+  State<GameViewport> createState() => _GameViewportState();
+}
+
+// widgets/game_viewport.dart
+class _GameViewportState extends State<GameViewport> {
+  late GameEngine gameEngine;
+  late EntitySystem entitySystem;
+  late Renderer renderer;
+  late Camera camera;
+  late CollisionDetector collisionDetector;
+  late GestureHandler gestureHandler;
+  late FPSMonitor fpsMonitor;
+  late ScreenController screenController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    fpsMonitor = FPSMonitor();
+    camera = Camera();
+    entitySystem = EntitySystem();
+    renderer = Renderer(camera: camera);
+    collisionDetector = CollisionDetector(spatialGrid: SpatialGrid());
+    gestureHandler = GestureHandler(
+      renderer: renderer,
+      entitySystem: entitySystem,
+    );
+    screenController = ScreenController(entitySystem: entitySystem);
+
+    gameEngine = GameEngine(
+      entitySystem: entitySystem,
+      renderer: renderer,
+      collisionDetector: collisionDetector,
+      gestureHandler: gestureHandler,
+    );
+
+    addInitialEntities();
+    gameEngine.start();
+  }
+
+  void addInitialEntities() {
+    screenController.addParkingSpot(Offset(100, 100), SpotType.car, isOccupied: true);
+    screenController.addParkingSpot(Offset(200, 100), SpotType.bike);
+    screenController.addFacility(Offset(300, 100), FacilityType.elevator);
+    screenController.addSignage(Offset(400, 100), SignageType.exit);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTapDown: gestureHandler.handleTapDown,
+          onScaleStart: gestureHandler.handleScaleStart,
+          onScaleUpdate: gestureHandler.handleScaleUpdate,
+          onScaleEnd: gestureHandler.handleScaleEnd,
+          child: CustomPaint(
+            painter: GamePainter(
+              entitySystem: entitySystem,
+              camera: camera,
+              selectedEntity: gestureHandler.selectedEntity,
+              fpsMonitor: fpsMonitor,
+            ),
+            child: Container(),
+          ),
+        ),
+        Positioned(
+          top: 10,
+          right: 10,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: ValueListenableBuilder<double>(
+              valueListenable: fpsMonitor.fpsNotifier,
+              builder: (context, fps, child) {
+                return Text(
+                  'FPS: ${fps.toStringAsFixed(1)}',
+                  style: const TextStyle(color: Colors.white),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+class GamePainter extends CustomPainter {
+  final EntitySystem entitySystem;
+  final Camera camera;
+  final Entity? selectedEntity;
+  final FPSMonitor fpsMonitor;
+
+  GamePainter({
+    required this.entitySystem,
+    required this.camera,
+    required this.selectedEntity,
+    required this.fpsMonitor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    fpsMonitor.update();
+        final textStyle = TextStyle(
+      color: Colors.black,
+      fontSize: 12 * camera.zoom,
+    );
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+
+    for (var entity in entitySystem.entities) {
+      final rect = Rect.fromLTWH(
+        (entity.transform.x - camera.x) * camera.zoom,
+        (entity.transform.y - camera.y) * camera.zoom,
+        entity.collider!.rect.width * camera.zoom,
+        entity.collider!.rect.height * camera.zoom,
+      );
+
+      if (entity is ParkingSpot) {
+        _drawParkingSpot(canvas, entity, rect);
+      } else if (entity is Facility) {
+        _drawFacility(canvas, entity, rect);
+      } else if (entity is Signage) {
+        _drawSignage(canvas, entity, rect);
+      }
+      final positionText = "(${entity.transform.x.toStringAsFixed(1)}, ${entity.transform.y.toStringAsFixed(1)})";
+      textPainter.text = TextSpan(text: positionText, style: textStyle);
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(rect.left + 5 * camera.zoom, rect.top + 5 * camera.zoom),
+      );
+
+      // Dibujar indicador de selección si la entidad está seleccionada
+      if (entity == selectedEntity) {
+        _drawSelectionIndicator(canvas, rect);
+      }
+
+      if (entity == selectedEntity) {
+        _drawSelectionIndicator(canvas, rect);
+      }
+    }
+  }
+
+  void _drawParkingSpot(Canvas canvas, ParkingSpot spot, Rect rect) {
+    // Dibujar el contorno del lugar
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = spot.spotColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0 * camera.zoom,
+    );
+
+    // Si está ocupado, dibujar el relleno
+    if (spot.renderable!.isOccupied) {
+      canvas.drawRect(
+        rect.deflate(4 * camera.zoom),
+        Paint()..color = spot.spotColor.withOpacity(0.3),
+      );
+    }
+  }
+
+  void _drawFacility(Canvas canvas, Facility facility, Rect rect) {
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = facility.facilityColor
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  void _drawSignage(Canvas canvas, Signage signage, Rect rect) {
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = signage.signageColor
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  void _drawSelectionIndicator(Canvas canvas, Rect rect) {
+    // Dibujar un borde punteado alrededor de la entidad seleccionada
+    final Paint dashPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0 * camera.zoom;
+
+    final Path dashPath = Path();
+    const double dashWidth = 5.0;
+    const double dashSpace = 5.0;
+    double distance = 0.0;
+    final double perimeter = rect.width * 2 + rect.height * 2;
+
+    while (distance < perimeter) {
+      dashPath.moveTo(
+        rect.left + (distance < rect.width ? distance : (distance < rect.width + rect.height ? rect.width : (distance < rect.width * 2 + rect.height ? rect.width - (distance - (rect.width + rect.height)) : 0))),
+        rect.top + (distance < rect.width ? 0 : (distance < rect.width + rect.height ? distance - rect.width : (distance < rect.width * 2 + rect.height ? rect.height : rect.height - (distance - (rect.width * 2 + rect.height))))),
+      );
+
+      final double dashLength = dashWidth * camera.zoom;
+      distance += dashLength;
+      if (distance > perimeter) break;
+
+      dashPath.lineTo(
+        rect.left + (distance < rect.width ? distance : (distance < rect.width + rect.height ? rect.width : (distance < rect.width * 2 + rect.height ? rect.width - (distance - (rect.width + rect.height)) : 0))),
+        rect.top + (distance < rect.width ? 0 : (distance < rect.width + rect.height ? distance - rect.width : (distance < rect.width * 2 + rect.height ? rect.height : rect.height - (distance - (rect.width * 2 + rect.height))))),
+      );
+
+      distance += dashSpace * camera.zoom;
+    }
+
+    canvas.drawPath(dashPath, dashPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant GamePainter oldDelegate) {
+    return true;
+  }
+}
+
+file: -- widgets\hud\context_menu.dart
+
+import 'package:flutter/material.dart';
+
+class ContextMenu extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // Implementación del menú contextual
+      color: Colors.white,
+      width: 200,
+      child: Column(
+        children: [
+          Text('Menú Contextual'),
+          // Aquí puedes agregar opciones del menú
+        ],
+      ),
+    );
+  }
+}
+    
+
+file: -- widgets\hud\coordinates_hud.dart
+
+import 'package:flutter/material.dart';
+
+class CoordinatesHUD extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // Implementación del HUD de coordenadas
+      color: Colors.black54,
+      padding: EdgeInsets.all(5),
+      child: Text(
+        'Coordenadas: (0,0)',
+        style: TextStyle(color: Colors.white),
+      ),
+    );
+  }
+}
+    
+
+file: -- widgets\hud\object_palette.dart
+
+import 'package:flutter/material.dart';
+
+class ObjectPalette extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // Implementación de la paleta de objetos
+      color: Colors.grey,
+      width: 100,
+      child: Column(
+        children: [
+          Text('Paleta de Objetos'),
+          // Aquí puedes agregar botones para agregar diferentes tipos de objetos
+        ],
+      ),
+    );
+  }
+}
+    
+
+file: -- widgets\inspectors\spot_inspector.dart
+
+import 'package:flutter/material.dart';
+
+class SpotInspector extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // Implementación del inspector de Spot
+      color: Colors.white,
+      padding: EdgeInsets.all(10),
+      child: Column(
+        children: [
+          Text('Inspector de Spot'),
+          // Aquí puedes agregar campos de edición para modificar propiedades del Spot
+        ],
+      ),
+    );
+  }
+}
+    
+

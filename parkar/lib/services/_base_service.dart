@@ -53,10 +53,11 @@ class BaseService<
   Future<Model> update(String id, UpdateModel updateModel) async {
     final uri =
         Uri.parse('$baseUrl$path/$id'); // Usar el path de la clase y el ID
-    final response = await http.put(
+    final response = await http.patch(
       uri,
       headers: buildHeaders(),
-      body: jsonEncode(updateModel.toJson()), // Convertir UpdateModel a JSON
+      body: jsonEncode(
+          removeNulls(updateModel.toJson())), // Convertir UpdateModel a JSON
     );
     handleResponse(response);
     final data = jsonDecode(response.body);
@@ -107,5 +108,34 @@ class BaseService<
     if (response.statusCode != 200) {
       throw Exception('Failed to load data: ${response.statusCode}');
     }
+  }
+
+  Map<String, dynamic> removeNulls(Map<String, dynamic> map) {
+    // Crear un nuevo mapa para almacenar los valores no nulos
+    Map<String, dynamic> result = {};
+
+    map.forEach((key, value) {
+      if (value != null) {
+        // Si el valor es un mapa, aplicar recursividad
+        if (value is Map<String, dynamic>) {
+          result[key] = removeNulls(value);
+        } 
+        // Si el valor es una lista, procesar sus elementos
+        else if (value is List) {
+          result[key] = value.map((item) {
+            if (item is Map<String, dynamic>) {
+              return removeNulls(item);
+            }
+            return item;
+          }).toList();
+        } 
+        // Si no es nulo, ni mapa ni lista, agregarlo directamente
+        else {
+          result[key] = value;
+        }
+      }
+    });
+
+    return result;
   }
 }

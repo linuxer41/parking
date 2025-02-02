@@ -68,7 +68,8 @@ export class BaseCrud<MainSchema extends {id: string; createdAt: string | Date; 
       .map((key, i) => `"${key}" = $${Object.keys(data).length + i + 1}`)
       .join(' AND ');
     const sql = `UPDATE ${this.tableName} SET ${setClause} WHERE ${conditions} RETURNING *`;
-    const res = await this.query<MainSchema>({ sql, params: [...Object.values(data), ...Object.values(where)] });
+    const values = Object.values(data).map((value) => typeof value === 'object' ? JSON.stringify(value) : value);
+    const res = await this.query<MainSchema>({ sql, params: [...values, ...Object.values(where)] });
     return res[0];
   }
 

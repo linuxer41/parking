@@ -185,14 +185,14 @@ export type ParkingCreate = typeof ParkingCreateSchema.static;
 // Modelo de Actualización
 export const ParkingUpdateSchema = t.Object(
   {
-  name: t.String({
+  name: t.Optional(t.String({
           description: "Nombre del estacionamiento",
           required: true
-        }),
-  vehicleTypes: t.Array(VehicleTypeSchema),
-  params: ParkingParamsSchema,
-  prices: t.Array(PriceSchema),
-  subscriptionPlans: t.Array(SubscriptionPlanSchema),
+        })),
+  vehicleTypes: t.Optional(t.Array(VehicleTypeSchema)),
+  params: t.Optional(ParkingParamsSchema),
+  prices: t.Optional(t.Array(PriceSchema)),
+  subscriptionPlans: t.Optional(t.Array(SubscriptionPlanSchema)),
   },
   {
   description: 'Esquema para la actualización de un Parking'

@@ -78,14 +78,14 @@ export type UserCreate = typeof UserCreateSchema.static;
 // Modelo de Actualización
 export const UserUpdateSchema = t.Object(
   {
-  name: t.String({
+  name: t.Optional(t.String({
           description: "Nombre completo del usuario",
           required: true
-        }),
-  email: t.String({
+        })),
+  email: t.Optional(t.String({
           description: "Correo electrónico del usuario",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un User'

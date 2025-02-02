@@ -1,6 +1,6 @@
 
 import { t } from 'elysia';
-import { ParkingSchema } from './parking';
+import { ParkingSchema, SubscriptionPlanSchema } from './parking';
 import { EmployeeSchema } from './employee';
 import { VehicleSchema } from './vehicle';
 
@@ -140,11 +140,11 @@ export type SubscriberCreate = typeof SubscriberCreateSchema.static;
 // Modelo de Actualización
 export const SubscriberUpdateSchema = t.Object(
   {
-  planId: t.String({
+  planId: t.Optional(t.String({
           description: "ID del plan de suscripción",
           required: true
-        }),
-  startDate: t.Union([
+        })),
+  startDate: t.Optional(t.Union([
       t.String({
         description: 'Fecha de inicio del abono',
         required: true
@@ -153,8 +153,8 @@ export const SubscriberUpdateSchema = t.Object(
         description: 'Fecha de inicio del abono',
         required: true
       })
-    ]),
-  endDate: t.Union([
+    ])),
+  endDate: t.Optional(t.Union([
       t.String({
         description: 'Fecha de fin del abono',
         required: true
@@ -163,11 +163,11 @@ export const SubscriberUpdateSchema = t.Object(
         description: 'Fecha de fin del abono',
         required: true
       })
-    ]),
-  isActive: t.Boolean({
+    ])),
+  isActive: t.Optional(t.Boolean({
           description: "Indica si el abono está activo",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un Subscriber'

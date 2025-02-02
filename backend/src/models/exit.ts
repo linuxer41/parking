@@ -119,15 +119,15 @@ export type ExitCreate = typeof ExitCreateSchema.static;
 // Modelo de Actualización
 export const ExitUpdateSchema = t.Object(
   {
-  number: t.Integer({
+  number: t.Optional(t.Integer({
           description: "Número de la salida",
           required: true
-        }),
-  employeeId: t.String({
+        })),
+  employeeId: t.Optional(t.String({
           description: "ID del empleado asociado",
           required: true
-        }),
-  dateTime: t.Union([
+        })),
+  dateTime: t.Optional(t.Union([
       t.String({
         description: 'Fecha y hora de la salida',
         required: true
@@ -136,11 +136,11 @@ export const ExitUpdateSchema = t.Object(
         description: 'Fecha y hora de la salida',
         required: true
       })
-    ]),
-  amount: t.Numeric({
+    ])),
+  amount: t.Optional(t.Numeric({
           description: "Monto cobrado",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un Exit'

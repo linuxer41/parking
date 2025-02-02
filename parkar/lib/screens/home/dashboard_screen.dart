@@ -14,6 +14,7 @@ import 'package:parkar/services/vehicle_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
 import '../../models/level_model.dart';
+import '../../services/parking_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -39,21 +40,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     };
 
-    controller.onChanged = (changedObject) {
-      if (changedObject.type == ChangeType.add) {
-        print("OBJETO AÑADIDO: ${changedObject.object.id}");
-      } else if (changedObject.type == ChangeType.delete) {
-        print("OBJETO ELIMINADO: ${changedObject.object.id}");
-      } else if (changedObject.type == ChangeType.update) {
-        print("OBJETO ACTUALIZADO: ${changedObject.object.id}");
-      }
-    };
+    controller.onChanged = (changedObject) {};
+  }
+
+  // @override 
+  // void didUpdateWidget(covariant DashboardScreen oldWidget) {
+  //   super.didUpdateWidget(oldWidget);
+  //   if (oldWidget.level != level) {
+  //     controller.clear();
+  //     _addObjectsToCanvas(controller, level);
+  //   }
+  // }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final level = AppStateContainer.of(context).currentLevel;
-    final currentParking = AppStateContainer.of(context).currentParking;
+    final appSate = AppStateContainer.of(context);
+    final level = appSate.currentLevel;
+    final currentParking = appSate.currentParking;
+    final parkinService =
+        AppStateContainer.di(context).resolve<ParkingService>();
     if (level == null) {
       return Scaffold(
         body: Center(
@@ -120,19 +131,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                           _buildToolButton(
                             icon: _isEditMode ? Icons.edit_off : Icons.edit,
-                            label: _isEditMode ? 'Salir edición' : 'Modo edición',
+                            label:
+                                _isEditMode ? 'Salir edición' : 'Modo edición',
                             shortcut: 'Ctrl+E',
                             onPressed: _toggleEditMode,
                           ),
                           if (_isEditMode)
                             _buildToolButton(
-                              icon: Icons.save,
-                              label: 'Guardar',
-                              shortcut: 'Ctrl+S',
-                              onPressed: () async {
-                                _saveChanges(level);
-                              },
-                            ),
+                                icon: Icons.save,
+                                label: 'Guardar',
+                                shortcut: 'Ctrl+S',
+                                onPressed: () async {
+                                  final newLevel = await _saveChanges(level);
+                                  appSate.setLevel(newLevel);
+                                  setState(() {
+                                    _isEditMode = false;
+                                    controller.setEditMode(_isEditMode);
+                                  });
+                                  parkinService
+                                      .getDetailed(currentParking!.id)
+                                      .then((parking) {
+                                    appSate.setParking(parking);
+                                  });
+                                }),
                         ],
                       ),
                     ),
@@ -189,7 +210,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Agregar objetos al canvas
-  void _addObjectsToCanvas(InfiniteCanvasController controller, LevelModel level) {
+  void _addObjectsToCanvas(
+      InfiniteCanvasController controller, LevelModel level) {
     // Limpiar objetos existentes
     controller.clear();
 
@@ -229,17 +251,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<LevelModel> _saveChanges(LevelModel level) async {
     final levelService = AppStateContainer.di(context).resolve<LevelService>();
     final objects = controller.objects;
-    final spots = objects.where((object) => object is SpotObject).map((object) => object as SpotObject).toList();
-    final facilities = objects.where((object) => object is FacilityObject).map((object) => object as FacilityObject).toList();
-    final signages = objects.where((object) => object is SignageObject).map((object) => object as SignageObject).toList();
+    final spots = objects
+        .whereType<SpotObject>()
+        .map((object) => object)
+        .map(
+          (spot) => SpotModel(
+            id: spot.id,
+            name: spot.label,
+            posX: spot.position.dx,
+            posY: spot.position.dy,
+            posZ: 0,
+            rotation: spot.rotation,
+            scale: spot.scale,
+            vehicleId: spot.vehiclePlate ?? "",
+            spotType: spot.type.index,
+            spotCategory: spot.category.index,
+          ),
+        )
+        .toList();
+    final facilities = objects
+        .whereType<FacilityObject>()
+        .map((object) => object)
+        .map(
+          (facility) => FacilityModel(
+            id: facility.id,
+            name: facility.label,
+            posX: facility.position.dx,
+            posY: facility.position.dy,
+            posZ: 0,
+            rotation: facility.rotation,
+            scale: facility.scale,
+            facilityType: facility.type.index,
+          ),
+        )
+        .toList();
+    final signages = objects
+        .whereType<SignageObject>()
+        .map((object) => object)
+        .map(
+          (signage) => SignageModel(
+            id: signage.id,
+            posX: signage.position.dx,
+            posY: signage.position.dy,
+            posZ: 0,
+            scale: signage.scale,
+            rotation: signage.rotation,
+            direction: signage.direction.index.toDouble(),
+            signageType: signage.type.index,
+          ),
+        )
+        .toList();
 
     final newLevel = LevelUpdateModel(
-      name: level.name + DateTime.now().toIso8601String(),
-      
+      name: DateTime.now().toIso8601String(),
+      spots: spots,
+      signages: signages,
+      facilities: facilities,
     );
-
     return await levelService.update(level.id, newLevel);
-
   }
 
   void _handleAddChange(GridObject object) {
@@ -281,7 +350,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isEditMode = !_isEditMode;
     });
     controller.setEditMode(_isEditMode);
-    print('Modo edición: $_isEditMode');
   }
 
   // Construir botón de herramientas
@@ -299,17 +367,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Selector de piso
-  Widget _buildFloorSelector() {
-    final appState = AppStateContainer.of(context);
-    final currentParking = appState.currentParking!;
-    final currentLevel = appState.currentLevel!;
+Widget _buildFloorSelector() {
+  final appState = AppStateContainer.of(context);
+  final currentParking = appState.currentParking!;
+  final currentLevel = appState.currentLevel!;
 
-    return DropdownButton<String>(
+  return ConstrainedBox(
+    constraints: BoxConstraints(maxWidth: 200), // Establece el ancho máximo
+    child: DropdownButton<String>(
       value: currentLevel.id,
+      isExpanded: true, // Hace que el DropdownButton ocupe todo el ancho disponible
+      menuMaxHeight: 300, // Establece una altura máxima para el menú desplegable
       items: currentParking.levels.map((level) {
         return DropdownMenuItem(
           value: level.id,
-          child: Text(level.name),
+          child: Text(
+            level.name,
+            overflow: TextOverflow.ellipsis, // Agrega ellipsis en caso de overflow
+            style: TextStyle(
+              fontSize: 14, // Ajusta el tamaño de la fuente si es necesario
+            ),
+          ),
         );
       }).toList(),
       onChanged: (value) {
@@ -317,11 +395,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             currentParking.levels.firstWhere((level) => level.id == value);
         appState.setLevel(selectedLevel);
       },
-    );
-  }
-
+    ),
+  );
+}
   // Mostrar acciones del spot
-  void _showSpotActionsBottomSheet(BuildContext context, SpotObject spotObject) {
+  void _showSpotActionsBottomSheet(
+      BuildContext context, SpotObject spotObject) {
     final apiService = AppStateContainer.di(context).resolve<VehicleService>();
     if (spotObject.vehiclePlate != null) {
       apiService.getVehicleDetails(spotObject.vehiclePlate!).then((entry) {
@@ -333,7 +412,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }).catchError((error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al obtener detalles del vehículo: $error')),
+          SnackBar(
+              content: Text('Error al obtener detalles del vehículo: $error')),
         );
       });
     } else {

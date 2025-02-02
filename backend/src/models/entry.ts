@@ -3,7 +3,7 @@ import { t } from 'elysia';
 import { ParkingSchema } from './parking';
 import { EmployeeSchema } from './employee';
 import { VehicleSchema } from './vehicle';
-import { LevelSchema } from './level';
+import { LevelSchema, SpotSchema } from './level';
 
 // Esquemas JSON adicionales
 // No hay esquemas adicionales
@@ -121,23 +121,23 @@ export type EntryCreate = typeof EntryCreateSchema.static;
 // Modelo de Actualización
 export const EntryUpdateSchema = t.Object(
   {
-  number: t.Integer({
+  number: t.Optional(t.Integer({
           description: "Número de la entrada",
           required: true
-        }),
-  employeeId: t.String({
+        })),
+  employeeId: t.Optional(t.String({
           description: "ID del empleado asociado",
           required: true
-        }),
-  vehicleId: t.String({
+        })),
+  vehicleId: t.Optional(t.String({
           description: "ID del vehículo que ingresó",
           required: true
-        }),
-  spotId: t.String({
+        })),
+  spotId: t.Optional(t.String({
           description: "ID del lugar de estacionamiento asignado",
           required: true
-        }),
-  dateTime: t.Union([
+        })),
+  dateTime: t.Optional(t.Union([
       t.String({
         description: 'Fecha y hora de la entrada',
         required: true
@@ -146,7 +146,7 @@ export const EntryUpdateSchema = t.Object(
         description: 'Fecha y hora de la entrada',
         required: true
       })
-    ]),
+    ])),
   },
   {
   description: 'Esquema para la actualización de un Entry'

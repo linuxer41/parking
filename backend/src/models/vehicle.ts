@@ -87,18 +87,18 @@ export type VehicleCreate = typeof VehicleCreateSchema.static;
 // Modelo de Actualización
 export const VehicleUpdateSchema = t.Object(
   {
-  typeId: t.String({
+  typeId: t.Optional(t.String({
           description: "ID del tipo de vehículo",
           required: true
-        }),
-  plate: t.String({
+        })),
+  plate: t.Optional(t.String({
           description: "Placa del vehículo",
           required: true
-        }),
-  isSubscriber: t.Boolean({
+        })),
+  isSubscriber: t.Optional(t.Boolean({
           description: "Indica si el vehículo es abonado",
           required: true
-        }),
+        })),
   },
   {
   description: 'Esquema para la actualización de un Vehicle'

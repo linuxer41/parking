@@ -624,10 +624,10 @@ class SpotObject extends GridObject {
 
   // Colores predefinidos para cada categoría
   static const Map<SpotObjectCategory, Color> categoryColors = {
-    SpotObjectCategory.standart: Color(0xFF4A90E2), // Azul suave
-    SpotObjectCategory.vip: Color(0xFFDAA520), // Dorado
-    SpotObjectCategory.electric: Color(0xFF32CD32), // Verde lima
-    SpotObjectCategory.handicap: Color(0xFFFF6347), // Coral
+  SpotObjectCategory.standart: Color(0xFF4A90E2), // Azul suave
+  SpotObjectCategory.vip: Color(0xFFDAA520), // Dorado
+  SpotObjectCategory.electric: Color(0xFF32CD32), // Verde lima
+  SpotObjectCategory.handicap: Color(0xFFFF6347), // Coral
   };
 
   // Nombres de las imágenes locales para cada tipo de spot
@@ -645,7 +645,7 @@ class SpotObject extends GridObject {
 
   SpotObject({
     super.position = const Offset(0, 0),
-    required this.label, // Código del spot (ejemplo: A4)
+    this.label= '', // Código del spot (ejemplo: A4)
     this.isFree = true,
     this.tintColor, // Nuevo: Color para aplicar a la imagen
     this.vehiclePlate, // Placa del vehículo (null si está libre)
@@ -998,7 +998,7 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                   (details.localPosition - controller.canvasOffset) /
                       controller.zoom;
               if (controller.canvasMode == DrawingMode.text) {
-                _showEditTextDialog(position);
+                // _showEditTextDialog(position);
               } else {
                 controller.selectObject(position);
               }
@@ -1006,31 +1006,6 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
         },
       ),
     };
-  }
-
-  void _showEditTextDialog(Offset position) {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Agregar texto"),
-          content: TextField(
-            controller: textController,
-            decoration: const InputDecoration(hintText: "Escribe algo..."),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                controller.addText(position, textController.text);
-                Navigator.of(context).pop();
-              },
-              child: const Text("Agregar"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -1075,19 +1050,72 @@ class _InfiniteCanvasState extends State<InfiniteCanvas> {
                   ),
                 ),
               ),
+              // Listener(
+              //   onPointerMove: (PointerMoveEvent event) {
+              //     // Actualiza la posición del mouse en el controlador
+              //     controller.updateMousePosition(event.localPosition);
+              //   },
+              //   child: CustomPaint(
+              //     size: Size.infinite,
+              //     painter: InfiniteCanvasPainter(
+              //       controller: controller,
+              //       gridColor: Theme.of(context)
+              //           .colorScheme
+              //           .onSurface
+              //           .withAlpha(128),
+              //     ),
+              //   ),
+              // ),
               // MiniMap(
               //   controller: controller,
               //   viewportSize: MediaQuery.of(context).size,
               // ),
               Positioned(
+                bottom: 10,
+                right: 10,
+                child: ValueListenableBuilder<Offset>(
+                  valueListenable: ValueNotifier(controller.mousePosition),
+                  builder: (context, position, child) {
+                    // Convertir la posición del mouse a coordenadas del lienzo
+                    final canvasPosition = (position - controller.canvasOffset) / controller.zoom;
+                    final x = (canvasPosition.dx / controller.gridSize).toStringAsFixed(2);
+                    final y = (canvasPosition.dy / controller.gridSize).toStringAsFixed(2);
+
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 5,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        "X: $x, Y: $y",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              if (controller.editMode)
+              Positioned(
                 top: 100,
                 right: 10,
                 child: GridObjectBar(
                   controller: controller,
-                  orientation: Axis.horizontal,
+                  orientation: Axis.vertical,
                 ),
               ),
-              if (controller.selectedObjects.isNotEmpty && widget.isEditable)
+              if (controller.editMode && controller.selectedObjects.isNotEmpty && widget.isEditable)
                 ActionBar(controller: controller),
               FloatingButtons(controller: controller),
               Positioned(
@@ -1120,19 +1148,25 @@ file: -- widgets\canvas_controller.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:parkar/infinite_canvas/models/signage_object.dart';
-import 'package:uuid/uuid.dart';
-import '../models/free_form_object.dart';
+
 import '../models/canvas_object.dart';
 import '../models/grid_object.dart';
-import '../models/text_object.dart';
 import '../models/spot_object.dart';
+
+enum ChangeType { delete, add, update }
+
+class ChangedObject {
+  final InfiniteCanvasObject object;
+  final ChangeType type;
+  ChangedObject({required this.object, required this.type});
+}
 
 enum DrawingMode { gridObject, text }
 
 class InfiniteCanvasController extends ChangeNotifier {
   final List<InfiniteCanvasObject> _objects = [];
   final List<InfiniteCanvasObject> _selectedObjects = [];
-  final List<InfiniteCanvasObject> _changedObjects = [];
+  final List<ChangedObject> _changedObjects = [];
   final ValueNotifier<int> objectCountNotifier = ValueNotifier(0);
   final ValueNotifier<int> changesCountNotifier = ValueNotifier(0);
   final ValueNotifier<bool> _isAnimating = ValueNotifier(false); // Control de animación
@@ -1141,16 +1175,17 @@ class InfiniteCanvasController extends ChangeNotifier {
   DrawingMode _canvasMode = DrawingMode.gridObject;
   double _zoom = 1.0;
   Offset _canvasOffset = Offset.zero;
-  final List<Offset> _freeFormPoints = [];
   Offset? _dragStart;
   Offset? _objectDragStart;
   double _gridSize = 15.0;
   bool _showGrid = false;
+  bool _editMode = false;
+  Offset _mousePosition = Offset.zero;
   Size viewportSize = Size.zero;
 
   // Callbacks
-  VoidCallback? onChanged;
-  VoidCallback? onSelect;
+  Function(ChangedObject)? onChanged;
+  Function(InfiniteCanvasObject)? onSelect;
   Function(String message)? onShowMessage; // Para mostrar mensajes (SnackBar)
 
   // Objeto copiado
@@ -1158,24 +1193,42 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   List<InfiniteCanvasObject> get objects => _objects;
   List<InfiniteCanvasObject> get selectedObjects => _selectedObjects;
-  List<InfiniteCanvasObject> get changedObjects => _changedObjects;
+  List<ChangedObject> get changedObjects => _changedObjects;
   DrawingMode get canvasMode => _canvasMode;
   double get zoom => _zoom;
   Offset get canvasOffset => _canvasOffset;
-  List<Offset> get freeFormPoints => _freeFormPoints;
   double get gridSize => _gridSize;
   bool get showGrid => _showGrid;
+  bool get editMode => _editMode;
+
+  Offset get mousePosition => _mousePosition;
+
+  void updateMousePosition(Offset position) {
+    _mousePosition = position;
+    notifyListeners();
+  }
+
+  void clear() {
+    _objects.clear();
+    _selectedObjects.clear();
+    _changedObjects.clear();
+    _canvasOffset = Offset.zero;
+    _zoom = 1.0;
+    notifyListeners();
+  }
 
   // Método para agregar/actualizar objetos modificados
-  void _addToChangedObjects(InfiniteCanvasObject object) {
-    final index = _changedObjects.indexWhere((o) => o.id == object.id);
+  void _addToChangedObjects({required InfiniteCanvasObject object, ChangeType type = ChangeType.add}) {
+    if (!editMode) return;
+    final changedObject = ChangedObject(object: object, type: type);
+    final index = _changedObjects.indexWhere((o) => o.object.id == object.id);
     if (index != -1) {
-      _changedObjects[index] = object; // Reemplaza si ya existe
+      _changedObjects[index] = changedObject; // Reemplaza si ya existe
     } else {
-      _changedObjects.add(object); // Agrega si es nuevo
+      _changedObjects.add(changedObject); // Agrega si es nuevo
     }
     changesCountNotifier.value = _changedObjects.length;
-    onChanged?.call();
+    onChanged?.call(changedObject);
   }
 
   // Método para manejar atajos de teclado
@@ -1247,7 +1300,7 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void onPanUpdate(DragUpdateDetails details) {
     final delta = (details.localPosition - _dragStart!) / _zoom;
-    if (_selectedObjects.isNotEmpty && _objectDragStart != null) {
+    if ( _editMode && _selectedObjects.isNotEmpty && _objectDragStart != null) {
       final newPosition = _objectDragStart! + delta;
       bool canMove = true;
       for (var object in _objects) {
@@ -1260,6 +1313,7 @@ class InfiniteCanvasController extends ChangeNotifier {
       if (canMove) {
         for (var object in _selectedObjects) {
           object.position = newPosition;
+          _addToChangedObjects(object: object, type: ChangeType.update);
         }
       }
     } else {
@@ -1318,6 +1372,7 @@ class InfiniteCanvasController extends ChangeNotifier {
         1.0,
       )) {
         _selectedObjects.add(object);
+        onSelect?.call(object);
         break;
       }
     }
@@ -1352,6 +1407,16 @@ class InfiniteCanvasController extends ChangeNotifier {
   }
 
   void addGridObjectNode(GridObject object) {
+    // check if pbjet with same id already exists
+    if (_objects.any((element) => element.id == object.id)) {
+      return;
+    }
+
+    // add auto label if empty
+    if (object is SpotObject && object.label.isEmpty) {
+      object.label = 'Lugar ${_objects.length + 1}';
+    }
+
     Offset offset = getCenterOfView(viewportSize);
     bool positionFound = false;
 
@@ -1391,28 +1456,21 @@ class InfiniteCanvasController extends ChangeNotifier {
     _selectedObjects.clear();
     _selectedObjects.add(object);
     _objects.add(object);
-        _isAnimating.value = true;
-    Future.delayed(const Duration(milliseconds: 150), () {
+    _addToChangedObjects(object:object, type: ChangeType.add);
+    _isAnimating.value = true;
+      Future.delayed(const Duration(milliseconds: 150), () {
       _isAnimating.value = false; // Finalizar animación después de 300ms
     });
     
     notifyListeners();
   }
 
-  void addText(Offset position, String text) {
-    final textObject = TextObject(
-      position: position,
-      text: text,
-      color: Colors.black,
-    );
-    _objects.add(textObject);
-    _selectedObjects.clear();
-    _selectedObjects.add(textObject);
-    notifyListeners();
-  }
-
   void deleteSelectedObjects() {
-    _objects.removeWhere((object) => _selectedObjects.contains(object));
+    final objects = _selectedObjects.toList();
+    for (var object in objects) {
+      _objects.removeWhere((o) => o.id == object.id);
+      _addToChangedObjects(object: object, type: ChangeType.delete);
+    }
     _selectedObjects.clear();
     notifyListeners();
   }
@@ -1420,33 +1478,38 @@ class InfiniteCanvasController extends ChangeNotifier {
   void rotateSelectedObjects(double angle) {
     for (var object in _selectedObjects) {
       object.rotate(angle);
+      _addToChangedObjects(object: object, type: ChangeType.update);
     }
     notifyListeners();
   }
 
   void toggleSignageDirection() {
     if (_selectedObjects.firstOrNull is SignageObject) {
-      final selectedVehicle = _selectedObjects.first as SignageObject;
-      selectedVehicle.toggleDirection();
+      final object = _selectedObjects.first as SignageObject;
+      object.toggleDirection();
+      _addToChangedObjects(object: object, type: ChangeType.update);
       notifyListeners();
     }
   }
 
   void toggleSpotStatus() {
     if (_selectedObjects.firstOrNull is SpotObject) {
-      final selectedVehicle = _selectedObjects.first as SpotObject;
-      selectedVehicle.toggleStatus();
+      final object = _selectedObjects.first as SpotObject;
+      object.toggleStatus();
+      _addToChangedObjects(object: object, type: ChangeType.update);
       notifyListeners();
     }
   }
 
-  void editSelectedText() {
-    if (_selectedObjects.isNotEmpty && _selectedObjects.first is TextObject) {
-      final selectedTextObject = _selectedObjects.first as TextObject;
-      // Implementar lógica para editar texto
+  void updateSpotLabel(String label) {
+    if (_selectedObjects.firstOrNull is SpotObject) {
+      final object = _selectedObjects.first as SpotObject;
+      object.label = label;
+      _addToChangedObjects(object: object, type: ChangeType.update);
       notifyListeners();
     }
   }
+
 
   void centerCanvas() {
     _canvasOffset = Offset.zero;
@@ -1475,6 +1538,11 @@ class InfiniteCanvasController extends ChangeNotifier {
 
   void updateViewportSize(Size newSize) {
     viewportSize = newSize;
+    notifyListeners();
+  }
+
+  void setEditMode(bool isEditMode) {
+    _editMode = isEditMode;
     notifyListeners();
   }
 }
@@ -1766,12 +1834,20 @@ class ActionBar extends StatelessWidget {
               ),
             if (selectedObject is SpotObject)
               IconButton(
-                icon: const Icon(Icons.swap_horiz),
-                onPressed: controller.toggleSpotStatus,
-                tooltip: "Ocupado/libre",
+                icon: const Icon(Icons.edit),
+                onPressed: () => _editSpotLabel(context, selectedObject),
+                tooltip: "Editar label",
                 iconSize: 20, // Reducir el tamaño del ícono en un 30%
-                color: Colors.green, // Color para la acción de cambiar estado
+                color: Colors.purple, // Color para la acción de editar label
               ),
+            // if (selectedObject is SpotObject)
+            //   IconButton(
+            //     icon: const Icon(Icons.swap_horiz),
+            //     onPressed: controller.toggleSpotStatus,
+            //     tooltip: "Ocupado/libre",
+            //     iconSize: 20, // Reducir el tamaño del ícono en un 30%
+            //     color: Colors.green, // Color para la acción de cambiar estado
+            //   ),
             if (selectedObject is TextObject)
               IconButton(
                 icon: const Icon(Icons.edit),
@@ -1792,6 +1868,39 @@ class ActionBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // Método para mostrar un diálogo y editar el label del SpotObject
+  void _editSpotLabel(BuildContext context, SpotObject spotObject) {
+    final textController = TextEditingController(text: spotObject.label);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Editar label"),
+          content: TextField(
+            controller: textController,
+            decoration: const InputDecoration(hintText: "Nuevo label..."),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+              child: const Text("Cancelar"),
+            ),
+            TextButton(
+              onPressed: () {
+                controller.updateSpotLabel(textController.text);
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+              child: const Text("Guardar"),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1906,7 +2015,7 @@ class _GridObjectBarState extends State<GridObjectBar>
       curve: Curves.easeInOut, // Curva de animación suave
       alignment: isHorizontal ? Alignment.centerLeft : Alignment.topCenter,
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface, // Usar color de superficie del tema
           borderRadius: BorderRadius.circular(12),
@@ -1951,8 +2060,8 @@ class _GridObjectBarState extends State<GridObjectBar>
                       SpotObject(
                         type: SpotObjectType.car,
                         category: SpotObjectCategory.standart,
-                        label: 'A1',
-                        vehiclePlate: 'ABC123',
+                        label: '',
+                        vehiclePlate: '',
                       ),
                     ),
                   ),

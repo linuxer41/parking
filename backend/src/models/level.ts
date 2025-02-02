@@ -209,13 +209,13 @@ export type LevelCreate = typeof LevelCreateSchema.static;
 // Modelo de Actualización
 export const LevelUpdateSchema = t.Object(
   {
-  name: t.String({
+  name: t.Optional(t.String({
           description: "Nombre del nivel",
           required: true
-        }),
-  spots: t.Array(SpotSchema),
-  signages: t.Array(SignageSchema),
-  facilities: t.Array(FacilitySchema),
+        })),
+  spots: t.Optional(t.Array(SpotSchema)),
+  signages: t.Optional(t.Array(SignageSchema)),
+  facilities: t.Optional(t.Array(FacilitySchema)),
   },
   {
   description: 'Esquema para la actualización de un Level'
