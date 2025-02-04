@@ -5,11 +5,6 @@ import 'package:parkar/screens/home/game_screen.dart';
 import 'package:parkar/screens/home/profile_screen.dart';
 import 'package:parkar/state/app_state_container.dart';
 
-import '../../tree/game.dart';
-import '../../world2d/widgets/game_viewport.dart';
-import 'dashboard_screen.dart';
-import 'tree.dart';
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -22,9 +17,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Lista de elementos de navegación
   final List<Widget> _screens = [
-     DashboardScreen(),
-    const FlutterGame(),
-     GameScreen(),
+     const GameScreen(),
+     const Text('Historial'),
+     const Text('Ajustes'),
   ];
 
   @override
