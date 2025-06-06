@@ -3,11 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_windows
   flutter_acrylic
-  flutter_angle
   screen_retriever_windows
+  share_plus
   system_theme
+  url_launcher_windows
   window_manager
 )
 

@@ -9,9 +9,9 @@ import '../state/app_state_container.dart';
 
 /// Middleware para verificar la autenticación
 String? _checkAuth(BuildContext context, {bool requireBranchId = false}) {
-  
   final appState = AppStateContainer.of(context);
-  print('Middleware: Verificando autenticación authtoke: ${appState.authToken} accesstoken: ${appState.branchId}');
+  print(
+      'Middleware: Verificando autenticación authtoke: ${appState.authToken} accesstoken: ${appState.branchId}');
 
   // Verifica si el authToken está presente
   if (appState.authToken == null) {

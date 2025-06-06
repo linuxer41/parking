@@ -13,7 +13,8 @@
     "@elysiajs/swagger": "^1.1.6",
     "@prisma/client": "^6.1.0",
     "elysia": "latest",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

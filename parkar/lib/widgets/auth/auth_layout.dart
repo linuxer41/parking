@@ -24,7 +24,7 @@ class AuthLayout extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             constraints: const BoxConstraints(maxWidth: 400),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant, // Usar el color de superficie del tema
+              color: theme.colorScheme.surfaceContainerHighest, // Usar el color de superficie del tema
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(

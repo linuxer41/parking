@@ -1,4 +1,3 @@
-
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
 import 'company_model.dart';
@@ -17,6 +16,15 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
   final List<SubscriptionPlanModel> subscriptionPlans;
   final DateTime createdAt;
   final DateTime updatedAt;
+  
+  // Nuevos campos para mapas y disponibilidad
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+  final int? totalSpots;
+  final int? availableSpots;
+  final bool? isOpen;
+  final String? openingHours;
 
   ParkingModel({
     required this.id,
@@ -29,6 +37,13 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     required this.subscriptionPlans,
     required this.createdAt,
     required this.updatedAt,
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.totalSpots,
+    this.availableSpots,
+    this.isOpen,
+    this.openingHours,
   });
 
   factory ParkingModel.fromJson(Map<String, dynamic> json) =>
@@ -42,10 +57,18 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
 class ParkingCreateModel extends JsonConvertible<ParkingCreateModel> {
   final String name;
   final String companyId;
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+  final int? totalSpots;
 
   ParkingCreateModel({
     required this.name,
     required this.companyId,
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.totalSpots,
   });
 
   factory ParkingCreateModel.fromJson(Map<String, dynamic> json) =>
@@ -62,6 +85,13 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
   final ParkingParamsModel? params;
   final List<PriceModel>? prices;
   final List<SubscriptionPlanModel>? subscriptionPlans;
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+  final int? totalSpots;
+  final int? availableSpots;
+  final bool? isOpen;
+  final String? openingHours;
 
   ParkingUpdateModel({
     this.name,
@@ -69,6 +99,13 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
     this.params,
     this.prices,
     this.subscriptionPlans,
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.totalSpots,
+    this.availableSpots,
+    this.isOpen,
+    this.openingHours,
   });
 
   factory ParkingUpdateModel.fromJson(Map<String, dynamic> json) =>

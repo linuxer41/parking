@@ -8,6 +8,14 @@ import 'state/app_state.dart';
 import 'state/app_state_container.dart';
 import 'di/di_container.dart';
 import 'state/theme.dart';
+import 'package:flutter/services.dart';
+import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/history/history_screen.dart';
+import 'screens/home/home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// Clave global para el navegador, útil para acceder al contexto desde cualquier parte
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 bool get isDesktop {
   if (kIsWeb) return false;
@@ -20,80 +28,156 @@ bool get isDesktop {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configurar la aplicación en modo pantalla completa
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
+
+  // Configurar la orientación de la app (solo permitir modo retrato)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   await SystemTheme.accentColor.load();
 
   if (isDesktop) {
     await windowManager.ensureInitialized();
     windowManager.waitUntilReadyToShow().then((_) async {
       await windowManager.setTitle('Parkar: sistema de parqueo');
-      // await windowManager.setBackgroundColor(const Color(0xFF202020));
-      // await windowManager.setBrightness(Brightness.light);
-      // await windowManager.maximize();
       await windowManager.setSize(const Size(755, 545));
-      // await windowManager.setMinimumSize(const Size(755, 545));
       await windowManager.center();
       await windowManager.show();
-      // await windowManager.setSkipTaskbar(false);
     });
   }
 
   final appState = AppState();
   await appState.loadState();
-  ServiceLocator().registerAppState(appState); // Registra el AppState
+  ServiceLocator().registerAppState(appState);
   final diContainer = DIContainer();
   final appTheme = AppTheme();
 
-  // set widnow title bar color
-
-  runApp(MyApp(appState: appState, diContainer: diContainer, appTheme: appTheme));
+  runApp(AppStateContainer(
+    state: appState,
+    diContainer: diContainer,
+    appTheme: appTheme,
+    child: const MyApp(),
+  ));
 }
 
-class MyApp extends StatelessWidget {
-  final AppState appState;
-  final DIContainer diContainer;
-  final AppTheme appTheme;
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
 
-  const MyApp({super.key, required this.appState, required this.diContainer, required this.appTheme});
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemePreference();
+  }
+
+  // Método para cargar la preferencia de tema
+  Future<void> _loadThemePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final themeModeString = prefs.getString('theme_mode');
+
+    if (themeModeString != null) {
+      setState(() {
+        if (themeModeString.contains('ThemeMode.light')) {
+          _themeMode = ThemeMode.light;
+        } else if (themeModeString.contains('ThemeMode.dark')) {
+          _themeMode = ThemeMode.dark;
+        } else {
+          _themeMode = ThemeMode.system;
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // final isDark = MediaQuery.of(context).platformBrightness == Brightness.dark || appTheme.mode == ThemeMode.dark;
-    // if (isDark) {
-    //   windowManager.setBrightness(Brightness.dark);
-    // } else {
-    //   windowManager.setBrightness(Brightness.light);
-    // }
-    return AppStateContainer(
-      state: appState,
-      diContainer: diContainer,
-      appTheme: appTheme,
-      child: ListenableBuilder(
-        listenable: appState,
-        builder: (context, child) {
-          return MaterialApp.router(
-            title: 'Parking Control',
-            debugShowCheckedModeBanner: false,
-            locale: appTheme.locale,
-            themeMode: appTheme.mode,
-            theme: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: appTheme.color,
-                brightness: Brightness.light,
-                // primary: appTheme.color,
-              ),
-            ),
-            darkTheme: ThemeData(
-              useMaterial3: true,
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: appTheme.color,
-                brightness: Brightness.dark,
-              ),
-            ),
-            routerConfig: router,
-          );
-        },
+    return MaterialApp.router(
+      title: 'Parkar',
+      routerConfig: router,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2D7CFF),
+          primary: const Color(0xFF2D7CFF),
+          secondary: const Color(0xFF00D5A1),
+          tertiary: const Color(0xFFFF8A00),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        buttonTheme: ButtonThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
       ),
+      darkTheme: ThemeData.dark().copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2D7CFF),
+          primary: const Color(0xFF2D7CFF),
+          secondary: const Color(0xFF00D5A1),
+          tertiary: const Color(0xFFFF8A00),
+          brightness: Brightness.dark,
+        ),
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+        ),
+        cardTheme: CardTheme(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        buttonTheme: ButtonThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+      ),
+      themeMode: _themeMode,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

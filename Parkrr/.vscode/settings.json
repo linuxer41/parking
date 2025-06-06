@@ -1,7 +1,0 @@
-{
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "reactSnippets.settings.importReactOnTop": false,
-  "reactSnippets.settings.typescriptPropsStatePrefix": "interface",
-  "reactSnippets.settings.typescript": true,
-  "reactSnippets.settings.prettierEnabled": true,
-}

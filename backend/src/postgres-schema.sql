@@ -1,4 +1,3 @@
-
 DROP TABLE IF EXISTS t_user;
 CREATE TABLE t_user (
   "id" text primary key not null,
@@ -208,3 +207,30 @@ create index t_reservation_parking_id on t_reservation ("parkingId");
 create index t_reservation_employee_id on t_reservation ("employeeId");
 create index t_reservation_vehicle_id on t_reservation ("vehicleId");
 create index t_reservation_spot_id on t_reservation ("spotId");
+
+
+DROP TABLE IF EXISTS t_notification;
+CREATE TABLE t_notification (
+  "id" text primary key not null,
+  "type" text not null,
+  "title" text not null,
+  "message" text not null,
+  "recipientId" text not null,
+  "recipientType" text not null,
+  "channel" text not null,
+  "parkingId" text not null,
+  "relatedEntityId" text,
+  "relatedEntityType" text,
+  "status" text not null,
+  "metadata" jsonb,
+  "scheduledFor" timestamptz,
+  "sentAt" timestamptz,
+  "createdAt" timestamptz default now() not null,
+  "updatedAt" timestamptz default now()
+);
+
+create index t_notification_recipient_id on t_notification ("recipientId");
+create index t_notification_parking_id on t_notification ("parkingId");
+create index t_notification_status on t_notification ("status");
+create index t_notification_type on t_notification ("type");
+create index t_notification_scheduled_for on t_notification ("scheduledFor");

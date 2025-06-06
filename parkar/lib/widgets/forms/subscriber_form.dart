@@ -214,7 +214,7 @@ class _SubscriberFormState extends State<SubscriberForm> {
                 },
               ),
               
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _submitForm,
                 child: Text(widget.model == null ? 'Crear' : 'Actualizar'),

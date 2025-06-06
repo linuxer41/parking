@@ -1,4 +1,3 @@
-
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
 import 'parking_model.dart';
@@ -23,6 +22,9 @@ class EntryModel extends JsonConvertible<EntryModel> {
   final DateTime dateTime;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Getter para entryTime
+  DateTime get entryTime => dateTime;
 
   EntryModel({
     required this.id,
@@ -94,5 +96,3 @@ class EntryUpdateModel extends JsonConvertible<EntryUpdateModel> {
   @override
   Map<String, dynamic> toJson() => _$EntryUpdateModelToJson(this);
 }
-
-

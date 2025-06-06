@@ -1,4 +1,3 @@
-
 import { Elysia, t } from 'elysia';
 import { swagger } from '@elysiajs/swagger';
 import { cors } from '@elysiajs/cors'
@@ -15,6 +14,9 @@ import { exitController } from './controllers/exit';
 import { cashRegisterController } from './controllers/cash-register';
 import { movementController } from './controllers/movement';
 import { reservationController } from './controllers/reservation';
+import { reportController } from './controllers/report';
+import { notificationController } from './controllers/notification';
+import { notificationProcessorController } from './controllers/notification-processor';
 import { authController } from './controllers/auth';
 
 const app = new Elysia()
@@ -50,7 +52,10 @@ const app = new Elysia()
     { name: 'exit', description: 'Operaciones relacionadas con exits' },
     { name: 'cash-register', description: 'Operaciones relacionadas con cash-registers' },
     { name: 'movement', description: 'Operaciones relacionadas con movements' },
-    { name: 'reservation', description: 'Operaciones relacionadas con reservations' }
+    { name: 'reservation', description: 'Operaciones relacionadas con reservations' },
+    { name: 'report', description: 'Operaciones relacionadas con reportes y análisis' },
+    { name: 'notification', description: 'Operaciones relacionadas con notificaciones' },
+    { name: 'notification-processor', description: 'Procesamiento de notificaciones pendientes' }
           ],
     components: {
         securitySchemes: {
@@ -99,6 +104,9 @@ const app = new Elysia()
     .use(cashRegisterController)
     .use(movementController)
     .use(reservationController)
+    .use(reportController)
+    .use(notificationController)
+    .use(notificationProcessorController)
   .listen(3001);
 
 console.log(`🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`);

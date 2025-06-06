@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(
     text: 'admin@example.com',
   );
@@ -22,9 +23,23 @@ class _LoginScreenState extends State<LoginScreen> {
     text: 'password123',
   );
   bool _obscurePassword = true;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submitForm() async {
-    if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
       final appState = AppStateContainer.of(context);
       final authService = AppStateContainer.di(context).resolve<AuthService>();
       final userService = AppStateContainer.di(context).resolve<UserService>();
@@ -42,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Text(response['message']),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
           ),
         );
 
@@ -66,13 +82,23 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         if (mounted) context.go('/init');
       } catch (e) {
+        setState(() {
+          _errorMessage = 'Error al iniciar sesión: $e';
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error al iniciar sesión: $e'),
+              content: Text(_errorMessage ?? 'Error desconocido'),
               backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
             ),
           );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
         }
       }
     }
@@ -80,54 +106,138 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
     return AuthLayout(
       title: 'Iniciar Sesión',
       children: [
-        TextField(
-          controller: _emailController,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _passwordController,
-          decoration: InputDecoration(
-            labelText: 'Contraseña',
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
-              },
+        if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: colorScheme.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: colorScheme.error),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          obscureText: _obscurePassword,
-        ),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: _submitForm,
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 50),
+        Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'ejemplo@correo.com',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa tu email';
+                  }
+                  if (!value.contains('@') || !value.contains('.')) {
+                    return 'Por favor ingresa un email válido';
+                  }
+                  return null;
+                },
+                autocorrect: false,
+                enableSuggestions: true,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  hintText: '********',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                    tooltip: _obscurePassword ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa tu contraseña';
+                  }
+                  return null;
+                },
+                onFieldSubmitted: (_) => _submitForm(),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(),
+                        )
+                      : const Text(
+                          'Iniciar Sesión',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () {
+                  context.go('/forgot-password');
+                },
+                icon: const Icon(Icons.help_outline, size: 18),
+                label: const Text('¿Olvidaste tu contraseña?'),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('¿No tienes una cuenta?'),
+                  TextButton(
+                    onPressed: () {
+                      context.go('/register');
+                    },
+                    child: const Text('Registrarse'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          child: const Text('Iniciar Sesión'),
-        ),
-        const SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            context.go('/forgot-password');
-          },
-          child: const Text('¿Olvidaste tu contraseña?'),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: () {
-            context.go('/register');
-          },
-          child: const Text('Registrarse'),
         ),
       ],
     );

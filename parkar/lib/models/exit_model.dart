@@ -1,4 +1,3 @@
-
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
 import 'parking_model.dart';
@@ -21,6 +20,11 @@ class ExitModel extends JsonConvertible<ExitModel> {
   final double amount;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Getters adicionales
+  DateTime get exitTime => dateTime;
+  int get duration => 0; // Placeholder
+  String get paymentMethod => 'Efectivo'; // Placeholder
 
   ExitModel({
     required this.id,
@@ -89,5 +93,3 @@ class ExitUpdateModel extends JsonConvertible<ExitUpdateModel> {
   @override
   Map<String, dynamic> toJson() => _$ExitUpdateModelToJson(this);
 }
-
-

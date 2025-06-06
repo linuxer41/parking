@@ -10,6 +10,8 @@ import { exitCrud } from './crud/exit';
 import { cashRegisterCrud } from './crud/cash-register';
 import { movementCrud } from './crud/movement';
 import { reservationCrud } from './crud/reservation';
+import { reportCrud } from './crud/report';
+import { notificationCrud } from './crud/notification';
 
   export const db = {
     user: userCrud,
@@ -23,6 +25,8 @@ import { reservationCrud } from './crud/reservation';
     exit: exitCrud,
     cashRegister: cashRegisterCrud,
     movement: movementCrud,
-    reservation: reservationCrud
+    reservation: reservationCrud,
+    report: reportCrud,
+    notification: notificationCrud
   };
   

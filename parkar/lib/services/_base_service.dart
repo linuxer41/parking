@@ -11,7 +11,7 @@ class BaseService<
     CreateModel extends JsonConvertible<CreateModel>,
     UpdateModel extends JsonConvertible<UpdateModel>> {
   final http.Client httpClient = http.Client();
-  final String baseUrl = 'http://192.168.1.2:3001';
+  final String baseUrl = 'http://192.168.100.8:3001';
   final String path; // Definir el path como propiedad de la clase
   final FromJsonFactory<Model> fromJsonFactory; // Función factory para Model
 
@@ -119,7 +119,7 @@ class BaseService<
         // Si el valor es un mapa, aplicar recursividad
         if (value is Map<String, dynamic>) {
           result[key] = removeNulls(value);
-        } 
+        }
         // Si el valor es una lista, procesar sus elementos
         else if (value is List) {
           result[key] = value.map((item) {
@@ -128,7 +128,7 @@ class BaseService<
             }
             return item;
           }).toList();
-        } 
+        }
         // Si no es nulo, ni mapa ni lista, agregarlo directamente
         else {
           result[key] = value;

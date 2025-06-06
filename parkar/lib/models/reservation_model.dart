@@ -1,4 +1,3 @@
-
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
 import 'parking_model.dart';
@@ -26,6 +25,9 @@ class ReservationModel extends JsonConvertible<ReservationModel> {
   final double amount;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  // Getter para startTime
+  DateTime get startTime => startDate;
 
   ReservationModel({
     required this.id,
@@ -112,5 +114,3 @@ class ReservationUpdateModel extends JsonConvertible<ReservationUpdateModel> {
   @override
   Map<String, dynamic> toJson() => _$ReservationUpdateModelToJson(this);
 }
-
-
