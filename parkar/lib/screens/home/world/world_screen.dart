@@ -7,7 +7,8 @@ import '../../../utils/theme_helper.dart';
 import 'core/index.dart';
 import 'models/index.dart';
 import 'widgets/world_canvas.dart';
-import '../world/dialogs/spot_properties_dialog.dart';
+import 'dialogs/spot_properties_dialog.dart';
+import 'widgets/controls_overlay.dart';
 
 /// Enumeración para los modos de vista
 enum ViewMode { normal, editor }
@@ -50,12 +51,17 @@ class _WorldScreenState extends State<WorldScreen>
   // FocusNode para capturar eventos de teclado
   late FocusNode _keyboardFocusNode;
 
+  // Estado para mostrar indicador de zoom
+  bool _showZoomInfo = false;
 
   @override
   void initState() {
     super.initState();
     // Crear el estado del mundo
     _worldState = WorldState();
+    
+    // Añadir listener para mantener sincronizada la lista de elementos seleccionados
+    _worldState.addListener(_updateSelectedElements);
 
     // Inicializar el controlador de animación
     _animationController = AnimationController(
@@ -89,8 +95,12 @@ class _WorldScreenState extends State<WorldScreen>
     // Activar modo de edición aquí es seguro porque didChangeDependencies
     // se llama después de initState y el contexto ya está disponible
     if (!_worldState.isEditMode && _viewMode == ViewMode.editor) {
-    _toggleEditMode();
+      _toggleEditMode();
     }
+    
+    // Actualizar la lista de elementos seleccionados
+    _selectedElements.clear();
+    _selectedElements.addAll(_worldState.selectedElements);
   }
 
   @override
@@ -104,9 +114,18 @@ class _WorldScreenState extends State<WorldScreen>
 
   @override
   void dispose() {
+    _worldState.removeListener(_updateSelectedElements);
     _animationController.dispose();
     _keyboardFocusNode.dispose();
     super.dispose();
+  }
+
+  // Método para actualizar la lista de elementos seleccionados
+  void _updateSelectedElements() {
+    setState(() {
+      _selectedElements.clear();
+      _selectedElements.addAll(_worldState.selectedElements);
+    });
   }
 
   // Método para cambiar entre modo normal y editor
@@ -308,6 +327,11 @@ class _WorldScreenState extends State<WorldScreen>
     final primaryColor = ThemeHelper.getAccentColor(context);
     final subtleColor = ThemeHelper.getSubtleColor(context);
     
+    // Verificar disponibilidad de acciones
+    final hasSelectedElements = _selectedElements.isNotEmpty;
+    final canUndo = _worldState.historyManager.canUndo;
+    final canRedo = _worldState.historyManager.canRedo;
+    
     // Actualizar el estilo de la barra de estado según el tema actual
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -337,8 +361,8 @@ class _WorldScreenState extends State<WorldScreen>
                     _keyboardFocusNode.requestFocus();
                   }
                 },
-          child: Stack(
-            children: [
+                child: Stack(
+                  children: [
                     // Canvas principal (en el fondo)
                     ChangeNotifierProvider.value(
                       value: _worldState,
@@ -361,297 +385,285 @@ class _WorldScreenState extends State<WorldScreen>
                         onEditSpotProperties: showSpotPropertiesDialog,
                       ),
                     ),
+                    
+                    // Controles del modo normal (solo visibles cuando no estamos en modo edición)
+                    if (_viewMode == ViewMode.normal && !_worldState.isEditMode)
+                      ChangeNotifierProvider.value(
+                        value: _worldState,
+                        child: ControlsOverlay(
+                          isEditMode: false,
+                          onToggleEditMode: _toggleViewMode,
+                          onSpotLocate: (spot) {
+                            // Centrar la cámara en el spot encontrado
+                            final cameraX = spot.position.x * _worldState.zoom;
+                            final cameraY = spot.position.y * _worldState.zoom;
+                            _worldState.moveCamera(vector_math.Vector2(cameraX, cameraY));
+                            
+                            // Destacar el spot encontrado
+                            setState(() {
+                              _selectedElements.clear();
+                              _selectedElements.add(spot);
+                            });
+                            
+                            // Mostrar información del spot
+                            _showAssignVehicleDialog(spot);
+                          },
+                          onAddSpot: (spotType) {
+                            _addSpot(type: spotType);
+                          },
+                          onAddSignage: (signageType) {
+                            _addSignage(type: signageType);
+                          },
+                          onAddFacility: (facilityType) {
+                            _addFacility(type: facilityType);
+                          },
+                        ),
+                      ),
+
+                    // Controles del modo editor
+                    if (_viewMode == ViewMode.editor && _worldState.isEditMode)
+                      ChangeNotifierProvider.value(
+                        value: _worldState,
+                        child: ControlsOverlay(
+                          isEditMode: true,
+                          onSaveChanges: _toggleViewMode,
+                          onCancelChanges: _toggleViewMode,
+                          onSpotLocate: (spot) {
+                            // Centrar la cámara en el spot encontrado
+                            final cameraX = spot.position.x * _worldState.zoom;
+                            final cameraY = spot.position.y * _worldState.zoom;
+                            _worldState.moveCamera(vector_math.Vector2(cameraX, cameraY));
+                            
+                            // Destacar el spot encontrado
+                            setState(() {
+                              _selectedElements.clear();
+                              _selectedElements.add(spot);
+                            });
+                          },
+                          onAddSpot: (spotType) {
+                            _addSpot(type: spotType);
+                          },
+                          onAddSignage: (signageType) {
+                            _addSignage(type: signageType);
+                          },
+                          onAddFacility: (facilityType) {
+                            _addFacility(type: facilityType);
+                          },
+                        ),
+                      ),
 
                     // Panel lateral unificado (izquierda) - Solo en modo editor
                     if (_viewMode == ViewMode.editor && _worldState.isEditMode)
-                      Material(
-                        type: MaterialType.transparency,
-                        child: Row(
-                          children: [
-                            // Panel de edición vertical (izquierda)
-                            Container(
-                              width: 50, // Reducido de 60 a 50
-                              height: double.infinity,
-                              decoration: BoxDecoration(
-                                color: surfaceColor,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 3,
-                                    offset: const Offset(1, 0),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  // Selector de modo de edición
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 4),
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          'MODO',
-                                          style: TextStyle(
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.bold,
-                                            color: subtleColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            _buildEditorModeButton(
-                                              EditorMode.free,
-                                              Icons.edit,
-                                              'Edición libre',
-                                              primaryColor,
-                                            ),
-                                            const SizedBox(height: 2),
-                                            _buildEditorModeButton(
-                                              EditorMode.selection,
-                                              Icons.select_all,
-                                              'Selección',
-                                              primaryColor,
-                                            ),
-                                          ],
-                                        ),
-                                        const Divider(height: 8, thickness: 0.5),
-                                      ],
-                                    ),
-                                  ),
-                                  
-                                  // Pestañas para elementos (integradas en la barra lateral)
-                                  Expanded(
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 6), // Reducido de 8 a 6
-                                      child: Column(
-                                        children: [
-                                          // Etiqueta de la sección
-                                          Text(
-                                            'ELEMENTOS',
-                                            style: TextStyle(
-                                              fontSize: 8, // Reducido de 9 a 8
-                                              fontWeight: FontWeight.bold,
-                                              color: subtleColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4), // Reducido de 8 a 4
-                                          _buildVerticalCategoryTab(0, 'Espacios', Icons.directions_car, subtleColor),
-                                          const SizedBox(height: 2), // Reducido de 4 a 2
-                                          _buildVerticalCategoryTab(1, 'Señales', Icons.signpost, subtleColor),
-                                          const SizedBox(height: 2), // Reducido de 4 a 2
-                                          _buildVerticalCategoryTab(2, 'Instalaciones', Icons.elevator, subtleColor),
-                                          
-                                          // Mostrar elementos de la categoría seleccionada
-                                          const Spacer(),
-                                          const SizedBox(height: 4),
-                                          
-                                          // Mostrar elementos de la categoría seleccionada directamente en el panel lateral
-                                          Expanded(
-        child: Container(
-                                              padding: const EdgeInsets.symmetric(vertical: 4),
-                                              child: SingleChildScrollView(
-                                                child: Column(
-                                                  children: _buildCompactElementsForCategory(_selectedTabIndex),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      Positioned(
+                        left: 16,
+                        top: 20,
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(12),
+                          color: surfaceColor,
+                          child: Container(
+                            width: 60,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 3,
+                                  offset: const Offset(1, 0),
+                                ),
+                              ],
                             ),
-                            // Espacio vacío para permitir que el canvas sea interactivo
-                            const Expanded(child: SizedBox()),
-                          ],
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Selector de modo de edición
+                                Text(
+                                  'MODO',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: subtleColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildEditorModeButton(
+                                      EditorMode.free,
+                                      Icons.edit,
+                                      'Edición libre',
+                                      primaryColor,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    _buildEditorModeButton(
+                                      EditorMode.selection,
+                                      Icons.select_all,
+                                      'Selección',
+                                      primaryColor,
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 12, thickness: 0.5),
+                                
+                                // Acciones rápidas
+                                Text(
+                                  'ACCIONES',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: subtleColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                
+                                // Botones de acciones rápidas
+                                _buildQuickActionButton(
+                                  Icons.copy, 
+                                  'Copiar',
+                                  primaryColor,
+                                  () {
+                                    if (hasSelectedElements) {
+                                      _worldState.copySelectedElements();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Elementos copiados'),
+                                          duration: Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  isEnabled: hasSelectedElements,
+                                ),
+                                
+                                const SizedBox(height: 4),
+                                _buildQuickActionButton(
+                                  Icons.paste, 
+                                  'Pegar',
+                                  primaryColor,
+                                  () {
+                                    // Obtener el centro de la pantalla para pegar elementos
+                                    final center = vector_math.Vector2(
+                                      _worldState.cameraPosition.x + 200 / _worldState.zoom,
+                                      _worldState.cameraPosition.y + 200 / _worldState.zoom,
+                                    );
+                                    _worldState.pasteElements(center);
+                                  },
+                                  isEnabled: _worldState.clipboardElements.isNotEmpty,
+                                ),
+                                
+                                const SizedBox(height: 4),
+                                _buildQuickActionButton(
+                                  Icons.undo, 
+                                  'Deshacer',
+                                  primaryColor,
+                                  () => _worldState.undo(),
+                                  isEnabled: canUndo,
+                                ),
+                                
+                                const SizedBox(height: 4),
+                                _buildQuickActionButton(
+                                  Icons.redo, 
+                                  'Rehacer',
+                                  primaryColor,
+                                  () => _worldState.redo(),
+                                  isEnabled: canRedo,
+                                ),
+                                
+                                const SizedBox(height: 4),
+                                _buildQuickActionButton(
+                                  Icons.delete, 
+                                  'Eliminar',
+                                  Colors.red,
+                                  _deleteSelectedElements,
+                                  isEnabled: hasSelectedElements,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
 
                     // Panel de herramientas para elementos seleccionados (solo en modo selección)
                     if (_viewMode == ViewMode.editor && _editorMode == EditorMode.selection && _selectedElements.isNotEmpty)
                       Positioned(
-                        bottom: 80,
+                        bottom: 120, // Ajustado para la nueva altura de la barra inferior
                         left: 0,
                         right: 0,
                         child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-                              color: surfaceColor.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '${_selectedElements.length} seleccionados',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: ThemeHelper.getTextColor(context),
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            color: surfaceColor,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${_selectedElements.length} seleccionados',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: primaryColor,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                _buildSelectionToolButton(
-                                  icon: Icons.delete,
-                                  tooltip: 'Eliminar seleccionados',
-                                  onPressed: _deleteSelectedElements,
-                                  primaryColor: Colors.red,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildSelectionToolButton(
-                                  icon: Icons.rotate_right,
-                                  tooltip: 'Rotar 90°',
-                                  onPressed: () => _rotateSelectedElements(90),
-                                  primaryColor: primaryColor,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildSelectionToolButton(
-                                  icon: Icons.align_horizontal_left,
-                                  tooltip: 'Alinear a la izquierda',
-                                  onPressed: () => _alignSelectedElements(AlignmentDirection.left),
-                                  primaryColor: primaryColor,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildSelectionToolButton(
-                                  icon: Icons.align_horizontal_right,
-                                  tooltip: 'Alinear a la derecha',
-                                  onPressed: () => _alignSelectedElements(AlignmentDirection.right),
-                                  primaryColor: primaryColor,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildSelectionToolButton(
-                                  icon: Icons.align_horizontal_center,
-                                  tooltip: 'Alinear arriba',
-                                  onPressed: () => _alignSelectedElements(AlignmentDirection.top),
-                                  primaryColor: primaryColor,
-                                ),
-                                const SizedBox(width: 8),
-                                _buildSelectionToolButton(
-                                  icon: Icons.align_vertical_bottom,
-                                  tooltip: 'Alinear abajo',
-                                  onPressed: () => _alignSelectedElements(AlignmentDirection.bottom),
-                                  primaryColor: primaryColor,
-                                ),
-                              ],
+                                  const SizedBox(width: 12),
+                                  _buildSelectionToolButton(
+                                    icon: Icons.delete,
+                                    tooltip: 'Eliminar seleccionados',
+                                    onPressed: _deleteSelectedElements,
+                                    primaryColor: Colors.red,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildSelectionToolButton(
+                                    icon: Icons.rotate_right,
+                                    tooltip: 'Rotar 90°',
+                                    onPressed: () => _rotateSelectedElements(90),
+                                    primaryColor: primaryColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildSelectionToolButton(
+                                    icon: Icons.align_horizontal_left,
+                                    tooltip: 'Alinear a la izquierda',
+                                    onPressed: () => _alignSelectedElements(AlignmentDirection.left),
+                                    primaryColor: primaryColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildSelectionToolButton(
+                                    icon: Icons.align_horizontal_right,
+                                    tooltip: 'Alinear a la derecha',
+                                    onPressed: () => _alignSelectedElements(AlignmentDirection.right),
+                                    primaryColor: primaryColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildSelectionToolButton(
+                                    icon: Icons.align_horizontal_center,
+                                    tooltip: 'Alinear arriba',
+                                    onPressed: () => _alignSelectedElements(AlignmentDirection.top),
+                                    primaryColor: primaryColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildSelectionToolButton(
+                                    icon: Icons.align_vertical_bottom,
+                                    tooltip: 'Alinear abajo',
+                                    onPressed: () => _alignSelectedElements(AlignmentDirection.bottom),
+                                    primaryColor: primaryColor,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-
-                    // Botón para cambiar entre modos (esquina superior derecha)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Material(
-                        color: Colors.transparent,
-      child: InkWell(
-                          onTap: _toggleViewMode,
-                          borderRadius: BorderRadius.circular(8),
-        child: Container(
-                            padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-                              color: surfaceColor.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  _viewMode == ViewMode.normal ? Icons.edit : Icons.visibility,
-                                  color: primaryColor,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _viewMode == ViewMode.normal ? 'Modo Editor' : 'Modo Normal',
-                                  style: TextStyle(
-                                    color: primaryColor,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Controles de zoom (esquina inferior derecha)
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: surfaceColor.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                _buildToolButton(
-                                  icon: Icons.zoom_in,
-                                  tooltip: 'Acercar',
-                                  onPressed: () {
-                                    _worldState.setZoom(_worldState.zoom * 1.2);
-                                  },
-                                  isSelected: false,
-                                  primaryColor: primaryColor,
-                                  subtleColor: subtleColor,
-                                ),
-                                const Divider(height: 1, thickness: 1),
-                                _buildToolButton(
-                                  icon: Icons.zoom_out,
-                                  tooltip: 'Alejar',
-                                  onPressed: () {
-                                    _worldState.setZoom(_worldState.zoom / 1.2);
-                                  },
-                                  isSelected: false,
-                                  primaryColor: primaryColor,
-                                  subtleColor: subtleColor,
-                                ),
-                                const Divider(height: 1, thickness: 1),
-                                _buildToolButton(
-                                  icon: Icons.center_focus_strong,
-                                  tooltip: 'Centrar y resetear zoom',
-                                  onPressed: _resetViewAndZoom,
-                                  isSelected: false,
-                                  primaryColor: primaryColor,
-                                  subtleColor: subtleColor,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
 
                     // Indicador de carga
                     if (_isLoading)
@@ -678,6 +690,102 @@ class _WorldScreenState extends State<WorldScreen>
                           ),
                         ),
                       ),
+
+                    // Controles de zoom (esquina inferior derecha)
+                    Positioned(
+                      bottom: 120, // Ajustado para la nueva altura de la barra inferior
+                      right: 20,
+                      child: Material(
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(8),
+                        color: surfaceColor,
+                        child: Container(
+                          width: 36,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.withOpacity(0.2), width: 0.5),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 16),
+                                tooltip: 'Acercar',
+                                onPressed: () {
+                                  _worldState.setZoom(_worldState.zoom * 1.1);
+                                  _showZoomIndicator();
+                                },
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(),
+                                splashRadius: 18,
+                              ),
+                              const Divider(height: 1, thickness: 0.5),
+                              IconButton(
+                                icon: const Icon(Icons.center_focus_strong, size: 16),
+                                tooltip: 'Centrar',
+                                onPressed: () {
+                                  _resetViewAndZoom();
+                                  _showZoomIndicator();
+                                },
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(),
+                                splashRadius: 18,
+                              ),
+                              const Divider(height: 1, thickness: 0.5),
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 16),
+                                tooltip: 'Alejar',
+                                onPressed: () {
+                                  _worldState.setZoom(_worldState.zoom / 1.1);
+                                  _showZoomIndicator();
+                                },
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(),
+                                splashRadius: 18,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Indicador de zoom (aparece temporalmente)
+                    if (_showZoomInfo)
+                      Positioned(
+                        top: 70,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Zoom: ${(_worldState.zoom * 100).toInt()}%',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                if (_worldState.cameraPosition.x != 0 || _worldState.cameraPosition.y != 0)
+                                  Text(
+                                    'Desplazamiento: (${_worldState.cameraPosition.x.toInt()}, ${_worldState.cameraPosition.y.toInt()})',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -698,7 +806,7 @@ class _WorldScreenState extends State<WorldScreen>
     print('Control pressed: ${HardwareKeyboard.instance.isControlPressed}');
     print('Shift pressed: ${HardwareKeyboard.instance.isShiftPressed}');
     
-    // Solo procesar eventos en modo edición
+    // Solo procesar eventos en modo edición (cualquier modo: libre o selección)
     if (!_worldState.isEditMode) {
       print('Ignorando evento de teclado: no estamos en modo edición');
       return;
@@ -714,12 +822,20 @@ class _WorldScreenState extends State<WorldScreen>
     if (HardwareKeyboard.instance.isControlPressed) {
       if (event.logicalKey == LogicalKeyboardKey.keyC) { // Ctrl+C - Copiar
         print('Ejecutando: Copiar');
-        if (_selectedElements.isNotEmpty) {
+        if (_worldState.selectedElements.isNotEmpty) {
           _worldState.copySelectedElements();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Elementos copiados'),
+              duration: Duration(seconds: 1),
+            ),
+          );
         }
       } else if (event.logicalKey == LogicalKeyboardKey.keyV) { // Ctrl+V - Pegar
         print('Ejecutando: Pegar');
-        _worldState.pasteElements(center);
+        if (_worldState.clipboardElements.isNotEmpty) {
+          _worldState.pasteElements(center);
+        }
       } else if (event.logicalKey == LogicalKeyboardKey.keyZ) { // Ctrl+Z - Deshacer/Rehacer
         if (HardwareKeyboard.instance.isShiftPressed) {
           // Ctrl+Shift+Z - Rehacer
@@ -737,7 +853,7 @@ class _WorldScreenState extends State<WorldScreen>
     } else if (event.logicalKey == LogicalKeyboardKey.delete || 
                event.logicalKey == LogicalKeyboardKey.backspace) { // Teclas Delete/Backspace - Eliminar
       print('Ejecutando: Eliminar');
-      if (_selectedElements.isNotEmpty) {
+      if (_worldState.selectedElements.isNotEmpty) {
         _worldState.deleteSelectedElements();
       }
     }
@@ -1113,13 +1229,24 @@ class _WorldScreenState extends State<WorldScreen>
 
   // Método para resetear la vista y el zoom
   void _resetViewAndZoom() {
-    // Calcular el desplazamiento necesario para volver al origen
-    final currentPos = _worldState.cameraPosition;
-    final delta = vector_math.Vector2(-currentPos.x, -currentPos.y);
-    
-    // Resetear zoom y posición
+    // Resetear zoom primero
     _worldState.setZoom(1.0);
-    _worldState.moveCamera(delta);
+    
+    // Establecer la posición de la cámara exactamente en (0,0)
+    _worldState.cameraPosition.x = 0;
+    _worldState.cameraPosition.y = 0;
+    _worldState.notifyListeners();
+    
+    // Mostrar indicador de zoom
+    _showZoomIndicator();
+    
+    // Mostrar confirmación visual
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Vista centrada en (0,0)'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   // Método para construir botón de modo de edición
@@ -1245,5 +1372,56 @@ class _WorldScreenState extends State<WorldScreen>
     
     // Usar el nuevo método que verifica colisiones
     _worldState.alignSelectedElements(directionStr);
+  }
+
+  // Widget para botones de acciones rápidas
+  Widget _buildQuickActionButton(IconData icon, String label, Color primaryColor, VoidCallback onPressed, {bool isEnabled = true}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isEnabled ? onPressed : null,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+            border: isEnabled ? null : Border.all(color: Colors.grey.withOpacity(0.2), width: 0.5),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isEnabled ? primaryColor : Colors.grey.withOpacity(0.5),
+                size: 18,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 7,
+                  fontWeight: FontWeight.w500,
+                  color: isEnabled ? primaryColor : Colors.grey.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Método para mostrar indicador de zoom
+  void _showZoomIndicator() {
+    setState(() {
+      _showZoomInfo = true;
+    });
+    Future.delayed(const Duration(seconds: 2), () {
+      setState(() {
+        _showZoomInfo = false;
+      });
+    });
   }
 }

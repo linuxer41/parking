@@ -31,13 +31,22 @@ class WorldRenderer {
   final bool showHeatmap;
   final double ambientLightIntensity;
 
+  // Caché de elementos visibles
+  List<WorldElement>? _visibleElements;
+  
+  // Flags para invalidar caché
+  bool _cacheInvalidated = true;
+  Size? _lastCanvasSize;
+  double? _lastZoom;
+  vector_math.Vector2? _lastCameraPosition;
+
   WorldRenderer({
     required this.state,
     required this.canvasSize,
     this.showGrid = true,
     this.gridSize = 20.0,
     this.gridColor = Colors.grey,
-    this.gridOpacity = 0.15, // Reducido para un aspecto más sutil
+    this.gridOpacity = 0.3,
     this.backgroundColor = Colors.white,
     this.selectionColor = Colors.blue, // Color azul para selección
     this.selectionStrokeWidth = 1.5, // Más fino para un aspecto minimalista
@@ -64,11 +73,50 @@ class WorldRenderer {
       _drawHeatmap(canvas);
     }
 
-    // Dibujar todos los elementos
-    _drawElements(canvas);
+    // Actualizar caché de elementos visibles si es necesario
+    if (_shouldUpdateCache()) {
+      _updateVisibleElementsCache();
+    }
+
+    // Dibujar elementos visibles
+    _renderVisibleElements(canvas);
 
     // Dibujar elementos de interfaz adicionales
     _drawUI(canvas);
+  }
+
+  /// Obtiene solo los elementos que son visibles en el viewport actual
+  List<WorldElement> _getVisibleElements() {
+    // Ordenar elementos por tipo para dibujarlos en capas
+    // (primero spots, luego facilities, finalmente signages)
+    final List<WorldElement> orderedElements = [];
+    orderedElements.addAll(state.spots);
+    orderedElements.addAll(state.facilities);
+    orderedElements.addAll(state.signages);
+
+    // Ordenar por posición Y para simular profundidad
+    orderedElements.sort((a, b) {
+      // Usar la posición Y como aproximación de profundidad
+      return a.position.y.compareTo(b.position.y);
+    });
+
+    // Aplicar culling: filtrar elementos visibles y en el nivel actual
+    // Ampliamos ligeramente el área visible para evitar apariciones abruptas
+    final visibleRect = Rect.fromLTWH(
+      -100, -100, 
+      canvasSize.width + 200, 
+      canvasSize.height + 200
+    );
+    
+    return orderedElements.where((element) {
+      // Verificar si el elemento está en la vista actual
+      final screenPos = element.getScreenPosition(state.zoom, state.cameraPosition);
+      final isInView = visibleRect.contains(Offset(screenPos.x, screenPos.y));
+
+      // Verificar si el elemento es visible
+      return element.isVisible && 
+             isInView;
+    }).toList();
   }
 
   /// Método para dibujar el fondo
@@ -108,64 +156,73 @@ class WorldRenderer {
     }
   }
 
-  /// Método para dibujar la cuadrícula
+  /// Método para dibujar la cuadrícula de manera optimizada
   void _drawGrid(Canvas canvas) {
     final Color effectiveGridColor = isDarkMode
         ? Colors.white.withOpacity(gridOpacity * 0.7)
         : gridColor.withOpacity(gridOpacity);
 
+    // Reutilizar el mismo objeto Paint para mejor rendimiento
     final paint = Paint()
       ..color = effectiveGridColor
-      ..strokeWidth = 0.5; // Líneas más finas para un aspecto minimalista
+      ..strokeWidth = 0.5;
 
     final effectiveGridSize = gridSize * state.zoom;
     final offsetX = state.cameraPosition.x % effectiveGridSize;
     final offsetY = state.cameraPosition.y % effectiveGridSize;
-
-    // Dibujar líneas verticales
-    for (double x = -offsetX; x < canvasSize.width; x += effectiveGridSize) {
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, canvasSize.height),
-        paint,
-      );
+    
+    // Calcular líneas visibles para evitar dibujar más allá de los límites
+    final int verticalLinesCount = (canvasSize.width / effectiveGridSize).ceil() + 1;
+    final int horizontalLinesCount = (canvasSize.height / effectiveGridSize).ceil() + 1;
+    
+    // Crear listas de puntos para dibujar todas las líneas a la vez
+    final List<Offset> gridPoints = [];
+    
+    // Añadir puntos para líneas verticales
+    for (int i = 0; i < verticalLinesCount; i++) {
+      final x = -offsetX + i * effectiveGridSize;
+      gridPoints.add(Offset(x, 0));
+      gridPoints.add(Offset(x, canvasSize.height));
     }
-
-    // Dibujar líneas horizontales
-    for (double y = -offsetY; y < canvasSize.height; y += effectiveGridSize) {
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(y, canvasSize.width),
-        paint,
-      );
+    
+    // Añadir puntos para líneas horizontales
+    for (int i = 0; i < horizontalLinesCount; i++) {
+      final y = -offsetY + i * effectiveGridSize;
+      gridPoints.add(Offset(0, y));
+      gridPoints.add(Offset(canvasSize.width, y));
     }
-
+    
+    // Dibujar todas las líneas de la cuadrícula a la vez
+    canvas.drawPoints(ui.PointMode.lines, gridPoints, paint);
+    
     // Dibujar líneas principales más destacadas
     final mainGridSize = effectiveGridSize * 5;
     final mainOffsetX = state.cameraPosition.x % mainGridSize;
     final mainOffsetY = state.cameraPosition.y % mainGridSize;
-
-    final mainPaint = Paint()
-      ..color = effectiveGridColor.withOpacity(gridOpacity * 2)
-      ..strokeWidth = 0.8;
-
-    // Dibujar líneas verticales principales
-    for (double x = -mainOffsetX; x < canvasSize.width; x += mainGridSize) {
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, canvasSize.height),
-        mainPaint,
-      );
+    
+    // Reutilizar el mismo objeto Paint para las líneas principales
+    paint.color = effectiveGridColor.withOpacity(gridOpacity * 2);
+    paint.strokeWidth = 0.8;
+    
+    // Crear listas de puntos para las líneas principales
+    final List<Offset> mainGridPoints = [];
+    
+    // Añadir puntos para líneas verticales principales
+    for (int i = 0; i <= (canvasSize.width / mainGridSize).ceil(); i++) {
+      final x = -mainOffsetX + i * mainGridSize;
+      mainGridPoints.add(Offset(x, 0));
+      mainGridPoints.add(Offset(x, canvasSize.height));
     }
-
-    // Dibujar líneas horizontales principales
-    for (double y = -mainOffsetY; y < canvasSize.height; y += mainGridSize) {
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(canvasSize.width, y),
-        mainPaint,
-      );
+    
+    // Añadir puntos para líneas horizontales principales
+    for (int i = 0; i <= (canvasSize.height / mainGridSize).ceil(); i++) {
+      final y = -mainOffsetY + i * mainGridSize;
+      mainGridPoints.add(Offset(0, y));
+      mainGridPoints.add(Offset(canvasSize.width, y));
     }
+    
+    // Dibujar todas las líneas principales a la vez
+    canvas.drawPoints(ui.PointMode.lines, mainGridPoints, paint);
   }
 
   /// Método para dibujar mapa de calor
@@ -212,7 +269,7 @@ class WorldRenderer {
   }
 
   /// Método para dibujar todos los elementos
-  void _drawElements(Canvas canvas) {
+  void _drawElements(Canvas canvas, List<WorldElement> visibleElements) {
     // Guardar el estado actual del canvas
     canvas.save();
 
@@ -579,64 +636,67 @@ class WorldRenderer {
     _drawElementToolbar(canvas, element, screenPos);
   }
 
-  /// Método para dibujar la barra de herramientas del elemento
+  /// Método para dibujar la barra de herramientas del elemento con estilo minimalista
   void _drawElementToolbar(
       Canvas canvas, WorldElement element, vector_math.Vector2 screenPos) {
     // Calcular posición de la barra de herramientas (debajo del elemento)
-    final toolbarY = screenPos.y + (element.size.height * state.zoom / 2) + 15;
+    final toolbarY = screenPos.y + (element.size.height * state.zoom / 2) + 12;
     final toolbarX = screenPos.x;
 
-    // Configuración de la barra de herramientas
-    final iconSize = 16.0; // Tamaño más pequeño para los iconos
-    final iconSpacing = 12.0; // Más espacio entre iconos
-    final totalButtons = 5; // Eliminar, Rotar izq, Rotar der, Copiar, Editar etiqueta
-    final totalWidth =
-        (iconSize * totalButtons) + (iconSpacing * (totalButtons - 1));
+    // Configuración ultraminimalista de la barra de herramientas
+    final iconSize = 14.0; // Iconos más pequeños
+    final iconSpacing = 8.0; // Menos espacio entre iconos
+    final totalButtons = 5;
+    final totalWidth = (iconSize * totalButtons) + (iconSpacing * (totalButtons - 1));
 
-    // Dibujar fondo de la barra de herramientas - más delgado y minimalista
-    final bgColor = isDarkMode ? Colors.grey[850]! : Colors.white;
-    final borderColor = isDarkMode ? Colors.grey[700]! : Colors.black12;
+    // Colores adaptados según el tema
+    final bgColor = isDarkMode ? Colors.grey[900]! : Colors.white;
+    final Color accentColor = isDarkMode ? Colors.white70 : Colors.grey[800]!;
 
-    final bgPaint = Paint()
-      ..color = bgColor.withOpacity(0.85)
+    // Crear un contenedor con efecto de vidrio (glassmorphism)
+    final glassBgPaint = Paint()
+      ..color = bgColor.withOpacity(0.7) // Fondo translúcido
       ..style = PaintingStyle.fill;
 
+    // Borde muy sutil
     final borderPaint = Paint()
-      ..color = borderColor
+      ..color = accentColor.withOpacity(0.15)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.5; // Más fino para un aspecto minimalista
+      ..strokeWidth = 0.5;
 
+    // Forma redondeada para la barra de herramientas
     final bgRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset(toolbarX, toolbarY),
-        width: totalWidth + 16,
-        height: iconSize + 12, // Más compacto
+        width: totalWidth + 12, // Más compacto
+        height: iconSize + 8, // Más delgado
       ),
-      Radius.circular(4.0), // Menos redondeado para un aspecto más minimalista
+      Radius.circular(iconSize), // Bordes completamente redondeados
     );
 
-    // Dibujar fondo con sombra sutil
+    // Añadir sombra ultraligera
     canvas.drawShadow(
       Path()..addRRect(bgRect),
-      Colors.black.withOpacity(0.2),
-      2.0, // Sombra más sutil
+      Colors.black.withOpacity(0.1),
+      1.5,
       true,
     );
 
-    canvas.drawRRect(bgRect, bgPaint);
+    // Dibujar el fondo con efecto de vidrio
+    canvas.drawRRect(bgRect, glassBgPaint);
     
-    // Añadir un sutil efecto de brillo en la parte superior
+    // Efecto sutil de brillo
     final Path highlightPath = Path();
     final Rect highlightRect = Rect.fromLTRB(
       bgRect.left + 1, 
       bgRect.top + 1, 
       bgRect.right - 1, 
-      bgRect.top + (bgRect.height * 0.4)
+      bgRect.top + (bgRect.height * 0.5)
     );
     highlightPath.addRRect(RRect.fromRectAndCorners(
       highlightRect,
-      topLeft: Radius.circular(4.0),
-      topRight: Radius.circular(4.0),
+      topLeft: Radius.circular(iconSize),
+      topRight: Radius.circular(iconSize),
     ));
     
     final Paint highlightPaint = Paint()
@@ -644,7 +704,7 @@ class WorldRenderer {
         Offset(highlightRect.left, highlightRect.top),
         Offset(highlightRect.left, highlightRect.bottom),
         [
-          Colors.white.withOpacity(0.1),
+          Colors.white.withOpacity(isDarkMode ? 0.1 : 0.2),
           Colors.white.withOpacity(0.0),
         ],
       )
@@ -652,50 +712,47 @@ class WorldRenderer {
     
     canvas.drawPath(highlightPath, highlightPaint);
     
-    // Dibujar el borde
+    // Dibujar el borde ultraligero
     canvas.drawRRect(bgRect, borderPaint);
 
     // Posiciones de los iconos
     final startX = toolbarX - totalWidth / 2 + iconSize / 2;
 
-    // Colores vibrantes para los iconos
+    // Colores monocromáticos para un aspecto más minimalista
+    final baseColor = isDarkMode ? Colors.white : Colors.grey[800]!;
     final deleteColor = Colors.red.shade400;
-    final rotateLeftColor = Colors.blue.shade400;
-    final rotateRightColor = Colors.green.shade400;
-    final copyColor = Colors.amber.shade600;
-    final editColor = Colors.purple.shade400;
-
-    // 1. Icono eliminar
-    _drawToolbarIcon(canvas, Icons.delete_outline, Offset(startX, toolbarY),
-        iconSize, deleteColor);
-
-    // 2. Icono rotar antihorario (izquierda)
-    _drawToolbarIcon(canvas, Icons.rotate_left, 
-        Offset(startX + iconSize + iconSpacing, toolbarY), iconSize, rotateLeftColor);
-
-    // 3. Icono rotar horario (derecha)
-    _drawToolbarIcon(canvas, Icons.rotate_right, 
-        Offset(startX + (iconSize + iconSpacing) * 2, toolbarY), iconSize, rotateRightColor);
-
-    // 4. Icono copiar
-    _drawToolbarIcon(canvas, Icons.content_copy, 
-        Offset(startX + (iconSize + iconSpacing) * 3, toolbarY), iconSize, copyColor);
-
-    // 5. Icono editar etiqueta
-    _drawToolbarIcon(canvas, Icons.edit, 
-        Offset(startX + (iconSize + iconSpacing) * 4, toolbarY), iconSize, editColor);
+    
+    // Iconos con espaciado uniforme
+    _drawMinimalistIcon(canvas, Icons.delete_outline, 
+        Offset(startX, toolbarY), iconSize, deleteColor.withOpacity(0.8));
+        
+    _drawMinimalistIcon(canvas, Icons.rotate_left, 
+        Offset(startX + (iconSize + iconSpacing), toolbarY), 
+        iconSize, baseColor.withOpacity(0.8));
+        
+    _drawMinimalistIcon(canvas, Icons.rotate_right, 
+        Offset(startX + (iconSize + iconSpacing) * 2, toolbarY), 
+        iconSize, baseColor.withOpacity(0.8));
+        
+    _drawMinimalistIcon(canvas, Icons.content_copy, 
+        Offset(startX + (iconSize + iconSpacing) * 3, toolbarY), 
+        iconSize, baseColor.withOpacity(0.8));
+        
+    _drawMinimalistIcon(canvas, Icons.edit, 
+        Offset(startX + (iconSize + iconSpacing) * 4, toolbarY), 
+        iconSize, baseColor.withOpacity(0.8));
   }
-
-  /// Método para dibujar un botón de la barra de herramientas - versión minimalista
-  void _drawToolbarButton(
+  
+  /// Método para dibujar un icono minimalista
+  void _drawMinimalistIcon(
     Canvas canvas,
+    IconData icon,
     Offset center,
     double size,
     Color color,
-    IconData icon,
   ) {
-    // Dibujar solo el icono, sin círculo ni borde
-    final iconSize = size;
+    // Dibujar el icono directamente, sin círculo de fondo
+    final iconSize = size * 1.2; // Ligeramente más grande para mejor visibilidad
     final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
       textAlign: ui.TextAlign.center,
       maxLines: 1,
@@ -704,7 +761,7 @@ class WorldRenderer {
         color: color,
         fontSize: iconSize,
         fontFamily: icon.fontFamily,
-        fontWeight: FontWeight.w400, // Más ligero para un aspecto minimalista
+        fontWeight: FontWeight.w300, // Más delgado para aspecto minimalista
       ));
 
     // Usar el código del icono como texto
@@ -759,135 +816,83 @@ class WorldRenderer {
 
   /// Método para dibujar información de estado
   void _drawStateInfo(Canvas canvas) {
-    // Usar un estilo más moderno para la información de estado
-    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
-    final bgColor = isDarkMode
-        ? Colors.grey[850]!.withOpacity(0.7)
-        : Colors.white.withOpacity(0.7);
-    final borderColor = isDarkMode ? Colors.grey[700]! : Colors.black12;
-
-    final textStyle = ui.TextStyle(
-      color: textColor,
-      fontSize: 11.0, // Más pequeño para un aspecto minimalista
-    );
-
-    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
-      textAlign: ui.TextAlign.left,
-      maxLines: 10,
-      ellipsis: '...',
-    ))
-      ..pushStyle(textStyle);
-
-    // Información básica
-    paragraphBuilder.addText('Zoom: ${state.zoom.toStringAsFixed(1)}x');
-
-    // Mostrar solo información esencial para un aspecto minimalista
-    if (state.firstSelectedElement != null) {
-      final element = state.firstSelectedElement!;
-      paragraphBuilder
-        ..addText(
-            '\nElemento: ${element.runtimeType.toString().replaceAll("Parking", "")}')
-        ..addText(
-            '\nPos: (${element.position.x.toStringAsFixed(0)}, ${element.position.y.toStringAsFixed(0)})');
-    } else if (state.selectedElements.isNotEmpty) {
-      paragraphBuilder
-          .addText('\nSeleccionados: ${state.selectedElements.length}');
-    }
-
-    final paragraph = paragraphBuilder.build()
-      ..layout(ui.ParagraphConstraints(width: 150.0));
-
-    // Dibujar un fondo más sutil y moderno
-    final bgPaint = Paint()
-      ..color = bgColor
-      ..style = PaintingStyle.fill;
-
-    final bgRect = Rect.fromLTWH(8.0, 8.0, 154.0, paragraph.height + 12.0);
-    final rrect = RRect.fromRectAndRadius(bgRect, Radius.circular(8.0));
-
-    // Añadir sombra sutil
-    canvas.drawShadow(
-      Path()..addRRect(rrect),
-      Colors.black.withOpacity(0.2),
-      3.0,
-      true,
-    );
-
-    canvas.drawRRect(rrect, bgPaint);
-
-    // Dibujar un borde sutil
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.5;
-
-    canvas.drawRRect(rrect, borderPaint);
-
-    // Posicionar el texto con un pequeño padding
-    canvas.drawParagraph(
-      paragraph,
-      Offset(12.0, 14.0),
-    );
+    // Método vacío - overlay eliminado
   }
 
-  /// Método para dibujar un icono en la barra de herramientas
-  void _drawToolbarIcon(
-    Canvas canvas,
-    IconData icon,
-    Offset center,
-    double size,
-    Color color,
-  ) {
-    // Dibujar un círculo de fondo para el icono
-    final bgPaint = Paint()
-      ..color = color.withOpacity(0.15)
-      ..style = PaintingStyle.fill;
+  /// Renderizar elementos visibles
+  void _renderVisibleElements(Canvas canvas) {
+    if (_visibleElements == null) return;
     
-    canvas.drawCircle(center, size * 0.75, bgPaint);
+    // Ordenar elementos por capa para renderizar en el orden correcto
+    // (primero los que están más atrás)
+    _visibleElements!.sort((a, b) => a.renderPriority.compareTo(b.renderPriority));
     
-    // Añadir un sutil efecto de brillo en la parte superior del círculo
-    final highlightPaint = Paint()
-      ..shader = ui.Gradient.radial(
-        Offset(center.dx - size * 0.2, center.dy - size * 0.2),
-        size * 0.75,
-        [
-          Colors.white.withOpacity(0.3),
-          Colors.transparent,
-        ],
-        [0.0, 1.0],
-      )
-      ..style = PaintingStyle.fill
-      ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, 2.0);
+    // Renderizar cada elemento visible
+    for (final element in _visibleElements!) {
+      // Usar el sistema de transformación matricial para optimizar
+      canvas.save();
+      
+      // Aplicar zoom y desplazamiento de cámara
+      canvas.translate(-state.cameraPosition.x, -state.cameraPosition.y);
+      canvas.scale(state.zoom, state.zoom);
+      
+      // Renderizar el elemento
+      element.render(canvas, canvasSize, state.zoom, state.cameraPosition);
+      
+      canvas.restore();
+    }
+  }
+  
+  /// Verificar si se debe actualizar la caché de elementos visibles
+  bool _shouldUpdateCache() {
+    // Actualizar si la caché está invalidada o si algún parámetro relevante ha cambiado
+    if (_cacheInvalidated || 
+        _visibleElements == null ||
+        _lastCanvasSize != canvasSize ||
+        _lastZoom != state.zoom ||
+        _lastCameraPosition?.x != state.cameraPosition.x ||
+        _lastCameraPosition?.y != state.cameraPosition.y) {
+      return true;
+    }
     
-    canvas.drawCircle(
-      Offset(center.dx - size * 0.2, center.dy - size * 0.2),
-      size * 0.3,
-      highlightPaint
+    return false;
+  }
+  
+  /// Actualizar la caché de elementos visibles
+  void _updateVisibleElementsCache() {
+    // Calcular el área visible en coordenadas del mundo
+    final visibleRect = Rect.fromLTWH(
+      state.cameraPosition.x / state.zoom,
+      state.cameraPosition.y / state.zoom,
+      canvasSize.width / state.zoom,
+      canvasSize.height / state.zoom,
     );
     
-    // Dibujar el icono
-    final iconSize = size;
-    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
-      textAlign: ui.TextAlign.center,
-      maxLines: 1,
-    ))
-      ..pushStyle(ui.TextStyle(
-        color: color,
-        fontSize: iconSize,
-        fontFamily: icon.fontFamily,
-        fontWeight: FontWeight.w500, // Un poco más visible
-      ));
-
-    // Usar el código del icono como texto
-    paragraphBuilder.addText(String.fromCharCode(icon.codePoint));
-
-    final paragraph = paragraphBuilder.build()
-      ..layout(ui.ParagraphConstraints(width: iconSize * 2));
-
-    // Centrar el icono
-    canvas.drawParagraph(
-      paragraph,
-      Offset(center.dx - iconSize / 2, center.dy - iconSize / 2),
-    );
+    // Filtrar elementos visibles (dentro del área visible)
+    _visibleElements = state.allElements.where((element) {
+      if (!element.isVisible) return false;
+      
+      // Calcular el rectángulo del elemento en coordenadas del mundo
+      final elementRect = Rect.fromCenter(
+        center: Offset(element.position.x, element.position.y),
+        width: element.size.width,
+        height: element.size.height,
+      );
+      
+      // Comprobar si el elemento está dentro del área visible
+      // (con un margen para elementos parcialmente visibles)
+      return visibleRect.overlaps(elementRect);
+    }).toList();
+    
+    // Actualizar parámetros para la próxima comprobación
+    _lastCanvasSize = canvasSize;
+    _lastZoom = state.zoom;
+    _lastCameraPosition = vector_math.Vector2(state.cameraPosition.x, state.cameraPosition.y);
+    _cacheInvalidated = false;
+  }
+  
+  /// Invalidar la caché de elementos visibles
+  void invalidateCache() {
+    _cacheInvalidated = true;
   }
 }

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/models/user_model.dart';
 import 'package:parkar/screens/home/world/world_screen.dart' show WorldScreen;
-import 'package:parkar/screens/home/flame/flame_screen.dart' show FlameScreen;
 import 'package:parkar/screens/home/profile_screen.dart';
 import 'package:parkar/screens/home/settings_screen.dart';
 import 'package:parkar/state/app_state_container.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../history/history_screen.dart';
+import '../game/game_screen.dart' show GameScreen;
 
 // Notificador para el modo de edición
 final ValueNotifier<bool> isEditorModeActive = ValueNotifier<bool>(false);
@@ -38,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = AppStateContainer.of(context);
     _screens = [
       const WorldScreen(),
-      const FlameScreen(),
+      const GameScreen(),
       const DashboardScreen(),
       const HistoryScreen(),
       const SettingsScreen(),

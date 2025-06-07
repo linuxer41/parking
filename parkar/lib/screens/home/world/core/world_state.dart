@@ -1,11 +1,15 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 
 import '../models/index.dart';
 import 'collision_manager.dart';
 import 'history_manager.dart';
+import 'drag_manager.dart';
+import '../engine/game_engine.dart';
+import '../models/component_system.dart';
 
 /// Clase que maneja el estado global del editor del mundo
 class WorldState extends ChangeNotifier {
@@ -35,16 +39,30 @@ class WorldState extends ChangeNotifier {
   // Gestor de colisiones
   late CollisionManager _collisionManager;
   
+  // Gestor de arrastre
+  late DragManager _dragManager;
+  
   // Mensaje de error de colisión
   String _collisionErrorMessage = '';
   
   // Gestor de historial
   late HistoryManager _historyManager;
   
+  // Motor de juego
+  GameEngine? _gameEngine;
+  
+  // Sistema de componentes
+  final ComponentSystem _componentSystem = ComponentSystem();
+  
+  // Nueva propiedad para controlar actualizaciones por lotes
+  bool _batchUpdatesEnabled = false;
+  bool _needsNotify = false;
+  
   // Constructor
   WorldState() {
     _collisionManager = CollisionManager(state: this);
     _historyManager = HistoryManager(this);
+    _dragManager = DragManager(state: this);
   }
 
   // Getters
@@ -58,8 +76,10 @@ class WorldState extends ChangeNotifier {
   bool get isEditMode => _isEditMode;
   int get currentLevel => _currentLevel;
   CollisionManager get collisionManager => _collisionManager;
+  DragManager get dragManager => _dragManager;
   String get collisionErrorMessage => _collisionErrorMessage;
   HistoryManager get historyManager => _historyManager;
+  ComponentSystem get componentSystem => _componentSystem;
   
   /// Obtener el primer elemento seleccionado (si existe)
   WorldElement? get firstSelectedElement => 
@@ -85,6 +105,40 @@ class WorldState extends ChangeNotifier {
     return elements;
   }
 
+  /// Inicializar el motor de juego
+  void initGameEngine(TickerProvider vsync) {
+    _gameEngine = GameEngine(
+      worldState: this,
+      onUpdate: () {
+        // Notificar cambios en cada actualización del motor
+        notifyListeners();
+      },
+    );
+    
+    _gameEngine!.start(vsync);
+  }
+  
+  /// Detener el motor de juego
+  void stopGameEngine() {
+    _gameEngine?.stop();
+    _gameEngine = null;
+  }
+  
+  /// Añadir un componente a un elemento
+  void addComponent(WorldElement element, Component component) {
+    _componentSystem.addComponent(element, component);
+  }
+  
+  /// Obtener un componente específico de un elemento
+  T? getComponent<T extends Component>(WorldElement element) {
+    return _componentSystem.getComponent<T>(element);
+  }
+  
+  /// Eliminar un componente específico de un elemento
+  void removeComponent<T extends Component>(WorldElement element) {
+    _componentSystem.removeComponent<T>(element);
+  }
+
   /// Método para alternar el modo de edición
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
@@ -97,7 +151,8 @@ class WorldState extends ChangeNotifier {
 
   /// Método para mover la cámara
   void moveCamera(vector_math.Vector2 delta) {
-    _cameraPosition += delta / _zoom;
+    // Invertir el delta para que el movimiento sea en la dirección del arrastre
+    _cameraPosition -= delta / _zoom;
     notifyListeners();
   }
 
@@ -251,16 +306,9 @@ class WorldState extends ChangeNotifier {
           _historyManager.executeAction(AddElementAction(copy));
         }
         
-        // Si es el primer elemento, seleccionarlo
-        if (_selectedElements.isEmpty) {
-          _selectedElements.add(copy);
-          copy.isSelected = true;
-        }
-        // Si hay más elementos, añadirlos a la selección múltiple
-        else if (!_isEditMode) {
-          _selectedElements.add(copy);
-          copy.isSelected = true;
-        }
+        // Seleccionar el elemento pegado, independientemente del modo
+        _selectedElements.add(copy);
+        copy.isSelected = true;
       }
     }
     
@@ -754,5 +802,53 @@ class WorldState extends ChangeNotifier {
   /// Método para rehacer la última acción deshecha
   void redo() {
     _historyManager.redo();
+  }
+
+  /// Inicia una actualización por lotes para reducir notificaciones
+  void beginBatchUpdate() {
+    _batchUpdatesEnabled = true;
+    _needsNotify = false;
+  }
+  
+  /// Finaliza una actualización por lotes y notifica si es necesario
+  void endBatchUpdate() {
+    _batchUpdatesEnabled = false;
+    if (_needsNotify) {
+      notifyListeners();
+      _needsNotify = false;
+    }
+  }
+  
+  /// Sobrescribe notifyListeners para manejar actualizaciones por lotes
+  @override
+  void notifyListeners() {
+    if (_batchUpdatesEnabled) {
+      _needsNotify = true;
+    } else {
+      super.notifyListeners();
+    }
+  }
+
+  /// Método para mover múltiples elementos a la vez (optimizado)
+  void moveMultipleElements(List<WorldElement> elements, vector_math.Vector2 delta) {
+    if (elements.isEmpty) return;
+    
+    beginBatchUpdate();
+    
+    for (final element in elements) {
+      final newPosition = vector_math.Vector2(
+        element.position.x + delta.x,
+        element.position.y + delta.y,
+      );
+      element.move(newPosition);
+    }
+    
+    endBatchUpdate();
+  }
+  
+  /// Método optimizado para filtrar elementos por nivel y visibilidad
+  List<WorldElement> getVisibleElementsInCurrentLevel() {
+    return allElements.where((element) => 
+      element.isVisible).toList();
   }
 }

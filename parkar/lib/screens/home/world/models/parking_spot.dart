@@ -33,6 +33,15 @@ class ParkingSpot extends RenderableElement {
     applyVisuals(typeVisuals);
   }
 
+  /// Obtener el color asociado a la categoría del espacio
+  Color get categoryColor => ElementProperties.getSpotCategoryVisuals(category).color;
+  
+  /// Obtener el icono asociado al tipo de espacio
+  IconData get typeIcon => ElementProperties.getSpotVisuals(type).icon;
+  
+  /// Obtener el nombre de la categoría
+  String get categoryName => ElementProperties.getSpotCategoryVisuals(category).label;
+
   /// Cambiar el tipo de espacio
   void setType(SpotType newType) {
     type = newType;

@@ -15,10 +15,26 @@ class DragManager {
 
   // Propiedades para snap al grid
   bool enableSnapToGrid = true;
-  double gridSize = 10.0;
+  double gridSize = 5.0;
+  
+  // Información de alineamiento activo
+  bool _hasHorizontalAlignment = false;
+  bool _hasVerticalAlignment = false;
+  double _horizontalAlignmentPosition = 0.0;
+  double _verticalAlignmentPosition = 0.0;
+  WorldElement? _horizontalAlignmentElement;
+  WorldElement? _verticalAlignmentElement;
+  
+  // Umbrales de alineamiento
+  final double _alignmentThreshold = 20.0; // Umbral para detectar elementos cercanos (aumentado)
+  final double _snapThreshold = 8.0;      // Umbral para alinearse con elementos (aumentado)
 
   // Getters
   bool get isDragging => _isDragging;
+  bool get hasHorizontalAlignment => _hasHorizontalAlignment;
+  bool get hasVerticalAlignment => _hasVerticalAlignment;
+  double get horizontalAlignmentPosition => _horizontalAlignmentPosition;
+  double get verticalAlignmentPosition => _verticalAlignmentPosition;
 
   DragManager({required this.state});
 
@@ -33,6 +49,7 @@ class DragManager {
     _dragStartScreenPosition = null;
     _elementStartWorldPosition = null;
     _multiDragStartPositions.clear();
+    _clearAlignmentInfo();
 
     // Configurar nuevo arrastre
     _isDragging = true;
@@ -40,8 +57,6 @@ class DragManager {
     _elementStartWorldPosition =
         vector_math.Vector2(element.position.x, element.position.y);
 
-    print(
-        "DragManager: Iniciando arrastre en ${element.id} en posición $_elementStartWorldPosition");
     return true;
   }
 
@@ -56,6 +71,7 @@ class DragManager {
     _dragStartScreenPosition = null;
     _elementStartWorldPosition = null;
     _multiDragStartPositions.clear();
+    _clearAlignmentInfo();
 
     // Guardar la posición inicial de cada elemento
     for (final element in elements) {
@@ -72,17 +88,17 @@ class DragManager {
     _isDragging = true;
     _dragStartScreenPosition = screenPosition;
 
-    print(
-        "DragManager: Iniciando arrastre múltiple con ${_multiDragStartPositions.length} elementos");
     return true;
   }
 
   /// Actualiza la posición durante el arrastre
   void updateDrag(Offset currentScreenPosition) {
     if (!_isDragging || _dragStartScreenPosition == null) {
-      print("DragManager: No hay arrastre activo");
       return;
     }
+
+    // Limpiar información de alineamiento en cada actualización
+    _clearAlignmentInfo();
 
     // Calcular el desplazamiento en coordenadas de pantalla
     final deltaScreen = Offset(
@@ -92,8 +108,6 @@ class DragManager {
     // Convertir a coordenadas de mundo
     final deltaWorld = vector_math.Vector2(
         deltaScreen.dx / state.zoom, deltaScreen.dy / state.zoom);
-
-    print("DragManager: Arrastre activo, delta mundo: $deltaWorld");
 
     // Si hay múltiples elementos seleccionados, siempre moverlos todos juntos
     if (state.selectedElements.length > 1) {
@@ -107,26 +121,52 @@ class DragManager {
         }
       }
       
-      // Mover todos los elementos seleccionados
+      // Calcular posiciones para todos los elementos
+      final List<vector_math.Vector2> newPositions = [];
+      
+      // Primero calcular las nuevas posiciones sin aplicar alineamiento
       for (final element in state.selectedElements) {
         if (_multiDragStartPositions.containsKey(element)) {
           final startPos = _multiDragStartPositions[element]!;
-
-          // Calcular nueva posición
           final newX = startPos.x + deltaWorld.x;
           final newY = startPos.y + deltaWorld.y;
-          final newPosition = vector_math.Vector2(newX, newY);
-
-          // Aplicar snap to grid si está habilitado
-          final finalPosition =
-              enableSnapToGrid ? newPosition.snapToGrid(gridSize) : newPosition;
-
-          // Actualizar directamente
-          element.position.x = finalPosition.x;
-          element.position.y = finalPosition.y;
+          newPositions.add(vector_math.Vector2(newX, newY));
         }
       }
-      print("DragManager: ${state.selectedElements.length} elementos movidos");
+      
+      // Buscar posibles alineamientos para el primer elemento
+      if (newPositions.isNotEmpty) {
+        final firstPosition = newPositions[0];
+        _checkForAlignment(firstPosition);
+        
+        // Aplicar alineamiento si es necesario
+        if (_hasHorizontalAlignment || _hasVerticalAlignment) {
+          final offsetX = _hasVerticalAlignment ? (_verticalAlignmentPosition - firstPosition.x) : 0.0;
+          final offsetY = _hasHorizontalAlignment ? (_horizontalAlignmentPosition - firstPosition.y) : 0.0;
+          
+          // Aplicar el mismo offset a todas las posiciones
+          for (int i = 0; i < newPositions.length; i++) {
+            if (_hasVerticalAlignment) newPositions[i].x += offsetX;
+            if (_hasHorizontalAlignment) newPositions[i].y += offsetY;
+          }
+        }
+      }
+      
+      // Aplicar las nuevas posiciones a los elementos
+      int i = 0;
+      for (final element in state.selectedElements) {
+        if (_multiDragStartPositions.containsKey(element) && i < newPositions.length) {
+          // Aplicar snap to grid si está habilitado y no hay alineamiento
+          final finalPosition = enableSnapToGrid && !_hasHorizontalAlignment && !_hasVerticalAlignment
+              ? newPositions[i].snapToGrid(gridSize)
+              : newPositions[i];
+          
+          element.position.x = finalPosition.x;
+          element.position.y = finalPosition.y;
+          i++;
+        }
+      }
+      
       state.notifyListeners();
     }
     // Si solo hay un elemento seleccionado
@@ -136,29 +176,110 @@ class DragManager {
 
       // Crear nueva posición
       final newPosition = vector_math.Vector2(newX, newY);
+      
+      // Buscar posibles alineamientos
+      _checkForAlignment(newPosition);
+      
+      // Aplicar alineamiento si es necesario
+      if (_hasHorizontalAlignment) {
+        newPosition.y = _horizontalAlignmentPosition;
+      }
+      
+      if (_hasVerticalAlignment) {
+        newPosition.x = _verticalAlignmentPosition;
+      }
 
-      // Aplicar snap to grid si está habilitado
-      final finalPosition =
-          enableSnapToGrid ? newPosition.snapToGrid(gridSize) : newPosition;
+      // Aplicar snap to grid si está habilitado y no hay alineamiento
+      final finalPosition = enableSnapToGrid && !_hasHorizontalAlignment && !_hasVerticalAlignment
+          ? newPosition.snapToGrid(gridSize)
+          : newPosition;
 
       // Actualizar directamente las coordenadas
       state.firstSelectedElement!.position.x = finalPosition.x;
       state.firstSelectedElement!.position.y = finalPosition.y;
 
-      print(
-          "DragManager: Elemento movido a (${finalPosition.x}, ${finalPosition.y})");
       state.notifyListeners();
     }
+  }
+  
+  /// Verifica si hay elementos cercanos para alineamiento
+  void _checkForAlignment(vector_math.Vector2 position) {
+    // Buscar elementos cercanos
+    final nearbyElements = _findNearbyElements(position);
+    
+    // Verificar alineamiento horizontal (mismo valor Y)
+    for (final element in nearbyElements) {
+      final dy = (element.position.y - position.y).abs();
+      if (dy <= _snapThreshold) {
+        _hasHorizontalAlignment = true;
+        _horizontalAlignmentPosition = element.position.y;
+        _horizontalAlignmentElement = element;
+        break;
+      }
+    }
+    
+    // Verificar alineamiento vertical (mismo valor X)
+    for (final element in nearbyElements) {
+      final dx = (element.position.x - position.x).abs();
+      if (dx <= _snapThreshold) {
+        _hasVerticalAlignment = true;
+        _verticalAlignmentPosition = element.position.x;
+        _verticalAlignmentElement = element;
+        break;
+      }
+    }
+  }
+  
+  /// Busca elementos cercanos para alineación
+  List<WorldElement> _findNearbyElements(vector_math.Vector2 position) {
+    return state.allElements.where((element) {
+      // No considerar elementos seleccionados
+      if (state.selectedElements.contains(element)) return false;
+      
+      // Calcular distancia
+      final dx = (element.position.x - position.x).abs();
+      final dy = (element.position.y - position.y).abs();
+      
+      // Considerar cercano si está dentro del umbral en cualquier dirección
+      return dx < _alignmentThreshold || dy < _alignmentThreshold;
+    }).toList();
+  }
+  
+  /// Limpia la información de alineamiento activo
+  void _clearAlignmentInfo() {
+    _hasHorizontalAlignment = false;
+    _hasVerticalAlignment = false;
+    _horizontalAlignmentPosition = 0.0;
+    _verticalAlignmentPosition = 0.0;
+    _horizontalAlignmentElement = null;
+    _verticalAlignmentElement = null;
   }
 
   /// Finaliza el arrastre
   void endDrag() {
     if (_isDragging) {
-      print("DragManager: Finalizando arrastre");
+      // Aplicar alineamiento final si es necesario
+      if ((_hasHorizontalAlignment || _hasVerticalAlignment) && state.selectedElements.isNotEmpty) {
+        for (final element in state.selectedElements) {
+          if (_hasHorizontalAlignment) {
+            element.position.y = _horizontalAlignmentPosition;
+          }
+          
+          if (_hasVerticalAlignment) {
+            element.position.x = _verticalAlignmentPosition;
+          }
+        }
+        
+        // Notificar cambios
+        state.notifyListeners();
+      }
+      
+      // Limpiar estados
       _isDragging = false;
       _dragStartScreenPosition = null;
       _elementStartWorldPosition = null;
       _multiDragStartPositions.clear();
+      _clearAlignmentInfo();
     }
   }
 
@@ -173,5 +294,15 @@ class DragManager {
   Offset worldToScreenPosition(vector_math.Vector2 worldPosition) {
     return Offset(worldPosition.x * state.zoom - state.cameraPosition.x,
         worldPosition.y * state.zoom - state.cameraPosition.y);
+  }
+  
+  /// Obtener información de alineamiento para dibujo de guías
+  Map<String, dynamic> getAlignmentInfo() {
+    return {
+      'hasHorizontalAlignment': _hasHorizontalAlignment,
+      'hasVerticalAlignment': _hasVerticalAlignment,
+      'horizontalPosition': _horizontalAlignmentPosition,
+      'verticalPosition': _verticalAlignmentPosition,
+    };
   }
 }

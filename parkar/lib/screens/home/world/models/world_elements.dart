@@ -76,6 +76,11 @@ class ElementProperties {
   static const Color gray = Color(0xFF9E9E9E);
   static const Color white = Color(0xFFFFFFFF);
   static const Color darkText = Color(0xFF333333);
+  
+  // Colores para los tabs de categorías
+  static const Color spacesTabColor = blue;
+  static const Color signsTabColor = orange;
+  static const Color facilitiesTabColor = purple;
 
   // Mapeo directo entre tipos de elementos y sus propiedades visuales
   static final Map<SignageType, ElementVisuals> signageVisuals = {
@@ -275,11 +280,6 @@ class ElementProperties {
     }
   }
 
-  // Colores para las pestañas de categorías
-  static Color get spacesTabColor => blue;
-  static Color get signsTabColor => red;
-  static Color get facilitiesTabColor => purple;
-
   // Iconos para las pestañas de categorías
   static IconData get spacesTabIcon => Icons.directions_car;
   static IconData get signsTabIcon => Icons.sign_language;
@@ -319,6 +319,19 @@ abstract class WorldElement {
   final bool isResizable;
   final bool isRotatable;
 
+  // Prioridad de renderizado (menor = más atrás, mayor = más adelante)
+  int renderPriority;
+
+  // Propiedades para seguimiento de cambios (inspirado en Unity/MonoGame)
+  bool _hasTransformChanged = false;
+  vector_math.Vector2 _lastPosition;
+  double _lastRotation;
+  Size3D _lastSize;
+  
+  // Matriz de transformación para optimizar el renderizado
+  Matrix4? _transformMatrix;
+  bool _transformMatrixDirty = true;
+
   // Constructor
   WorldElement({
     required this.id,
@@ -334,7 +347,10 @@ abstract class WorldElement {
     this.isDraggable = true,
     this.isResizable = true,
     this.isRotatable = true,
-  });
+    this.renderPriority = 0,
+  }) : _lastPosition = vector_math.Vector2(position.x, position.y),
+       _lastRotation = rotation,
+       _lastSize = Size3D.copy(size);
 
   /// Método para dibujar el elemento
   void render(
@@ -361,19 +377,31 @@ abstract class WorldElement {
 
   /// Método para mover el elemento
   void move(vector_math.Vector2 newPosition) {
-    position.x = newPosition.x;
-    position.y = newPosition.y;
+    if (position.x != newPosition.x || position.y != newPosition.y) {
+      position.x = newPosition.x;
+      position.y = newPosition.y;
+      _hasTransformChanged = true;
+      _transformMatrixDirty = true;
+    }
   }
 
   /// Método para rotar el elemento
   void rotate(double angle) {
-    rotation = angle;
+    if (rotation != angle) {
+      rotation = angle;
+      _hasTransformChanged = true;
+      _transformMatrixDirty = true;
+    }
   }
 
   /// Método para cambiar el tamaño del elemento
   void resize(double newWidth, double newHeight) {
-    size.width = newWidth;
-    size.height = newHeight;
+    if (size.width != newWidth || size.height != newHeight) {
+      size.width = newWidth;
+      size.height = newHeight;
+      _hasTransformChanged = true;
+      _transformMatrixDirty = true;
+    }
   }
 
   /// Método para cambiar el color del elemento
@@ -384,6 +412,44 @@ abstract class WorldElement {
   /// Método para cambiar la visibilidad del elemento
   void setVisibility(bool visible) {
     isVisible = visible;
+  }
+
+  /// Verificar si la transformación ha cambiado desde la última actualización
+  bool get hasTransformChanged => _hasTransformChanged;
+  
+  /// Actualizar la transformación del elemento
+  void updateTransform() {
+    // Actualizar la matriz de transformación
+    if (_transformMatrixDirty) {
+      _updateTransformMatrix();
+    }
+    
+    // Guardar el estado actual como el último estado conocido
+    _lastPosition.x = position.x;
+    _lastPosition.y = position.y;
+    _lastRotation = rotation;
+    _lastSize = Size3D.copy(size);
+    
+    // Resetear la bandera de cambios
+    _hasTransformChanged = false;
+  }
+  
+  /// Actualizar la matriz de transformación
+  void _updateTransformMatrix() {
+    _transformMatrix = Matrix4.identity()
+      ..translate(position.x, position.y, 0.0)
+      ..rotateZ(rotation)
+      ..scale(size.width, size.height, 1.0);
+    
+    _transformMatrixDirty = false;
+  }
+  
+  /// Obtener la matriz de transformación
+  Matrix4 get transformMatrix {
+    if (_transformMatrixDirty) {
+      _updateTransformMatrix();
+    }
+    return _transformMatrix!;
   }
 
   /// Convertir a JSON para guardar
@@ -558,6 +624,7 @@ abstract class RenderableElement extends WorldElement {
     super.isDraggable = true,
     super.isResizable = true,
     super.isRotatable = true,
+    super.renderPriority = 0,
   });
 
   /// Método base para renderizar un elemento rectangular
@@ -594,23 +661,106 @@ abstract class RenderableElement extends WorldElement {
   /// Este método debe ser implementado por las subclases
   void renderContent(Canvas canvas, Offset center, double zoom);
   
-  /// Método para renderizar el indicador de selección
+  /// Método para renderizar el indicador de selección con un estilo minimalista
   void renderSelectionIndicator(Canvas canvas, Offset center, double zoom) {
+    // Pintura para el contorno principal - más delgado y sutil
     final selectionPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2 * zoom
-      ..color = ElementProperties.selectedColor.withOpacity(0.8);
+      ..strokeWidth = 0.8 * zoom
+      ..color = ElementProperties.selectedColor.withOpacity(0.6);
     
-    // Crear un rectángulo ligeramente más grande
+    // Pintura para las esquinas - más destacadas
+    final cornerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2 * zoom
+      ..color = ElementProperties.selectedColor;
+      
+    // Crear un rectángulo para el elemento
     final selectionRect = Rect.fromCenter(
       center: center,
-      width: size.width * zoom + 4 * zoom,
-      height: size.height * zoom + 4 * zoom,
+      width: size.width * zoom + 2 * zoom,
+      height: size.height * zoom + 2 * zoom,
     );
     
-    // Dibujar línea discontinua
-    drawDashedRect(canvas, selectionRect, selectionPaint, 
-        dashLength: 3 * zoom, dashSpace: 2 * zoom);
+    // Dibujar rectángulo sutil con bordes redondeados
+    final rrect = RRect.fromRectAndRadius(
+      selectionRect,
+      Radius.circular(2 * zoom),
+    );
+    canvas.drawRRect(rrect, selectionPaint);
+    
+    // Tamaño de las esquinas
+    final cornerSize = 6.0 * zoom;
+    
+    // Dibujar pequeñas esquinas en las cuatro puntas
+    // Esquina superior izquierda
+    canvas.drawLine(
+      Offset(selectionRect.left, selectionRect.top + cornerSize),
+      Offset(selectionRect.left, selectionRect.top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(selectionRect.left, selectionRect.top),
+      Offset(selectionRect.left + cornerSize, selectionRect.top),
+      cornerPaint,
+    );
+    
+    // Esquina superior derecha
+    canvas.drawLine(
+      Offset(selectionRect.right - cornerSize, selectionRect.top),
+      Offset(selectionRect.right, selectionRect.top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(selectionRect.right, selectionRect.top),
+      Offset(selectionRect.right, selectionRect.top + cornerSize),
+      cornerPaint,
+    );
+    
+    // Esquina inferior izquierda
+    canvas.drawLine(
+      Offset(selectionRect.left, selectionRect.bottom - cornerSize),
+      Offset(selectionRect.left, selectionRect.bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(selectionRect.left, selectionRect.bottom),
+      Offset(selectionRect.left + cornerSize, selectionRect.bottom),
+      cornerPaint,
+    );
+    
+    // Esquina inferior derecha
+    canvas.drawLine(
+      Offset(selectionRect.right - cornerSize, selectionRect.bottom),
+      Offset(selectionRect.right, selectionRect.bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(selectionRect.right, selectionRect.bottom),
+      Offset(selectionRect.right, selectionRect.bottom - cornerSize),
+      cornerPaint,
+    );
+    
+    // Efecto sutil de brillo alrededor del contorno
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5 * zoom
+      ..color = ElementProperties.selectedColor.withOpacity(0.2)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 1.5 * zoom);
+      
+    // Dibujar un halo sutil alrededor del elemento
+    final glowRect = Rect.fromCenter(
+      center: center,
+      width: size.width * zoom + 6 * zoom,
+      height: size.height * zoom + 6 * zoom,
+    );
+    
+    final glowRRect = RRect.fromRectAndRadius(
+      glowRect,
+      Radius.circular(3 * zoom),
+    );
+    
+    canvas.drawRRect(glowRRect, glowPaint);
   }
   
   /// Método para renderizar la etiqueta

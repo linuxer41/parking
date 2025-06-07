@@ -58,20 +58,6 @@ dependencies:
   share_plus: ^7.2.2     # Compartir archivos
   fl_chart: ^0.71.0
   
-  # Motor de juegos Flame para la nueva interfaz
-  flame: ^1.16.0
-  flame_tiled: ^1.16.0
-  
-  # Nuevas dependencias para notificaciones push
-  # firebase_core: ^2.26.0
-  # firebase_messaging: ^14.7.10
-  # flutter_local_notifications: ^16.3.3
-  
-  # Nuevas dependencias para mapas en tiempo real
-  # google_maps_flutter: ^2.6.0
-  # geolocator: ^11.0.0
-  # flutter_polyline_points: ^2.0.0
-  
   # Nuevas dependencias para sistema de reservas
   table_calendar: ^3.1.0
   flutter_datetime_picker_plus: ^2.1.0
