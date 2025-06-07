@@ -79,9 +79,17 @@ class GameEngine {
   void stop() {
     if (!_isRunning) return;
     
-    _ticker?.stop();
-    _ticker?.dispose();
-    _ticker = null;
+    if (_ticker != null) {
+      _ticker!.stop();
+      // Asegurarnos que el ticker es dispuesto correctamente
+      try {
+        _ticker!.dispose();
+      } catch (e) {
+        print('Error al disponer ticker: $e');
+      }
+      _ticker = null;
+    }
+    
     _isRunning = false;
     _isPaused = false;
     

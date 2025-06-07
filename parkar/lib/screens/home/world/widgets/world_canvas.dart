@@ -120,12 +120,24 @@ class _WorldCanvasState extends State<WorldCanvas> with SingleTickerProviderStat
 
   @override
   void dispose() {
-    // Detener el motor de juego
-    final worldState = Provider.of<WorldState>(context, listen: false);
-    worldState.stopGameEngine();
-    
+    // Cancelar timers primero
     _errorMessageTimer?.cancel();
     _zoomIndicatorTimer?.cancel();
+    
+    // Asegurarnos de detener el motor de juego
+    // CORRECCIÓN: Gestionar posibles errores
+    try {
+      if (context.mounted) {
+        // Detener el motor de juego si tenemos contexto válido
+        final worldState = Provider.of<WorldState>(context, listen: false);
+        worldState.stopGameEngine();
+      }
+    } catch (e) {
+      print('Error al detener motor de juego: $e');
+    }
+    
+    // IMPORTANTE: Llamar a super.dispose() después de limpiar todos los recursos
+    // para prevenir errores con Ticker.dispose()
     super.dispose();
   }
 

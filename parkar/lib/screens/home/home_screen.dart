@@ -6,7 +6,7 @@ import 'package:parkar/screens/home/settings_screen.dart';
 import 'package:parkar/state/app_state_container.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../history/history_screen.dart';
-import '../game/game_screen.dart' show GameScreen;
+import 'parking/parking_screen.dart' show ParkingScreen;
 
 // Notificador para el modo de edición
 final ValueNotifier<bool> isEditorModeActive = ValueNotifier<bool>(false);
@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final appState = AppStateContainer.of(context);
     _screens = [
       const WorldScreen(),
-      const GameScreen(),
+      const ParkingScreen(),
       const DashboardScreen(),
       const HistoryScreen(),
       const SettingsScreen(),
@@ -104,9 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: EdgeInsets.symmetric(vertical: 12),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.gamepad_outlined),
-                        selectedIcon: Icon(Icons.gamepad),
-                        label: Text('Flame'),
+                        icon: Icon(Icons.local_parking_outlined),
+                        selectedIcon: Icon(Icons.local_parking),
+                        label: Text('Parking'),
                         padding: EdgeInsets.symmetric(vertical: 12),
                       ),
                       NavigationRailDestination(
@@ -174,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             label: 'Canvas',
                           ),
                           NavigationDestination(
-                            icon: Icon(Icons.gamepad_outlined, size: 24),
-                            selectedIcon: Icon(Icons.gamepad, size: 24),
-                            label: 'Flame',
+                            icon: Icon(Icons.local_parking_outlined, size: 24),
+                            selectedIcon: Icon(Icons.local_parking, size: 24),
+                            label: 'Parking',
                           ),
                           NavigationDestination(
                             icon: Icon(Icons.dashboard_outlined, size: 24),

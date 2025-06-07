@@ -107,21 +107,39 @@ class WorldState extends ChangeNotifier {
 
   /// Inicializar el motor de juego
   void initGameEngine(TickerProvider vsync) {
-    _gameEngine = GameEngine(
-      worldState: this,
-      onUpdate: () {
-        // Notificar cambios en cada actualización del motor
-        notifyListeners();
-      },
-    );
-    
-    _gameEngine!.start(vsync);
+    // Si ya existe un motor, primero detenerlo
+    if (_gameEngine != null) {
+      stopGameEngine();
+    }
+
+    try {
+      _gameEngine = GameEngine(
+        worldState: this,
+        onUpdate: () {
+          // Notificar cambios en cada actualización del motor
+          notifyListeners();
+        },
+      );
+      
+      _gameEngine!.start(vsync);
+    } catch (e) {
+      print('Error al iniciar motor de juego: $e');
+    }
   }
   
   /// Detener el motor de juego
   void stopGameEngine() {
-    _gameEngine?.stop();
-    _gameEngine = null;
+    try {
+      if (_gameEngine != null) {
+        if (_gameEngine!.isRunning) {
+          // Asegurarse de que el ticker se detiene y elimina
+          _gameEngine!.stop();
+        }
+        _gameEngine = null;
+      }
+    } catch (e) {
+      print('Error al detener motor de juego: $e');
+    }
   }
   
   /// Añadir un componente a un elemento
