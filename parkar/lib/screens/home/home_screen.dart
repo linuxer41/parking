@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/screens/home/world/world_screen.dart' show WorldScreen;
 import 'package:parkar/screens/home/profile_screen.dart';
 import 'package:parkar/screens/home/settings_screen.dart';
 import 'package:parkar/state/app_state_container.dart';
@@ -36,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _initScreens() {
     final appState = AppStateContainer.of(context);
     _screens = [
-      const WorldScreen(),
       const ParkingScreen(),
       const DashboardScreen(),
       const HistoryScreen(),
@@ -104,9 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: EdgeInsets.symmetric(vertical: 12),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.local_parking_outlined),
-                        selectedIcon: Icon(Icons.local_parking),
-                        label: Text('Parking'),
+                        icon: Icon(Icons.car_rental),
+                        selectedIcon: Icon(Icons.car_rental_outlined),
+                        label: Text('Paking'),
                         padding: EdgeInsets.symmetric(vertical: 12),
                       ),
                       NavigationRailDestination(
@@ -174,9 +172,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             label: 'Canvas',
                           ),
                           NavigationDestination(
-                            icon: Icon(Icons.local_parking_outlined, size: 24),
-                            selectedIcon: Icon(Icons.local_parking, size: 24),
-                            label: 'Parking',
+                            icon: Icon(Icons.car_rental, size: 24),
+                            selectedIcon: Icon(Icons.car_rental_outlined, size: 24),
+                            label: 'Paking',
                           ),
                           NavigationDestination(
                             icon: Icon(Icons.dashboard_outlined, size: 24),

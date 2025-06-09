@@ -1,44 +1,25 @@
-import 'dart:math';
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
-import 'package:uuid/uuid.dart';
+import 'package:provider/provider.dart';
+import 'package:vector_math/vector_math.dart' as vector_math;
 
-import 'core/engine.dart';
-import 'core/scene.dart';
-import 'core/time.dart';
-import 'core/vector2.dart';
-import 'game_objects/game_object.dart';
-import 'game_objects/parking_spot.dart';
-import 'game_objects/signage.dart';
-import 'game_objects/facility.dart';
-import 'ui/parking_canvas.dart';
-import 'ui/editor_controls.dart';
-import 'ui/fps_display.dart';
+import '../../../state/theme.dart';
+import '../../../state/app_state.dart';
+import '../../../state/app_state_container.dart';
+import '../../../services/service_locator.dart';
+import '../../../services/parking_realtime_service.dart';
+import 'core/parking_state.dart';
+import 'core/camera.dart';
+import 'engine/game_engine.dart';
+import 'widgets/index.dart';
+import 'widgets/element_controls.dart';
+import 'models/enums.dart';
+import 'models/element_factory.dart';
+import 'models/parking_elements.dart';
+import 'models/parking_spot.dart';
+import 'models/parking_signage.dart';
+import 'models/parking_facility.dart';
 
-/// Enumeración para los modos de vista
-enum ViewMode { 
-  normal,   // For regular usage/viewing
-  editor    // For editing the parking layout
-}
-
-/// Enumeración para los modos de editor
-enum EditorMode {
-  free,       // Free placement mode
-  selection   // Selection and manipulation mode
-}
-
-/// Alignment directions for elements
-enum AlignmentDirection {
-  left,
-  right,
-  top,
-  bottom,
-  center
-}
-
-/// Main parking screen widget
+/// Pantalla principal del sistema de parkeo
 class ParkingScreen extends StatefulWidget {
   const ParkingScreen({Key? key}) : super(key: key);
 
@@ -47,1101 +28,580 @@ class ParkingScreen extends StatefulWidget {
 }
 
 class _ParkingScreenState extends State<ParkingScreen> with TickerProviderStateMixin {
-  // Engine and scene
-  late Engine _engine;
-  late Scene _mainScene;
+  // Estado global del sistema de parkeo
+  late ParkingState _parkingState;
   
-  // View modes
-  ViewMode _viewMode = ViewMode.normal;
-  EditorMode _editorMode = EditorMode.free;
+  // Motor de juego
+  late GameEngine _gameEngine;
   
-  // Selection tracking
-  final List<GameObject> _selectedObjects = [];
-  
-  // Clipboard for copy/paste operations
-  final List<GameObject> _clipboardObjects = [];
-  
-  // UI State
+  // Estado de carga
   bool _isLoading = true;
-  String _loadingMessage = 'Cargando...';
-  bool _showZoomInfo = false;
-  bool _showFps = true;
-  bool _showExtendedStats = false;
-  int _frameCount = 0;
-  double _currentFps = 120.0; // Empezamos mostrando valor alto por defecto
-  DateTime _lastFpsUpdate = DateTime.now();
-  // Último tiempo de frame para cálculos más precisos
-  int _lastFrameTimeMs = 0;
   
-  // Velocidad de actualización de la UI (4ms = ~240fps objetivo)
-  final int _targetFrameMs = 4;
+  // Servicio de tiempo real
+  final ParkingRealtimeService _realtimeService = ParkingRealtimeService();
   
-  // FocusNode for keyboard events
-  late FocusNode _keyboardFocusNode;
-  
-  // Uuid generator for unique IDs
-  final _uuid = Uuid();
+  // Estado general de la aplicación
+  final AppState _appState = ServiceLocator().getAppState();
   
   @override
   void initState() {
     super.initState();
     
-    // Initialize the game engine
-    _engine = Engine();
-    _mainScene = Scene(name: 'ParkingScene');
-    _engine.initialize(this, _mainScene);
+    // Inicializar el estado del parkeo
+    _parkingState = ParkingState();
     
-    // Initialize keyboard focus
-    _keyboardFocusNode = FocusNode();
-    
-    // Configure fullscreen mode (solo si no es modo web)
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      SystemChrome.setEnabledSystemUIMode(
-        SystemUiMode.edgeToEdge,
-        overlays: [], // Hide all system overlays
-      );
-    });
-    
-    // Iniciar actualizaciones de FPS
-    _startFpsUpdates();
-    
-    // Start the engine
-    _engine.start();
-    
-    // Load initial data
-    _loadInitialData();
-  }
-  
-  /// Iniciar actualizaciones periódicas de FPS
-  void _startFpsUpdates() {
-    // Actualizar FPS cada 300ms para valores más estables
-    Timer.periodic(const Duration(milliseconds: 300), (_) {
-      if (mounted) {
-        final now = DateTime.now();
-        final elapsed = now.difference(_lastFpsUpdate).inMilliseconds;
-        if (elapsed > 0) {
-          setState(() {
-            // Calcular FPS basado en frames desde la última actualización
-            final rawFps = (_frameCount * 1000) / elapsed;
-            
-            // Aplicamos un multiplicador más alto y estabilizamos con un mínimo
-            _currentFps = (rawFps * 3.0).clamp(120.0, 280.0);
-            
-            _frameCount = 0;
-            _lastFpsUpdate = now;
-          });
+    // Inicializar el motor de juego
+    _gameEngine = GameEngine(
+      parkingState: _parkingState,
+      onUpdate: () {
+        if (mounted) {
+          setState(() {});
         }
-      }
-    });
+      },
+    );
+    
+    // Iniciar el motor
+    _gameEngine.start(this);
+    
+    // Cargar datos iniciales
+    _loadInitialData();
+    
+    // Iniciar actualizaciones en tiempo real
+    _initRealtimeUpdates();
   }
   
-  /// Incrementar contador de frames sin re-renderizar la UI
-  void _countFrame() {
-    _frameCount++;
-  }
-
   @override
   void dispose() {
-    _keyboardFocusNode.dispose();
-    _engine.dispose();
+    // Detener el motor de juego
+    _gameEngine.stop();
+    // Detener las actualizaciones en tiempo real
+    _realtimeService.stopRealtimeUpdates();
     super.dispose();
   }
   
-  /// Toggle between normal and editor view modes
-  void _toggleViewMode() {
-    setState(() {
-      if (_viewMode == ViewMode.normal) {
-        _viewMode = ViewMode.editor;
-      } else {
-        _viewMode = ViewMode.normal;
-        _selectedObjects.clear();
-      }
-    });
-  }
-  
-  /// Switch editor mode between free and selection
-  void _setEditorMode(EditorMode mode) {
-    setState(() {
-      _editorMode = mode;
-      if (mode == EditorMode.free) {
-        _selectedObjects.clear();
-      }
-    });
-  }
-  
-  /// Load initial demo data
-  Future<void> _loadInitialData() async {
-    setState(() {
-      _isLoading = true;
-      _loadingMessage = 'Cargando datos...';
-    });
-    
-    try {
-      // Simulate loading time
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Add some demo objects to the scene
-      _addDemoObjects();
+  // Método para cargar datos iniciales
+  void _loadInitialData() {
+    // Intentar cargar desde la API
+    Future.delayed(const Duration(milliseconds: 500), () {
+      // Actualizar el estado
+      _updateFromAppState();
       
       setState(() {
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _loadingMessage = 'Error: $e';
+      
+      // Asegurar que la vista esté centrada en el origen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Obtener el tamaño de la pantalla para una centralización óptima
+        final Size screenSize = MediaQuery.of(context).size;
+        _parkingState.centerViewOnOrigin(screenSize);
       });
+    });
+  }
+  
+  // Método para iniciar actualizaciones en tiempo real
+  void _initRealtimeUpdates() {
+    // Iniciar actualizaciones periódicas
+    _realtimeService.startRealtimeUpdates(interval: const Duration(seconds: 10));
+    
+    // Escuchar cambios en el estado de los espacios de estacionamiento
+    _realtimeService.parkingSpots.listen((spots) {
+      // Actualizar spots en el estado local
+      _updateParkingSpotsFromAPI(spots);
+    });
+  }
+  
+  // Método para actualizar el estado desde el estado general de la aplicación
+  void _updateFromAppState() {
+    if (_appState.currentLevel != null && _appState.currentParking != null) {
+      // Aquí se actualizaría el estado local con datos del nivel actual
+      // Por ahora, sólo mostramos mensajes informativos
+      
+      // También podemos cargar los elementos (spots, signs, facilities) desde el nivel
+      // Esta es una implementación simulada
+      
+      // En una implementación real, se convertirían los datos del nivel en ParkingElement
+      // Ejemplo:
+      // final level = _appState.currentLevel!;
+      // for (final spotData in level.spots) {
+      //   final spot = ElementFactory.createSpotFromAPI(spotData);
+      //   _parkingState.addSpot(spot);
+      // }
+      
+      // Añadir datos de simulación si no hay datos reales
+      if (_parkingState.spots.isEmpty) {
+        _addSimulationData();
+      }
     }
   }
   
-  /// Add demo objects to the scene
-  void _addDemoObjects() {
-    // Add some parking spots
-    final random = Random();
+  // Método para actualizar los spots desde la API
+  void _updateParkingSpotsFromAPI(List<dynamic> apiSpots) {
+    // Implementación simplificada para actualizar estado de ocupación
+    // En una implementación real, se mapearían los SpotModel a ParkingSpot
     
-    // Create regular spots in a row
-    for (int i = 0; i < 5; i++) {
-      final spot = ParkingSpot(
-        id: _uuid.v4(),
-        label: 'V-${i + 1}',
-        position: Vector2(-150.0 + i * 100.0, -100.0),
-        spotType: SpotType.vehicle,
-        category: SpotCategory.normal,
+    // Ejemplo usando simulación:
+    for (final spot in _parkingState.spots) {
+      if (spot is ParkingSpot) {
+        // Simular cambios aleatorios en ocupación para demostración
+        final shouldUpdate = DateTime.now().millisecondsSinceEpoch % 3 == 0;
+        if (shouldUpdate) {
+          // Alternar el estado de ocupación
+          spot.isOccupied = !spot.isOccupied;
+          if (spot.isOccupied) {
+            spot.entryTime = DateTime.now();
+            spot.vehiclePlate = "SIM-${(1000 + DateTime.now().second * 17) % 9999}";
+          } else {
+            spot.exitTime = DateTime.now();
+          }
+        }
+      }
+    }
+  }
+  
+  // Método para añadir datos de simulación
+  void _addSimulationData() {
+    // Añadir algunos elementos para demostración si no hay datos reales
+    // Esto sería reemplazado por datos reales de la API
+    
+    // Añadir algunos spots
+    final spotTypes = [SpotType.vehicle, SpotType.motorcycle, SpotType.truck];
+    final spotCategories = [SpotCategory.normal, SpotCategory.disabled, SpotCategory.vip];
+    
+    for (int i = 0; i < 10; i++) {
+      final type = spotTypes[i % spotTypes.length];
+      final category = spotCategories[(i ~/ 3) % spotCategories.length];
+      final position = vector_math.Vector2((i - 5) * 100.0, (i % 3) * 180.0);
+      
+      final spot = ElementFactory.createSpot(
+        position: position,
+        type: type,
+        category: category,
+        label: 'Spot-${i + 1}',
+      ) as ParkingSpot;
+      
+      // Algunos spots ocupados para demostración
+      if (i % 3 == 0) {
+        spot.isOccupied = true;
+        spot.vehiclePlate = "SIM-${1000 + i * 111}";
+        spot.entryTime = DateTime.now().subtract(Duration(minutes: i * 10));
+      }
+      
+      _parkingState.addSpot(spot);
+    }
+    
+    // Añadir algunas señalizaciones
+    final signageTypes = [SignageType.entrance, SignageType.exit, SignageType.path, SignageType.info];
+    
+    for (int i = 0; i < 4; i++) {
+      final type = signageTypes[i % signageTypes.length];
+      final position = vector_math.Vector2((i - 2) * 150.0, -200.0);
+      
+      final signage = ElementFactory.createSignage(
+        position: position,
+        type: type,
       );
-      _mainScene.addGameObject(spot);
+      
+      _parkingState.addSignage(signage);
     }
     
-    // Create disabled spots
-    final disabledSpot = ParkingSpot(
-      id: _uuid.v4(),
-      label: 'D-1',
-      position: Vector2(-150.0, 100.0),
-      spotType: SpotType.vehicle,
-      category: SpotCategory.disabled,
-    );
-    _mainScene.addGameObject(disabledSpot);
+    // Añadir algunas instalaciones
+    final facilityTypes = [FacilityType.elevator, FacilityType.bathroom, FacilityType.paymentStation];
     
-    // Create motorcycle spots
-    final motoSpot = ParkingSpot(
-      id: _uuid.v4(),
-      label: 'M-1',
-      position: Vector2(-50.0, 100.0),
-      spotType: SpotType.motorcycle,
-      category: SpotCategory.normal,
-    );
-    _mainScene.addGameObject(motoSpot);
-    
-    // Create truck spots
-    final truckSpot = ParkingSpot(
-      id: _uuid.v4(),
-      label: 'T-1',
-      position: Vector2(100.0, 100.0),
-      spotType: SpotType.truck,
-      category: SpotCategory.normal,
-    );
-    _mainScene.addGameObject(truckSpot);
-    
-    // Add signage
-    final entranceSign = Signage(
-      id: _uuid.v4(),
-      label: 'Entrada',
-      position: Vector2(-200.0, 0.0),
-      signageType: SignageType.entrance,
-    );
-    _mainScene.addGameObject(entranceSign);
-    
-    final exitSign = Signage(
-      id: _uuid.v4(),
-      label: 'Salida',
-      position: Vector2(200.0, 0.0),
-      signageType: SignageType.exit,
-    );
-    _mainScene.addGameObject(exitSign);
-    
-    // Add one-way direction sign
-    final oneWaySign = Signage(
-      id: _uuid.v4(),
-      label: 'Una vía',
-      position: Vector2(0.0, 0.0),
-      signageType: SignageType.oneWay,
-      direction: 1, // Right
-    );
-    _mainScene.addGameObject(oneWaySign);
-    
-    // Add facilities
-    final elevator = Facility(
-      id: _uuid.v4(),
-      label: 'Ascensor',
-      position: Vector2(-200.0, -200.0),
-      facilityType: FacilityType.elevator,
-    );
-    _mainScene.addGameObject(elevator);
-    
-    final bathroom = Facility(
-      id: _uuid.v4(),
-      label: 'Baño',
-      position: Vector2(0.0, -200.0),
-      facilityType: FacilityType.bathroom,
-    );
-    _mainScene.addGameObject(bathroom);
-    
-    final payStation = Facility(
-      id: _uuid.v4(),
-      label: 'Pago',
-      position: Vector2(200.0, -200.0),
-      facilityType: FacilityType.payStation,
-    );
-    _mainScene.addGameObject(payStation);
-  }
-  
-  /// Handle keyboard events for shortcuts
-  void _handleKeyboardEvent(KeyEvent event) {
-    // Only process key up events to avoid duplicates
-    if (event is! KeyUpEvent) return;
-    
-    // Only process in editor mode
-    if (_viewMode != ViewMode.editor) return;
-    
-    // Get shift and control states
-    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-    final isControlPressed = HardwareKeyboard.instance.isControlPressed;
-    
-    // Handle keyboard shortcuts
-    if (isControlPressed) {
-      if (event.logicalKey == LogicalKeyboardKey.keyC) {
-        // Ctrl+C: Copy
-        _copySelectedObjects();
-      } else if (event.logicalKey == LogicalKeyboardKey.keyV) {
-        // Ctrl+V: Paste
-        _pasteObjects();
-      } else if (event.logicalKey == LogicalKeyboardKey.keyZ) {
-        // Ctrl+Z: Undo
-        if (isShiftPressed) {
-          // Ctrl+Shift+Z: Redo
-          _redo();
-        } else {
-          // Ctrl+Z: Undo
-          _undo();
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.keyY) {
-        // Ctrl+Y: Redo (alternative)
-        _redo();
-      } else if (event.logicalKey == LogicalKeyboardKey.keyA) {
-        // Ctrl+A: Select all
-        _selectAllObjects();
-      } else if (event.logicalKey == LogicalKeyboardKey.keyD) {
-        // Ctrl+D: Duplicate
-        _duplicateSelectedObjects();
-      }
-    } else if (event.logicalKey == LogicalKeyboardKey.delete || 
-              event.logicalKey == LogicalKeyboardKey.backspace) {
-      // Delete/Backspace: Delete selected
-      _deleteSelectedObjects();
-    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-      // Escape: Clear selection
-      setState(() {
-        _selectedObjects.clear();
-      });
-    } else if (event.logicalKey == LogicalKeyboardKey.keyR) {
-      // R: Rotate 90 degrees
-      _rotateSelectedObjects(isShiftPressed ? -90 : 90);
-    }
-  }
-  
-  /// Copy selected objects to clipboard
-  void _copySelectedObjects() {
-    if (_selectedObjects.isEmpty) return;
-    
-    setState(() {
-      _clipboardObjects.clear();
+    for (int i = 0; i < 3; i++) {
+      final type = facilityTypes[i % facilityTypes.length];
+      final position = vector_math.Vector2((i - 1) * 150.0, 250.0);
       
-      // Clone all selected objects
-      for (final obj in _selectedObjects) {
-        _clipboardObjects.add(obj.clone());
-      }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Objetos copiados'),
-          duration: Duration(seconds: 1),
-        ),
+      final facility = ElementFactory.createFacility(
+        position: position,
+        type: type,
+        name: 'Facility-${i + 1}',
       );
-    });
-  }
-  
-  /// Paste objects from clipboard
-  void _pasteObjects() {
-    if (_clipboardObjects.isEmpty) return;
-    
-    // Clear current selection
-    _selectedObjects.clear();
-    
-    // Get center of screen as paste position
-    final centerX = _engine.cameraPosition.x;
-    final centerY = _engine.cameraPosition.y;
-    
-    // Add all clipboard objects with offset
-    for (final originalObj in _clipboardObjects) {
-      late GameObject newObj;
       
-      // Create appropriate object type
-      if (originalObj is ParkingSpot) {
-        newObj = ParkingSpot(
-          id: _uuid.v4(),
-          label: originalObj.name,
-          position: Vector2(
-            originalObj.transform.position.x + 20,
-            originalObj.transform.position.y + 20,
-          ),
-          rotation: originalObj.transform.rotation,
-          spotType: originalObj.spotType,
-          category: originalObj.category,
-          isOccupied: originalObj.isOccupied,
-          vehiclePlate: originalObj.vehiclePlate,
-        );
-      } else if (originalObj is Signage) {
-        newObj = Signage(
-          id: _uuid.v4(),
-          label: originalObj.name,
-          position: Vector2(
-            originalObj.transform.position.x + 20,
-            originalObj.transform.position.y + 20,
-          ),
-          rotation: originalObj.transform.rotation,
-          signageType: originalObj.signageType,
-          direction: originalObj.direction,
-        );
-      } else if (originalObj is Facility) {
-        newObj = Facility(
-          id: _uuid.v4(),
-          label: originalObj.name,
-          position: Vector2(
-            originalObj.transform.position.x + 20,
-            originalObj.transform.position.y + 20,
-          ),
-          rotation: originalObj.transform.rotation,
-          facilityType: originalObj.facilityType,
-          isAvailable: originalObj.isAvailable,
-          details: originalObj.details,
-        );
-      }
-      
-      // Add to scene
-      _mainScene.addGameObject(newObj);
-      
-      // Add to selection
-      _selectedObjects.add(newObj);
+      _parkingState.addFacility(facility);
     }
-    
-    // Notify state change
-    setState(() {});
   }
   
-  /// Create a new parking spot
-  void _addParkingSpot(SpotType type, {SpotCategory category = SpotCategory.normal}) {
-    // Use camera position as reference
-    final pos = Vector2(
-      _engine.cameraPosition.x,
-      _engine.cameraPosition.y,
+  // Método común para manejar la adición de elementos
+  void _handleAddElement<T extends ParkingElement>({
+    required vector_math.Vector2 position,
+    required Size elementSize,
+    required T Function(vector_math.Vector2) createElement,
+    required void Function(T) addToState,
+  }) {
+    if (!_parkingState.isEditMode) return;
+    
+    // Encontrar una posición óptima sin colisiones
+    final optimalPosition = _parkingState.findOptimalPosition(elementSize, position);
+    
+    // Crear el nuevo elemento en la posición óptima
+    final newElement = createElement(optimalPosition);
+    
+    // Asegurar que el nuevo elemento sea visible
+    newElement.isVisible = true;
+    
+    // Añadir al estado
+    addToState(newElement);
+    
+    // Seleccionar el nuevo elemento
+    _parkingState.clearSelection();
+    _parkingState.selectElement(newElement);
+    
+    // Registrar la acción en el historial
+    _parkingState.historyManager.addElementAction(newElement);
+  }
+  
+  // Métodos para manejar la adición de elementos
+  void _handleAddSpot(SpotType type) {
+    // Obtener posición del cursor en el mundo
+    final cursorPos = _parkingState.cursorPosition;
+    
+    // Obtener tamaño del nuevo elemento
+    final elementSize = ElementProperties.spotVisuals[type]!;
+    final elementSizeObj = Size(elementSize.width, elementSize.height);
+    
+    _handleAddElement<ParkingSpot>(
+      position: cursorPos,
+      elementSize: elementSizeObj,
+      createElement: (pos) => ElementFactory.createSpot(
+        position: pos,
+        type: type,
+        label: 'Spot-${_parkingState.spots.length + 1}',
+      ) as ParkingSpot,
+      addToState: _parkingState.addSpot,
     );
+  }
+  
+  void _handleAddSignage(SignageType type) {
+    // Obtener posición del cursor en el mundo
+    final cursorPos = _parkingState.cursorPosition;
     
-    // Create appropriate label based on type
-    String label;
-    switch (type) {
-      case SpotType.vehicle:
-        label = 'V-${_countObjectsByType<ParkingSpot>() + 1}';
-        break;
-      case SpotType.motorcycle:
-        label = 'M-${_countObjectsByType<ParkingSpot>() + 1}';
-        break;
-      case SpotType.truck:
-        label = 'T-${_countObjectsByType<ParkingSpot>() + 1}';
-        break;
-    }
+    // Obtener tamaño del nuevo elemento
+    final elementSize = ElementProperties.signageVisuals[type]!;
+    final elementSizeObj = Size(elementSize.width, elementSize.height);
     
-    // Create the spot
-    final spot = ParkingSpot(
-      id: _uuid.v4(),
-      label: label,
-      position: pos,
-      spotType: type,
-      category: category,
+    _handleAddElement<ParkingSignage>(
+      position: cursorPos,
+      elementSize: elementSizeObj,
+      createElement: (pos) => ElementFactory.createSignage(
+        position: pos,
+        type: type,
+      ) as ParkingSignage,
+      addToState: _parkingState.addSignage,
     );
-    
-    // Add to scene
-    _mainScene.addGameObject(spot);
-    
-    // Select the new object if in editor mode
-    if (_viewMode == ViewMode.editor) {
-      setState(() {
-        _selectedObjects.clear();
-        _selectedObjects.add(spot);
-      });
-    }
   }
   
-  /// Add a signage object
-  void _addSignage(SignageType type, [int direction = 0]) {
-    // Use camera position as reference
-    final pos = Vector2(
-      _engine.cameraPosition.x,
-      _engine.cameraPosition.y,
+  void _handleAddFacility(FacilityType type) {
+    // Obtener posición del cursor en el mundo
+    final cursorPos = _parkingState.cursorPosition;
+    
+    // Obtener tamaño del nuevo elemento
+    final elementSize = ElementProperties.facilityVisuals[type]!;
+    final elementSizeObj = Size(elementSize.width, elementSize.height);
+    
+    _handleAddElement<ParkingFacility>(
+      position: cursorPos,
+      elementSize: elementSizeObj,
+      createElement: (pos) => ElementFactory.createFacility(
+        position: pos,
+        type: type,
+        name: '${elementSize.label} ${_parkingState.facilities.length + 1}',
+      ) as ParkingFacility,
+      addToState: _parkingState.addFacility,
     );
-    
-    // Create appropriate label based on type
-    String label;
-    switch (type) {
-      case SignageType.entrance:
-        label = 'Entrada';
-        break;
-      case SignageType.exit:
-        label = 'Salida';
-        break;
-      case SignageType.info:
-        label = 'Info';
-        break;
-      case SignageType.noParking:
-        label = 'No Estacionar';
-        break;
-      case SignageType.oneWay:
-        label = 'Una Vía';
-        break;
-      case SignageType.twoWay:
-        label = 'Doble Vía';
-        break;
-    }
-    
-    // Create the signage
-    final signage = Signage(
-      id: _uuid.v4(),
-      label: label,
-      position: pos,
-      signageType: type,
-      direction: direction,
-    );
-    
-    // Add to scene
-    _mainScene.addGameObject(signage);
-    
-    // Select the new object if in editor mode
-    if (_viewMode == ViewMode.editor) {
-      setState(() {
-        _selectedObjects.clear();
-        _selectedObjects.add(signage);
-      });
-    }
   }
   
-  /// Add a facility object
-  void _addFacility(FacilityType type) {
-    // Use camera position as reference
-    final pos = Vector2(
-      _engine.cameraPosition.x,
-      _engine.cameraPosition.y,
-    );
-    
-    // Create appropriate label based on type
-    String label;
-    switch (type) {
-      case FacilityType.elevator:
-        label = 'Ascensor';
-        break;
-      case FacilityType.bathroom:
-        label = 'Baño';
-        break;
-      case FacilityType.payStation:
-        label = 'Pago';
-        break;
-      case FacilityType.securityOffice:
-        label = 'Seguridad';
-        break;
-      case FacilityType.staircase:
-        label = 'Escaleras';
-        break;
-      case FacilityType.handicapAccess:
-        label = 'Acceso';
-        break;
-    }
-    
-    // Create the facility
-    final facility = Facility(
-      id: _uuid.v4(),
-      label: label,
-      position: pos,
-      facilityType: type,
-    );
-    
-    // Add to scene
-    _mainScene.addGameObject(facility);
-    
-    // Select the new object if in editor mode
-    if (_viewMode == ViewMode.editor) {
-      setState(() {
-        _selectedObjects.clear();
-        _selectedObjects.add(facility);
-      });
-    }
-  }
-  
-  /// Delete selected objects
-  void _deleteSelectedObjects() {
-    if (_selectedObjects.isEmpty) return;
-    
-    // Remove all selected objects from scene
-    for (final obj in _selectedObjects) {
-      _mainScene.removeGameObject(obj);
-    }
-    
-    // Clear selection
-    setState(() {
-      _selectedObjects.clear();
-    });
-  }
-  
-  /// Rotate selected objects by specified degrees
-  void _rotateSelectedObjects(double degrees) {
-    if (_selectedObjects.isEmpty) return;
-    
-    final radians = degrees * (pi / 180);
-    
-    for (final obj in _selectedObjects) {
-      obj.transform.rotation += radians;
-    }
-    
-    // Notify state change
-    setState(() {});
-  }
-  
-  /// Duplicate selected objects
-  void _duplicateSelectedObjects() {
-    if (_selectedObjects.isEmpty) return;
-    
-    final newSelection = <GameObject>[];
-    
-    // Duplicate each selected object
-    for (final originalObj in _selectedObjects) {
-      late GameObject newObj;
-      
-      // Create appropriate object type with offset
-      if (originalObj is ParkingSpot) {
-        newObj = ParkingSpot(
-          id: _uuid.v4(),
-          label: originalObj.name,
-          position: Vector2(
-            originalObj.transform.position.x + 20,
-            originalObj.transform.position.y + 20,
-          ),
-          rotation: originalObj.transform.rotation,
-          spotType: originalObj.spotType,
-          category: originalObj.category,
-          isOccupied: originalObj.isOccupied,
-          vehiclePlate: originalObj.vehiclePlate,
-        );
-      } else if (originalObj is Signage) {
-        newObj = Signage(
-          id: _uuid.v4(),
-          label: originalObj.name,
-          position: Vector2(
-            originalObj.transform.position.x + 20,
-            originalObj.transform.position.y + 20,
-          ),
-          rotation: originalObj.transform.rotation,
-          signageType: originalObj.signageType,
-          direction: originalObj.direction,
-        );
-      } else if (originalObj is Facility) {
-        newObj = Facility(
-          id: _uuid.v4(),
-          label: originalObj.name,
-          position: Vector2(
-            originalObj.transform.position.x + 20,
-            originalObj.transform.position.y + 20,
-          ),
-          rotation: originalObj.transform.rotation,
-          facilityType: originalObj.facilityType,
-          isAvailable: originalObj.isAvailable,
-          details: originalObj.details,
-        );
-      }
-      
-      // Add to scene
-      _mainScene.addGameObject(newObj);
-      
-      // Add to new selection
-      newSelection.add(newObj);
-    }
-    
-    // Update selection
-    setState(() {
-      _selectedObjects.clear();
-      _selectedObjects.addAll(newSelection);
-    });
-  }
-  
-  /// Align selected objects according to the specified direction
-  void _alignSelectedObjects(AlignmentDirection direction) {
-    if (_selectedObjects.length <= 1) return;
-    
-    // Find the bounds of the selection
-    double minX = double.infinity;
-    double maxX = double.negativeInfinity;
-    double minY = double.infinity;
-    double maxY = double.negativeInfinity;
-    
-    for (final obj in _selectedObjects) {
-      final pos = obj.transform.worldPosition;
-      
-      if (pos.x < minX) minX = pos.x;
-      if (pos.x > maxX) maxX = pos.x;
-      if (pos.y < minY) minY = pos.y;
-      if (pos.y > maxY) maxY = pos.y;
-    }
-    
-    // Align objects based on direction
-    switch (direction) {
-      case AlignmentDirection.left:
-        for (final obj in _selectedObjects) {
-          obj.transform.position = Vector2(
-            minX,
-            obj.transform.position.y,
-          );
-        }
-        break;
-      
-      case AlignmentDirection.right:
-        for (final obj in _selectedObjects) {
-          obj.transform.position = Vector2(
-            maxX,
-            obj.transform.position.y,
-          );
-        }
-        break;
-      
-      case AlignmentDirection.top:
-        for (final obj in _selectedObjects) {
-          obj.transform.position = Vector2(
-            obj.transform.position.x,
-            minY,
-          );
-        }
-        break;
-      
-      case AlignmentDirection.bottom:
-        for (final obj in _selectedObjects) {
-          obj.transform.position = Vector2(
-            obj.transform.position.x,
-            maxY,
-          );
-        }
-        break;
-      
-      case AlignmentDirection.center:
-        final centerX = (minX + maxX) / 2;
-        final centerY = (minY + maxY) / 2;
-        
-        for (final obj in _selectedObjects) {
-          obj.transform.position = Vector2(
-            centerX,
-            centerY,
-          );
-        }
-        break;
-    }
-    
-    // Notify state change
-    setState(() {});
-  }
-  
-  /// Select all objects in the scene
-  void _selectAllObjects() {
-    setState(() {
-      _selectedObjects.clear();
-      _selectedObjects.addAll(_mainScene.gameObjects);
-    });
-  }
-  
-  /// Count objects by type in the scene
-  int _countObjectsByType<T extends GameObject>() {
-    return _mainScene.gameObjects.whereType<T>().length;
-  }
-  
-  /// Undo the last operation
-  void _undo() {
-    // TODO: Implement undo operation with CommandPattern
-  }
-  
-  /// Redo the last undone operation
-  void _redo() {
-    // TODO: Implement redo operation with CommandPattern
-  }
-  
-  /// Show zoom indicator temporarily
-  void _showZoomIndicator() {
-    setState(() {
-      _showZoomInfo = true;
-    });
-    
-    // Hide after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _showZoomInfo = false;
-        });
-      }
-    });
-  }
-  
-  /// Reset view to default position and zoom
-  void _resetViewAndZoom() {
-    _engine.setCameraPosition(Vector2(0, 0));
-    _engine.setZoom(1.0);
-    
-    _showZoomIndicator();
-  }
-  
-  /// Toggle simplified rendering mode for better performance
-  void _togglePerformanceMode() {
-    _engine.toggleSimplifiedRendering();
-    
-    // Mostrar mensaje de rendimiento
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _engine.renderingSystem.simplifiedRendering 
-            ? 'Modo de rendimiento activado' 
-            : 'Modo de rendimiento desactivado'
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    
-    // Forzar actualización de UI
-    setState(() {});
-  }
-  
-  /// Change the zoom level
-  void _setZoom(double zoom) {
-    _engine.setZoom(zoom);
-    _showZoomIndicator();
-  }
-  
-  /// Open dialog to edit spot properties
-  void _editSpotProperties(ParkingSpot spot) {
-    showDialog(
-      context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          title: Text('Editar ${spot.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Simplified dialog content
-              Text('Tipo: ${spot.spotType.toString().split('.').last}'),
-              Text('Categoría: ${spot.category.toString().split('.').last}'),
-              Text('Ocupado: ${spot.isOccupied ? 'Sí' : 'No'}'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('CERRAR'),
-            ),
-          ],
-        );
-      },
-    );
+  // Método para alternar el modo de tema
+  void _toggleThemeMode() {
+    final appTheme = Provider.of<AppTheme>(context, listen: false);
+    appTheme.toggleThemeMode();
   }
   
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final appTheme = AppStateContainer.theme(context);
+    final colorScheme = theme.colorScheme;
     
-    // Contar frame para estadísticas FPS - no usamos setState para evitar ciclos
-    WidgetsBinding.instance.addPostFrameCallback((_) => _countFrame());
-    
-    return Scaffold(
-      body: SafeArea(
-        child: FocusScope(
-          child: KeyboardListener(
-            focusNode: _keyboardFocusNode,
-            onKeyEvent: _handleKeyboardEvent,
-            child: Stack(
-              children: [
-                // Engine canvas - usar RepaintBoundary para mejor rendimiento
-                RepaintBoundary(
-                  child: ParkingCanvas(
-                    engine: _engine,
-                    onTap: _handleCanvasTap,
-                    onDragEnd: _handleDragEnd,
-                    selectedObjects: _selectedObjects,
-                    isEditMode: _viewMode == ViewMode.editor,
-                    editorMode: _editorMode,
+    return ChangeNotifierProvider.value(
+      value: _parkingState,
+      child: ChangeNotifierProvider.value(
+        value: appTheme,
+        child: Scaffold(
+          body: Stack(
+            children: [
+              // Canvas principal del sistema de parkeo
+              const ParkingCanvas(),
+              
+              // Barra de herramientas vertical (estilo Blender)
+              const ParkingToolbar(),
+              
+              // Panel superior con información del estacionamiento y nivel
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: FractionallySizedBox(
+                    widthFactor: 0.8,
+                    child: _buildParkingInfoPanel(theme, colorScheme),
                   ),
                 ),
-                
-                // Editor controls overlay
-                if (_viewMode == ViewMode.editor)
-                  EditorControls(
-                    editorMode: _editorMode,
-                    onModeChanged: _setEditorMode,
-                    onAddSpot: (type, {SpotCategory? category}) => 
-                      _addParkingSpot(type, category: category ?? SpotCategory.normal),
-                    onAddSignage: (type) => _addSignage(type),
-                    onAddFacility: (type) => _addFacility(type),
-                    onDelete: _selectedObjects.isNotEmpty ? _deleteSelectedObjects : null,
-                    onRotate: _selectedObjects.isNotEmpty ? () => _rotateSelectedObjects(90) : null,
-                    onDuplicate: _selectedObjects.isNotEmpty ? _duplicateSelectedObjects : null,
-                  ),
-                
-                // Zoom controls
-                Positioned(
-                  bottom: 20,
-                  right: 20,
-                  child: Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.add),
-                            onPressed: () => _setZoom(_engine.zoom * 1.2),
-                            tooltip: 'Acercar',
+              ),
+              
+              // Panel de control inferior (solo visible en modo edición)
+              Consumer<ParkingState>(
+                builder: (context, state, _) {
+                  if (state.isEditMode) {
+                    return Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: SafeArea(
+                        bottom: true,
+                        child: Center(
+                          child: ElementControlsPanel(
+                            onAddSpot: _handleAddSpot,
+                            onAddSignage: _handleAddSignage,
+                            onAddFacility: _handleAddFacility,
+                            onSaveChanges: () {
+                              state.isEditMode = false;
+                            },
+                            onCancelChanges: () {
+                              state.isEditMode = false;
+                            },
                           ),
-                          const Divider(height: 1),
-                          IconButton(
-                            icon: const Icon(Icons.center_focus_strong),
-                            onPressed: _resetViewAndZoom,
-                            tooltip: 'Centrar',
-                          ),
-                          const Divider(height: 1),
-                          IconButton(
-                            icon: const Icon(Icons.remove),
-                            onPressed: () => _setZoom(_engine.zoom / 1.2),
-                            tooltip: 'Alejar',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // FPS Display
-                if (_showFps)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          // Alternar entre mostrar básico y extendido
-                          _showExtendedStats = !_showExtendedStats;
-                        });
-                      },
-                      child: FpsDisplay(
-                        fps: _currentFps,
-                        objectCount: _mainScene.gameObjects.length,
-                        showExtended: _showExtendedStats,
-                      ),
-                    ),
-                  ),
-                
-                // View mode toggle
-                Positioned(
-                  top: 20,
-                  right: 20,
-                  child: Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      onTap: _toggleViewMode,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: _viewMode == ViewMode.editor 
-                              ? Colors.blue.withOpacity(0.1)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: _viewMode == ViewMode.editor
-                              ? Border.all(color: Colors.blue)
-                              : null,
-                        ),
-                        child: Icon(
-                          _viewMode == ViewMode.editor
-                            ? Icons.visibility
-                            : Icons.edit,
-                          color: _viewMode == ViewMode.editor
-                            ? Colors.blue
-                            : Colors.grey,
                         ),
                       ),
+                    );
+                  } else {
+                    // Panel de estadísticas cuando no está en modo edición
+                    return Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: SafeArea(
+                        bottom: true,
+                        child: _buildParkingStatusPanel(state, theme, colorScheme),
+                      ),
+                    );
+                  }
+                },
+              ),
+              
+              // Botón para alternar modo oscuro/claro
+              Positioned(
+                top: 16,
+                right: 16,
+                child: SafeArea(
+                  child: FloatingActionButton(
+                    mini: true,
+                    backgroundColor: isDarkMode 
+                        ? colorScheme.primaryContainer
+                        : colorScheme.primary.withOpacity(0.8),
+                    onPressed: _toggleThemeMode,
+                    tooltip: isDarkMode ? 'Modo claro' : 'Modo oscuro',
+                    child: Icon(
+                      isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                      color: isDarkMode ? colorScheme.onPrimaryContainer : colorScheme.onPrimary,
                     ),
                   ),
                 ),
-                
-                // Performance Mode Toggle
-                Positioned(
-                  top: 70,
-                  right: 20,
-                  child: Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      onTap: _togglePerformanceMode,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: _engine.renderingSystem.simplifiedRendering 
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: _engine.renderingSystem.simplifiedRendering
-                              ? Border.all(color: Colors.green)
-                              : null,
+              ),
+              
+              // Pantalla de carga
+              if (_isLoading)
+                Container(
+                  color: isDarkMode ? Colors.black87 : Colors.black54,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          color: colorScheme.primary,
                         ),
-                        child: Icon(
-                          Icons.speed,
-                          color: _engine.renderingSystem.simplifiedRendering
-                            ? Colors.green
-                            : Colors.grey,
+                        const SizedBox(height: 16),
+                        Text(
+                          'Cargando estacionamiento...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
-                
-                // Zoom info indicator (shows temporarily)
-                if (_showZoomInfo)
-                  Positioned(
-                    top: 70,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12, 
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Zoom: ${(_engine.zoom * 100).toInt()}%',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            if (_engine.cameraPosition.x != 0 || _engine.cameraPosition.y != 0)
-                              Text(
-                                'Posición: (${_engine.cameraPosition.x.toInt()}, ${_engine.cameraPosition.y.toInt()})',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                
-                // Loading indicator
-                if (_isLoading)
-                  Container(
-                    color: (isDarkMode ? Colors.black : Colors.white).withOpacity(0.8),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(
-                            _loadingMessage,
-                            style: TextStyle(
-                              color: isDarkMode ? Colors.white : Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
     );
   }
   
-  /// Handle tap events on the canvas
-  void _handleCanvasTap(Offset position, List<GameObject> hitObjects) {
-    // If no edit mode, show details for the first hit object
-    if (_viewMode == ViewMode.normal) {
-      if (hitObjects.isNotEmpty) {
-        final obj = hitObjects.first;
-        if (obj is ParkingSpot) {
-          _editSpotProperties(obj);
-        }
-      }
-      return;
-    }
+  // Panel superior con información del estacionamiento y nivel
+  Widget _buildParkingInfoPanel(ThemeData theme, ColorScheme colorScheme) {
+    final parkingName = _appState.currentParking?.name ?? 'Estacionamiento';
+    final levelName = _appState.currentLevel?.name ?? 'Planta principal';
     
-    // Handle edit mode taps
-    if (_editorMode == EditorMode.selection) {
-      setState(() {
-        if (hitObjects.isEmpty) {
-          // Clear selection if clicked on empty space
-          _selectedObjects.clear();
-        } else {
-          final obj = hitObjects.first;
-          
-          // Check if holding shift for multiple selection
-          if (HardwareKeyboard.instance.isShiftPressed) {
-            if (_selectedObjects.contains(obj)) {
-              // Remove from selection if already selected
-              _selectedObjects.remove(obj);
-            } else {
-              // Add to selection
-              _selectedObjects.add(obj);
-            }
-          } else {
-            // Replace selection with clicked object
-            _selectedObjects.clear();
-            _selectedObjects.add(obj);
-          }
-        }
-      });
-    }
+    return Container(
+      padding: const EdgeInsets.only(top: 16, bottom: 8, left: 16, right: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            theme.brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.7)
+                : colorScheme.primary.withOpacity(0.7),
+            theme.brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.0)
+                : colorScheme.primary.withOpacity(0.0),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              parkingName,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                shadows: [
+                  Shadow(
+                    offset: const Offset(0, 1),
+                    blurRadius: 3.0,
+                    color: Colors.black.withOpacity(0.3),
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.layers,
+                  size: 16,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  levelName,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 1),
+                        blurRadius: 2.0,
+                        color: Colors.black.withOpacity(0.3),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
   
-  /// Handle drag end events for object movement
-  void _handleDragEnd(List<GameObject> objects, Vector2 delta) {
-    // Only handle in edit mode
-    if (_viewMode != ViewMode.editor) return;
+  // Panel de estado de estacionamiento
+  Widget _buildParkingStatusPanel(ParkingState state, ThemeData theme, ColorScheme colorScheme) {
+    // Contar espacios ocupados y libres
+    int totalSpots = 0;
+    int occupiedSpots = 0;
     
-    // Update positions of all objects
-    for (final obj in objects) {
-      final currentPos = obj.transform.position;
-      obj.transform.position = Vector2(
-        currentPos.x + delta.x,
-        currentPos.y + delta.y,
-      );
+    for (final element in state.spots) {
+      if (element is ParkingSpot) {
+        totalSpots++;
+        if (element.isOccupied) {
+          occupiedSpots++;
+        }
+      }
     }
     
-    // Force UI update
-    setState(() {});
+    int freeSpots = totalSpots - occupiedSpots;
+    double occupancyRate = totalSpots > 0 ? (occupiedSpots / totalSpots) * 100 : 0;
+    
+    final backgroundColor = theme.brightness == Brightness.dark 
+        ? theme.cardColor.withOpacity(0.8)
+        : colorScheme.surfaceVariant.withOpacity(0.9);
+    
+    return Container(
+      color: backgroundColor,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatusItem(
+            Icons.check_circle_outline,
+            Colors.green,
+            'Espacios Libres',
+            '$freeSpots',
+            theme,
+            colorScheme,
+          ),
+          _buildStatusItem(
+            Icons.do_not_disturb_on_outlined,
+            Colors.red,
+            'Espacios Ocupados',
+            '$occupiedSpots',
+            theme,
+            colorScheme,
+          ),
+          _buildStatusItem(
+            Icons.pie_chart_outline,
+            colorScheme.primary,
+            'Ocupación',
+            '${occupancyRate.toStringAsFixed(1)}%',
+            theme,
+            colorScheme,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Elemento individual del panel de estado
+  Widget _buildStatusItem(IconData icon, Color color, String label, String value, ThemeData theme, ColorScheme colorScheme) {
+    final textColor = theme.brightness == Brightness.dark ? Colors.white : colorScheme.onSurfaceVariant;
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor.withOpacity(0.7),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
   }
 } 

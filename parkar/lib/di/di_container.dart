@@ -1,4 +1,3 @@
-
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/company_service.dart';
@@ -12,6 +11,7 @@ import '../services/exit_service.dart';
 import '../services/cash_register_service.dart';
 import '../services/movement_service.dart';
 import '../services/reservation_service.dart';
+import '../services/parking_realtime_service.dart';
 
 
 class DIContainer {
@@ -56,6 +56,7 @@ class DIContainer {
 
     _dependencies[AuthService] = AuthService();
     
+    _dependencies[ParkingRealtimeService] = ParkingRealtimeService();
   }
 
   T resolve<T>() {

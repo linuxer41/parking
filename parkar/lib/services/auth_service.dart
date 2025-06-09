@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AuthService {
-  final String baseUrl = 'http://192.168.100.8:3001';
+  final String baseUrl = 'http://192.168.1.10:3001';
   final String authPath = '/auth'; // Ruta base para autenticación
 
   AuthService();
