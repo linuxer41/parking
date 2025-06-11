@@ -9,10 +9,6 @@ import 'state/app_state_container.dart';
 import 'di/di_container.dart';
 import 'state/theme.dart';
 import 'package:flutter/services.dart';
-import 'screens/dashboard/dashboard_screen.dart';
-import 'screens/history/history_screen.dart';
-import 'screens/home/home_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // Clave global para el navegador, útil para acceder al contexto desde cualquier parte
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -24,6 +20,15 @@ bool get isDesktop {
     TargetPlatform.linux,
     TargetPlatform.macOS,
   ].contains(defaultTargetPlatform);
+}
+
+bool get isTablet {
+  // Determinar si es una tablet basado en el tamaño físico
+  final data = MediaQueryData.fromWindow(WidgetsBinding.instance.window);
+  final size = data.size;
+  final diagonal =
+      (size.width * size.width + size.height * size.height) / 10000;
+  return diagonal >= 70; // Diagonal de 7 pulgadas o más
 }
 
 void main() async {
@@ -38,11 +43,22 @@ void main() async {
     ),
   );
 
-  // Configurar la orientación de la app (solo permitir modo retrato)
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Configurar la orientación de la app
+  // Solo permitir modo retrato en dispositivos móviles
+  // Permitir todas las orientaciones en tablets y escritorio
+  if (!isTablet && !isDesktop) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  } else {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
 
   await SystemTheme.accentColor.load();
 
@@ -50,7 +66,7 @@ void main() async {
     await windowManager.ensureInitialized();
     windowManager.waitUntilReadyToShow().then((_) async {
       await windowManager.setTitle('Parkar: sistema de parqueo');
-      await windowManager.setSize(const Size(755, 545));
+      await windowManager.setSize(const Size(1200, 800));
       await windowManager.center();
       await windowManager.show();
     });
@@ -62,6 +78,7 @@ void main() async {
   final diContainer = DIContainer();
   final appTheme = AppTheme();
 
+  // Crear una instancia de animación para forzar actualizaciones
   runApp(AppStateContainer(
     state: appState,
     diContainer: diContainer,
@@ -77,37 +94,50 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  AppTheme? _currentTheme;
 
   @override
   void initState() {
     super.initState();
-    _loadThemePreference();
+    // Registrar para escuchar cambios en el sistema (como cambio de tema del sistema)
+    WidgetsBinding.instance.addObserver(this);
   }
 
-  // Método para cargar la preferencia de tema
-  Future<void> _loadThemePreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeModeString = prefs.getString('theme_mode');
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-    if (themeModeString != null) {
-      setState(() {
-        if (themeModeString.contains('ThemeMode.light')) {
-          _themeMode = ThemeMode.light;
-        } else if (themeModeString.contains('ThemeMode.dark')) {
-          _themeMode = ThemeMode.dark;
-        } else {
-          _themeMode = ThemeMode.system;
-        }
-      });
-    }
+  @override
+  void didChangePlatformBrightness() {
+    // Forzar actualización cuando cambia el brillo del sistema
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final appTheme = AppStateContainer.theme(context);
-    
+    // Usar directamente el tema del AppStateContainer y comparar con el tema anterior
+    final container =
+        context.dependOnInheritedWidgetOfExactType<AppStateContainer>();
+    if (container == null) {
+      throw FlutterError(
+          'AppStateContainer no encontrado en el árbol de widgets');
+    }
+
+    final appTheme = container.appTheme;
+
+    // Si el tema ha cambiado, forzamos una reconstrucción
+    if (_currentTheme == null ||
+        _currentTheme!.mode != appTheme.mode ||
+        _currentTheme!.color.value != appTheme.color.value) {
+      _currentTheme = appTheme;
+      // No es necesario llamar a setState() aquí porque dependOnInheritedWidgetOfExactType
+      // ya disparará una reconstrucción si el contenedor ha cambiado
+    }
+
+    // Reconstruir MaterialApp con el tema actual
     return MaterialApp.router(
       title: 'Parkar',
       routerConfig: router,

@@ -2,7 +2,6 @@
 // Implementación temporal sin Google Maps
 
 import 'dart:async';
-import 'package:flutter/material.dart';
 
 class MapService {
   static final MapService _instance = MapService._internal();

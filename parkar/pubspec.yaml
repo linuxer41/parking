@@ -89,6 +89,9 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    # - assets/icons/
+    - assets/data/
+    - lib/assets/data/
     - assets/images/spot/
     - assets/spot/
     # - assets/coin.glb  # Comentado porque son archivos 3D que ya no usaremos

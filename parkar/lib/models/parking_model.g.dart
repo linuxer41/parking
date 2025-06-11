@@ -26,6 +26,13 @@ ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
           .toList(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      address: json['address'] as String?,
+      totalSpots: (json['totalSpots'] as num?)?.toInt(),
+      availableSpots: (json['availableSpots'] as num?)?.toInt(),
+      isOpen: json['isOpen'] as bool?,
+      openingHours: json['openingHours'] as String?,
     );
 
 Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
@@ -40,18 +47,33 @@ Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
       'subscriptionPlans': instance.subscriptionPlans,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'address': instance.address,
+      'totalSpots': instance.totalSpots,
+      'availableSpots': instance.availableSpots,
+      'isOpen': instance.isOpen,
+      'openingHours': instance.openingHours,
     };
 
 ParkingCreateModel _$ParkingCreateModelFromJson(Map<String, dynamic> json) =>
     ParkingCreateModel(
       name: json['name'] as String,
       companyId: json['companyId'] as String,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      address: json['address'] as String?,
+      totalSpots: (json['totalSpots'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$ParkingCreateModelToJson(ParkingCreateModel instance) =>
     <String, dynamic>{
       'name': instance.name,
       'companyId': instance.companyId,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'address': instance.address,
+      'totalSpots': instance.totalSpots,
     };
 
 ParkingUpdateModel _$ParkingUpdateModelFromJson(Map<String, dynamic> json) =>
@@ -70,6 +92,13 @@ ParkingUpdateModel _$ParkingUpdateModelFromJson(Map<String, dynamic> json) =>
           ?.map(
               (e) => SubscriptionPlanModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      address: json['address'] as String?,
+      totalSpots: (json['totalSpots'] as num?)?.toInt(),
+      availableSpots: (json['availableSpots'] as num?)?.toInt(),
+      isOpen: json['isOpen'] as bool?,
+      openingHours: json['openingHours'] as String?,
     );
 
 Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
@@ -79,6 +108,13 @@ Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
       'params': instance.params,
       'prices': instance.prices,
       'subscriptionPlans': instance.subscriptionPlans,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'address': instance.address,
+      'totalSpots': instance.totalSpots,
+      'availableSpots': instance.availableSpots,
+      'isOpen': instance.isOpen,
+      'openingHours': instance.openingHours,
     };
 
 VehicleTypeModel _$VehicleTypeModelFromJson(Map<String, dynamic> json) =>

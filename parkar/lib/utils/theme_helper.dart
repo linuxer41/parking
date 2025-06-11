@@ -7,10 +7,8 @@ class ThemeHelper {
   static bool isDarkMode(BuildContext context) {
     // Primero verificamos si hay un tema explícito en el contexto
     final brightness = Theme.of(context).brightness;
-    if (brightness != null) {
-      return brightness == Brightness.dark;
-    }
-    
+    return brightness == Brightness.dark;
+      
     // Si no hay un tema explícito, usamos la configuración del sistema
     return SchedulerBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
   }

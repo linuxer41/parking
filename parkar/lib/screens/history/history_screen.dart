@@ -17,14 +17,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _searchQuery = '';
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
-  
+
   // Para filtrar por tipo de vehículo
   String? _selectedVehicleType;
-  final List<String> _vehicleTypes = ['Todos', 'Automóvil', 'Motocicleta', 'Camión'];
-  
+  final List<String> _vehicleTypes = [
+    'Todos',
+    'Automóvil',
+    'Motocicleta',
+    'Camión'
+  ];
+
   // Para ordenar
-  String _sortBy = 'date';
-  bool _sortAscending = false;
+  final String _sortBy = 'date';
+  final bool _sortAscending = false;
 
   @override
   void initState() {
@@ -36,19 +41,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // En una implementación real, obtendríamos los datos del servicio
       // Aquí estamos simulando datos para el ejemplo
       await Future.delayed(const Duration(milliseconds: 800));
-      
+
       final now = DateTime.now();
       final vehicles = List.generate(50, (index) {
         final isExit = index % 3 == 0; // Algunos vehículos ya han salido
-        final entryTime = now.subtract(Duration(hours: index + (index % 5), minutes: index * 7 % 60));
-        final exitTime = isExit ? entryTime.add(Duration(hours: 1 + (index % 4), minutes: index * 11 % 60)) : null;
-        final vehicleType = index % 5 == 0 ? 'Camión' : (index % 3 == 0 ? 'Motocicleta' : 'Automóvil');
-        
+        final entryTime = now.subtract(
+            Duration(hours: index + (index % 5), minutes: index * 7 % 60));
+        final exitTime = isExit
+            ? entryTime
+                .add(Duration(hours: 1 + (index % 4), minutes: index * 11 % 60))
+            : null;
+        final vehicleType = index % 5 == 0
+            ? 'Camión'
+            : (index % 3 == 0 ? 'Motocicleta' : 'Automóvil');
+
         return Vehicle(
           id: 'VEH-${1000 + index}',
           licensePlate: 'ABC-${123 + index}',
@@ -60,7 +71,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           cost: isExit ? (10.0 + index % 30) : null,
         );
       });
-      
+
       setState(() {
         _vehicles = vehicles;
         _isLoading = false;
@@ -79,42 +90,49 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() {
       _isLoading = true;
     });
-    
+
     // Filtrar vehículos según los criterios seleccionados
     List<Vehicle> filteredVehicles = _vehicles.where((vehicle) {
       // Filtrar por búsqueda de texto (placa o nombre)
-      bool matchesSearch = _searchQuery.isEmpty || 
-          vehicle.licensePlate.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (vehicle.ownerName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-      
+      bool matchesSearch = _searchQuery.isEmpty ||
+          vehicle.licensePlate
+              .toLowerCase()
+              .contains(_searchQuery.toLowerCase()) ||
+          (vehicle.ownerName
+                  ?.toLowerCase()
+                  .contains(_searchQuery.toLowerCase()) ??
+              false);
+
       // Filtrar por rango de fechas
       bool matchesDateRange = true;
       if (_selectedStartDate != null) {
-        matchesDateRange = matchesDateRange && vehicle.entryTime.isAfter(_selectedStartDate!);
+        matchesDateRange =
+            matchesDateRange && vehicle.entryTime.isAfter(_selectedStartDate!);
       }
       if (_selectedEndDate != null) {
         // Añadir un día completo para incluir el día seleccionado
         final endDatePlusDay = _selectedEndDate!.add(const Duration(days: 1));
-        matchesDateRange = matchesDateRange && vehicle.entryTime.isBefore(endDatePlusDay);
+        matchesDateRange =
+            matchesDateRange && vehicle.entryTime.isBefore(endDatePlusDay);
       }
-      
+
       // Filtrar por tipo de vehículo
-      bool matchesType = _selectedVehicleType == null || 
-          _selectedVehicleType == 'Todos' || 
+      bool matchesType = _selectedVehicleType == null ||
+          _selectedVehicleType == 'Todos' ||
           vehicle.type == _selectedVehicleType;
-      
+
       return matchesSearch && matchesDateRange && matchesType;
     }).toList();
-    
+
     // Ordenar la lista filtrada
     filteredVehicles.sort((a, b) {
       if (_sortBy == 'date') {
-        return _sortAscending 
-            ? a.entryTime.compareTo(b.entryTime) 
+        return _sortAscending
+            ? a.entryTime.compareTo(b.entryTime)
             : b.entryTime.compareTo(a.entryTime);
       } else if (_sortBy == 'plate') {
-        return _sortAscending 
-            ? a.licensePlate.compareTo(b.licensePlate) 
+        return _sortAscending
+            ? a.licensePlate.compareTo(b.licensePlate)
             : b.licensePlate.compareTo(a.licensePlate);
       } else if (_sortBy == 'cost') {
         final aCost = a.cost ?? 0.0;
@@ -123,7 +141,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
       return 0;
     });
-    
+
     // Actualizar la lista filtrada después de un breve retraso para mostrar el efecto de carga
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
@@ -147,10 +165,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _selectDateRange(BuildContext context) async {
     final initialDateRange = DateTimeRange(
-      start: _selectedStartDate ?? DateTime.now().subtract(const Duration(days: 7)),
+      start: _selectedStartDate ??
+          DateTime.now().subtract(const Duration(days: 7)),
       end: _selectedEndDate ?? DateTime.now(),
     );
-    
+
     final newDateRange = await showDateRangePicker(
       context: context,
       initialDateRange: initialDateRange,
@@ -165,7 +184,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         );
       },
     );
-    
+
     if (newDateRange != null) {
       setState(() {
         _selectedStartDate = newDateRange.start;
@@ -178,220 +197,213 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Historial de Vehículos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadVehicles,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildFilters(theme),
-          Expanded(
-            child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : _vehicles.isEmpty 
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.history_toggle_off,
-                              size: 80,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No se encontraron registros',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: _resetFilters,
-                              child: const Text('Limpiar filtros'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _buildVehicleList(theme),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildFilters(ThemeData theme) {
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      // Sin AppBar para un diseño más minimalista
+      body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Filtros',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            // Encabezado con título simple
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text(
+                'Registros',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por placa o nombre',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onChanged: (value) {
-                      _searchQuery = value;
-                      if (value.isEmpty || value.length > 2) {
-                        _applyFilters();
-                      }
-                    },
-                  ),
+
+            // Filtros mejorados
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black12 : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.date_range, size: 16),
-                  label: Text(
-                    _selectedStartDate == null ? 'Fecha' : 'Fechas',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  ),
-                  onPressed: () => _selectDateRange(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                // Selector de tipo de vehículo
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Tipo de vehículo',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    value: _selectedVehicleType,
-                    hint: const Text('Todos'),
-                    items: _vehicleTypes.map((type) {
-                      return DropdownMenuItem<String>(
-                        value: type == 'Todos' ? null : type,
-                        child: Text(type),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedVehicleType = value;
-                      });
-                      _applyFilters();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Selector de ordenamiento
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      labelText: 'Ordenar por',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    value: _sortBy,
-                    items: const [
-                      DropdownMenuItem(value: 'date', child: Text('Fecha')),
-                      DropdownMenuItem(value: 'plate', child: Text('Placa')),
-                      DropdownMenuItem(value: 'cost', child: Text('Costo')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _sortBy = value;
-                        });
-                        _applyFilters();
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Botón para invertir orden
-                IconButton(
-                  icon: Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward),
-                  tooltip: _sortAscending ? 'Ascendente' : 'Descendente',
-                  onPressed: () {
-                    setState(() {
-                      _sortAscending = !_sortAscending;
-                    });
-                    _applyFilters();
-                  },
-                ),
-              ],
-            ),
-            if (_selectedStartDate != null || _selectedEndDate != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Row(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.calendar_today, size: 14, color: theme.colorScheme.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      _getDateRangeText(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.primary,
+                    // Barra de búsqueda
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.black26 : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : Colors.black12,
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Buscar por placa o nombre',
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                            size: 20,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onChanged: (value) {
+                          _searchQuery = value;
+                          if (value.isEmpty || value.length > 2) {
+                            _applyFilters();
+                          }
+                        },
                       ),
                     ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedStartDate = null;
-                          _selectedEndDate = null;
-                        });
-                        _applyFilters();
-                      },
-                      child: const Text('Limpiar fechas'),
+
+                    const SizedBox(height: 16),
+
+                    // Filtros de fecha y tipo
+                    Row(
+                      children: [
+                        // Selector de fecha
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.date_range, size: 16),
+                            label: Text(
+                              _selectedStartDate == null ? 'Fecha' : 'Fechas',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () => _selectDateRange(context),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        // Selector de tipo de vehículo
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.black26 : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark ? Colors.white10 : Colors.black12,
+                                width: 1,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                hint: const Text('Tipo vehículo'),
+                                value: _selectedVehicleType,
+                                items: _vehicleTypes.map((type) {
+                                  return DropdownMenuItem<String>(
+                                    value: type == 'Todos' ? null : type,
+                                    child: Text(type),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedVehicleType = value;
+                                  });
+                                  _applyFilters();
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+
+                    // Información de rango de fechas seleccionadas
+                    if (_selectedStartDate != null || _selectedEndDate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today,
+                                size: 14, color: colorScheme.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              _getDateRangeText(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedStartDate = null;
+                                  _selectedEndDate = null;
+                                });
+                                _applyFilters();
+                              },
+                              child: const Text('Limpiar fechas'),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
+            ),
+
+            // Lista de vehículos
+            Expanded(
+              child: _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: colorScheme.primary,
+                      ),
+                    )
+                  : _vehicles.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.directions_car,
+                                size: 80,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No se encontraron registros',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: _resetFilters,
+                                child: const Text('Limpiar filtros'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _loadVehicles,
+                          color: colorScheme.primary,
+                          child: _buildVehicleList(theme),
+                        ),
+            ),
           ],
         ),
       ),
     );
   }
-  
-  String _getDateRangeText() {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    if (_selectedStartDate != null && _selectedEndDate != null) {
-      return '${dateFormat.format(_selectedStartDate!)} - ${dateFormat.format(_selectedEndDate!)}';
-    } else if (_selectedStartDate != null) {
-      return 'Desde ${dateFormat.format(_selectedStartDate!)}';
-    } else if (_selectedEndDate != null) {
-      return 'Hasta ${dateFormat.format(_selectedEndDate!)}';
-    }
-    return '';
-  }
-  
+
   Widget _buildVehicleList(ThemeData theme) {
     return ListView.builder(
       padding: const EdgeInsets.all(8.0),
@@ -399,7 +411,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       itemBuilder: (context, index) {
         final vehicle = _vehicles[index];
         final isActive = vehicle.exitTime == null;
-        
+
         // Calcular duración
         String durationText = '';
         if (vehicle.exitTime != null) {
@@ -413,16 +425,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
           final minutes = duration.inMinutes % 60;
           durationText = '${hours}h ${minutes}m (Activo)';
         }
-        
+
         // Formato de fechas
         final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-        
+
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4.0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: isActive 
-                ? BorderSide(color: theme.colorScheme.primary.withOpacity(0.3), width: 1) 
+            side: isActive
+                ? BorderSide(
+                    color: theme.colorScheme.primary.withOpacity(0.3), width: 1)
                 : BorderSide.none,
           ),
           child: InkWell(
@@ -436,10 +449,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isActive 
-                              ? theme.colorScheme.primary 
+                          color: isActive
+                              ? theme.colorScheme.primary
                               : Colors.grey[600],
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -462,7 +476,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       const Spacer(),
                       if (vehicle.cost != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.tertiary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -515,13 +530,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              vehicle.exitTime != null 
-                                  ? dateFormat.format(vehicle.exitTime!) 
+                              vehicle.exitTime != null
+                                  ? dateFormat.format(vehicle.exitTime!)
                                   : 'En curso',
                               style: TextStyle(
                                 fontWeight: FontWeight.w500,
-                                color: vehicle.exitTime == null 
-                                    ? theme.colorScheme.primary 
+                                color: vehicle.exitTime == null
+                                    ? theme.colorScheme.primary
                                     : null,
                               ),
                             ),
@@ -568,19 +583,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
       },
     );
   }
-  
+
   void _showVehicleDetails(Vehicle vehicle) {
     // Formato de fechas para la vista detallada
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
-    
+
     // Calcular duración
-    final duration = vehicle.exitTime != null 
+    final duration = vehicle.exitTime != null
         ? vehicle.exitTime!.difference(vehicle.entryTime)
         : DateTime.now().difference(vehicle.entryTime);
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
     final durationText = '$hours horas y $minutes minutos';
-    
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -599,8 +614,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Text(
                     'Detalles del Vehículo',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -609,7 +624,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // ID y placa
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -632,7 +647,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Tipo y propietario
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -655,7 +670,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Hora de entrada y salida
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -671,19 +686,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Expanded(
                     child: _detailItem(
                       label: 'Salida',
-                      value: vehicle.exitTime != null 
-                          ? dateFormat.format(vehicle.exitTime!) 
+                      value: vehicle.exitTime != null
+                          ? dateFormat.format(vehicle.exitTime!)
                           : 'En curso',
                       icon: Icons.logout,
-                      color: vehicle.exitTime == null 
-                          ? Theme.of(context).colorScheme.primary 
+                      color: vehicle.exitTime == null
+                          ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Duración y espacio
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -706,7 +721,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Costo
               if (vehicle.cost != null)
                 _detailItem(
@@ -717,9 +732,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   isBold: true,
                   isLarge: true,
                 ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Botones de acción
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -729,21 +744,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       icon: const Icon(Icons.receipt_long, size: 16),
                       label: const Text('Ver Factura'),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       onPressed: () {
                         Navigator.pop(context);
                         // Implementar visualización de factura
                       },
                     ),
-                  
                   if (vehicle.exitTime == null)
                     ElevatedButton.icon(
                       icon: const Icon(Icons.logout, size: 16),
                       label: const Text('Registrar Salida'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       onPressed: () {
                         Navigator.pop(context);
@@ -758,11 +774,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
       },
     );
   }
-  
+
   Widget _detailItem({
-    required String label, 
-    required String value, 
-    required IconData icon, 
+    required String label,
+    required String value,
+    required IconData icon,
     Color? color,
     bool isBold = false,
     bool isLarge = false,
@@ -771,8 +787,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
-          icon, 
-          size: isLarge ? 20 : 16, 
+          icon,
+          size: isLarge ? 20 : 16,
           color: color ?? Colors.grey[600],
         ),
         const SizedBox(width: 8),
@@ -802,4 +818,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ],
     );
   }
-} 
+
+  String _getDateRangeText() {
+    if (_selectedStartDate == null && _selectedEndDate == null) {
+      return 'Selecciona una fecha';
+    } else if (_selectedStartDate == null) {
+      return 'Desde ${DateFormat('dd/MM/yyyy').format(_selectedEndDate!)}';
+    } else if (_selectedEndDate == null) {
+      return 'Desde ${DateFormat('dd/MM/yyyy').format(_selectedStartDate!)}';
+    } else {
+      return '${DateFormat('dd/MM/yyyy').format(_selectedStartDate!)} - ${DateFormat('dd/MM/yyyy').format(_selectedEndDate!)}';
+    }
+  }
+}

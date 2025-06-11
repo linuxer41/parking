@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController(
     text: 'password123',
   );
-  bool _obscurePassword = true;
+  bool _showPassword = false;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -43,7 +43,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final appState = AppStateContainer.of(context);
       final authService = AppStateContainer.di(context).resolve<AuthService>();
       final userService = AppStateContainer.di(context).resolve<UserService>();
-      final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+      final parkingService =
+          AppStateContainer.di(context).resolve<ParkingService>();
 
       try {
         final response = await authService.login(
@@ -73,7 +74,8 @@ class _LoginScreenState extends State<LoginScreen> {
           if (companies.first.parkings.length == 1) {
             appState.setCompany(companies.first);
             final targetParking = companies.first.parkings.first;
-            final detailedParking = await parkingService.getDetailed(targetParking.id);
+            final detailedParking =
+                await parkingService.getDetailed(targetParking.id);
             appState.setParking(detailedParking);
             appState.setLevel(detailedParking.levels.first);
             if (mounted) context.go('/home');
@@ -106,46 +108,53 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return AuthLayout(
       title: 'Iniciar Sesión',
       children: [
         if (_errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: colorScheme.error),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: colorScheme.error),
+          Container(
+            margin: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: colorScheme.errorContainer.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, color: colorScheme.error, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _errorMessage!,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.error,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Campo de Email moderno y compacto
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Email',
                   hintText: 'ejemplo@correo.com',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  prefixIcon: Icon(
+                    Icons.email_outlined,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
@@ -161,80 +170,121 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
                 autocorrect: false,
                 enableSuggestions: true,
+                style: textTheme.bodyMedium,
               ),
+
               const SizedBox(height: 16),
+
+              // Campo de Contraseña moderno y compacto
               TextFormField(
                 controller: _passwordController,
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
                   hintText: '********',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.lock),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  prefixIcon: Icon(
+                    Icons.lock_outline,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                    tooltip: _obscurePassword ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                    icon: Icon(
+                      _showPassword ? Icons.visibility_off : Icons.visibility,
+                      size: 18,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                     onPressed: () {
                       setState(() {
-                        _obscurePassword = !_obscurePassword;
+                        _showPassword = !_showPassword;
                       });
                     },
                   ),
                 ),
-                obscureText: _obscurePassword,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.password],
+                obscureText: !_showPassword,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu contraseña';
                   }
                   return null;
                 },
-                onFieldSubmitted: (_) => _submitForm(),
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) {
+                  if (!_isLoading) {
+                    _submitForm();
+                  }
+                },
+                style: textTheme.bodyMedium,
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    context.go('/forgot-password');
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    '¿Olvidaste tu contraseña?',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(),
-                        )
-                      : const Text(
-                          'Iniciar Sesión',
-                          style: TextStyle(fontSize: 16),
-                        ),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: () {
-                  context.go('/forgot-password');
-                },
-                icon: const Icon(Icons.help_outline, size: 18),
-                label: const Text('¿Olvidaste tu contraseña?'),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('¿No tienes una cuenta?'),
-                  TextButton(
-                    onPressed: () {
-                      context.go('/register');
-                    },
-                    child: const Text('Registrarse'),
+
+              const SizedBox(height: 24),
+
+              // Botón de Iniciar Sesión moderno y minimalista
+              FilledButton(
+                onPressed: _isLoading ? null : _submitForm,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ],
+                  disabledBackgroundColor: colorScheme.primary.withOpacity(0.4),
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onPrimary,
+                        ),
+                      )
+                    : Text(
+                        'Iniciar Sesión',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onPrimary,
+                        ),
+                      ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Botón de registro con estilo moderno
+              OutlinedButton(
+                onPressed: () {
+                  context.go('/register');
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'Crear cuenta nueva',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
               ),
             ],
           ),

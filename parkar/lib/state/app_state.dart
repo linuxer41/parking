@@ -72,7 +72,8 @@ class AppState extends ChangeNotifier {
     final parkingJson = prefs.getString('parking');
     if (parkingJson != null) {
       try {
-        _currentParking = ParkingCompositeModel.fromJson(jsonDecode(parkingJson));
+        _currentParking =
+            ParkingCompositeModel.fromJson(jsonDecode(parkingJson));
       } catch (e) {
         // pass
       }
@@ -107,12 +108,11 @@ class AppState extends ChangeNotifier {
 
     // Guardar datos del usuario (serializar modelos)
     if (_user != null) {
-      try{
+      try {
         await prefs.setString('user', jsonEncode(_user!.toJson()));
       } catch (e) {
         // pass
       }
-      
     }
 
     // Guardar datos de la empresa
@@ -198,8 +198,16 @@ class AppState extends ChangeNotifier {
   }
 
   void setTheme(AppTheme theme) {
-    _theme = theme;
-    saveState(); // Guardar el estado después de cambiar el tema
+    // Actualizar el tema directamente sin preocuparse por mantener la misma instancia
+    // ya que simplificamos el objeto AppTheme
+    _theme.mode = theme.mode;
+    _theme.color = theme.color;
+    if (theme.locale != _theme.locale) {
+      _theme.locale = theme.locale;
+    }
+
+    // Guardar las preferencias y notificar inmediatamente
+    _theme.savePreferencesNow();
     notifyListeners();
   }
 

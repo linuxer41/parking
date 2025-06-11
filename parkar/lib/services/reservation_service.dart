@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'notification_service.dart';
 import '../models/level_model.dart';
-import '../models/vehicle_model.dart';
 import 'package:http/http.dart' as http;
 
 class ReservationService extends BaseService<ReservationModel,

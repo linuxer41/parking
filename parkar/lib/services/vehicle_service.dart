@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vehicle_model.dart';
-import '_base_service.dart';
 
 class VehicleService extends ChangeNotifier {
   static final VehicleService _instance = VehicleService._internal();

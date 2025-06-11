@@ -2,8 +2,6 @@
 // Implementación temporal sin Firebase
 
 import 'dart:async';
-import 'package:flutter/material.dart';
-import '_base_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();

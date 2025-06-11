@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/screens/home/profile_screen.dart';
-import 'package:parkar/screens/home/settings_screen.dart';
+import 'package:parkar/screens/control_panel/user_control_panel.dart';
 import 'package:parkar/state/app_state_container.dart';
+import '../../widgets/responsive_layout.dart';
+
 import '../dashboard/dashboard_screen.dart';
 import '../history/history_screen.dart';
-import 'parking/parking_screen.dart' show ParkingScreen;
+import '../parking/parking_screen.dart' show ParkingScreen;
 
 // Notificador para el modo de edición
 final ValueNotifier<bool> isEditorModeActive = ValueNotifier<bool>(false);
@@ -38,8 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const ParkingScreen(),
       const DashboardScreen(),
       const HistoryScreen(),
-      const SettingsScreen(),
-      ProfileSettings(
+      UserControlPanel(
         onEditProfile: () {},
         onLogout: () {
           appState.logout();
@@ -61,146 +61,148 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isMobile =
-        MediaQuery.of(context).size.width < 600; // Detectar móvil
+    final mediaQuery = MediaQuery.of(context);
     final colorScheme = Theme.of(context).colorScheme;
-    final padding = MediaQuery.of(context).padding;
+    final textTheme = Theme.of(context).textTheme;
 
     // Usar ValueListenableBuilder para escuchar cambios en el modo de edición
     return ValueListenableBuilder<bool>(
         valueListenable: isEditorModeActive,
         builder: (context, isEditorMode, child) {
-          return Scaffold(
-            // Sin AppBar para un diseño minimalista
-            extendBody:
-                false, // Importante: NO extender el body detrás del bottomNavigationBar
+          // Contenido para móviles
+          final mobileContent = Scaffold(
+            extendBody: false,
             extendBodyBehindAppBar: true,
-            body: Row(
-              children: [
-                if (!isMobile) // Sidebar para escritorio (minimalista)
-                  NavigationRail(
-                    labelType: NavigationRailLabelType.selected,
-                    useIndicator: true,
-                    indicatorColor: colorScheme.primaryContainer,
-                    selectedIconTheme:
-                        IconThemeData(color: colorScheme.primary),
-                    selectedLabelTextStyle:
-                        TextStyle(color: colorScheme.primary),
-                    backgroundColor: colorScheme.surface.withOpacity(0.9),
-                    minWidth: 60,
-                    elevation: 1.0,
-                    groupAlignment: 0,
-                    selectedIndex: _selectedIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _selectedIndex = index);
-                    },
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.grid_3x3_outlined),
-                        selectedIcon: Icon(Icons.grid_3x3),
-                        label: Text('Canvas'),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.car_rental),
-                        selectedIcon: Icon(Icons.car_rental_outlined),
-                        label: Text('Paking'),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.dashboard_outlined),
-                        selectedIcon: Icon(Icons.dashboard),
-                        label: Text('Dashboard'),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.history_outlined),
-                        selectedIcon: Icon(Icons.history),
-                        label: Text('Historial'),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings),
-                        label: Text('Ajustes'),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.person_outlined),
-                        selectedIcon: Icon(Icons.person),
-                        label: Text('Perfil'),
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ],
-                  ),
-                Expanded(
-                  child: _screens[_selectedIndex],
-                ),
-              ],
+            body: SafeArea(
+              child: _screens[_selectedIndex],
             ),
-            // Solo mostrar la barra de navegación si no estamos en modo edición
-            bottomNavigationBar: (isMobile && !isEditorMode)
+            bottomNavigationBar: !isEditorMode
                 ? Container(
                     decoration: BoxDecoration(
                       color: colorScheme.surface,
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                          offset: Offset(0, -1),
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, -2),
                         ),
                       ],
                     ),
-                    // Usar SafeArea para asegurar que está dentro de la zona visible
                     child: SafeArea(
                       child: NavigationBar(
                         selectedIndex: _selectedIndex,
                         onDestinationSelected: (index) {
                           setState(() => _selectedIndex = index);
                         },
-                        height:
-                            60, // Altura fija para evitar problemas de layout
+                        height: 62,
                         labelBehavior:
-                            NavigationDestinationLabelBehavior.onlyShowSelected,
-                        backgroundColor: Colors
-                            .transparent, // Transparente para mejor integración
-                        elevation: 0, // Sin elevación para diseño minimalista
-                        destinations: const [
+                            NavigationDestinationLabelBehavior.alwaysShow,
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
+                        indicatorColor:
+                            colorScheme.secondaryContainer.withOpacity(0.7),
+                        destinations: [
                           NavigationDestination(
-                            icon: Icon(Icons.grid_3x3_outlined, size: 24),
-                            selectedIcon: Icon(Icons.grid_3x3, size: 24),
-                            label: 'Canvas',
+                            icon: Icon(Icons.local_parking_outlined, size: 22),
+                            selectedIcon: Icon(Icons.local_parking, size: 22),
+                            label: 'Parqueo',
                           ),
                           NavigationDestination(
-                            icon: Icon(Icons.car_rental, size: 24),
-                            selectedIcon: Icon(Icons.car_rental_outlined, size: 24),
-                            label: 'Paking',
+                            icon: Icon(Icons.dashboard_outlined, size: 22),
+                            selectedIcon: Icon(Icons.dashboard, size: 22),
+                            label: 'Panel',
                           ),
                           NavigationDestination(
-                            icon: Icon(Icons.dashboard_outlined, size: 24),
-                            selectedIcon: Icon(Icons.dashboard, size: 24),
-                            label: 'Dashboard',
+                            icon: Icon(Icons.list_alt_outlined, size: 22),
+                            selectedIcon: Icon(Icons.list_alt, size: 22),
+                            label: 'Registros',
                           ),
                           NavigationDestination(
-                            icon: Icon(Icons.history_outlined, size: 24),
-                            selectedIcon: Icon(Icons.history, size: 24),
-                            label: 'Historial',
-                          ),
-                          NavigationDestination(
-                            icon: Icon(Icons.settings_outlined, size: 24),
-                            selectedIcon: Icon(Icons.settings, size: 24),
-                            label: 'Ajustes',
-                          ),
-                          NavigationDestination(
-                            icon: Icon(Icons.person_outlined, size: 24),
-                            selectedIcon: Icon(Icons.person, size: 24),
-                            label: 'Perfil',
+                            icon: Icon(Icons.more_horiz, size: 22),
+                            selectedIcon: Icon(Icons.more_horiz, size: 22),
+                            label: 'Más',
                           ),
                         ],
                       ),
                     ),
                   )
                 : null,
+          );
+
+          // Contenido para tablets y escritorio
+          final desktopContent = Scaffold(
+            extendBody: false,
+            extendBodyBehindAppBar: true,
+            body: SafeArea(
+              child: Row(
+                children: [
+                  // Navigation Rail
+                  NavigationRail(
+                    labelType: NavigationRailLabelType.all,
+                    useIndicator: true,
+                    indicatorColor: colorScheme.primaryContainer,
+                    selectedIconTheme:
+                        IconThemeData(color: colorScheme.primary, size: 20),
+                    unselectedIconTheme: IconThemeData(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        size: 20),
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    selectedLabelTextStyle: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                    unselectedLabelTextStyle: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                    minWidth: 68,
+                    minExtendedWidth: 150,
+                    elevation: 1,
+                    groupAlignment: 0,
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (index) {
+                      setState(() => _selectedIndex = index);
+                    },
+                    destinations: [
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.local_parking_outlined),
+                        selectedIcon: const Icon(Icons.local_parking),
+                        label: const Text('Parqueo'),
+                      ),
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.dashboard_outlined),
+                        selectedIcon: const Icon(Icons.dashboard),
+                        label: const Text('Panel'),
+                      ),
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.list_alt_outlined),
+                        selectedIcon: const Icon(Icons.list_alt),
+                        label: const Text('Registros'),
+                      ),
+                      NavigationRailDestination(
+                        icon: const Icon(Icons.more_horiz),
+                        selectedIcon: const Icon(Icons.more_horiz),
+                        label: const Text('Más'),
+                      ),
+                    ],
+                  ),
+
+                  // Contenido principal sin restricciones de ancho
+                  Expanded(
+                    child: _screens[_selectedIndex],
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          // Aplicar el layout responsivo
+          return ResponsiveLayout(
+            mobile: mobileContent,
+            desktop: desktopContent,
           );
         });
   }

@@ -11,6 +11,7 @@ class AppTheme extends ChangeNotifier {
   set color(Color color) {
     _color = color;
     _savePreferences();
+    _updateSystemUIOverlayStyle();
     notifyListeners();
   }
 
@@ -19,15 +20,6 @@ class AppTheme extends ChangeNotifier {
   ThemeMode get mode => _mode;
   set mode(ThemeMode mode) {
     _mode = mode;
-    _savePreferences();
-    notifyListeners();
-  }
-
-  // Dirección del texto
-  TextDirection _textDirection = TextDirection.ltr;
-  TextDirection get textDirection => _textDirection;
-  set textDirection(TextDirection direction) {
-    _textDirection = direction;
     _savePreferences();
     notifyListeners();
   }
@@ -41,36 +33,15 @@ class AppTheme extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Tamaño de fuente para accesibilidad
-  double _textScaleFactor = 1.0;
-  double get textScaleFactor => _textScaleFactor;
-  set textScaleFactor(double scale) {
-    _textScaleFactor = scale;
-    _savePreferences();
-    notifyListeners();
-  }
-
-  // Alto contraste para accesibilidad
-  bool _highContrast = false;
-  bool get highContrast => _highContrast;
-  set highContrast(bool value) {
-    _highContrast = value;
-    _savePreferences();
-    notifyListeners();
-  }
-
-  // Reducir animaciones para accesibilidad
-  bool _reduceAnimations = false;
-  bool get reduceAnimations => _reduceAnimations;
-  set reduceAnimations(bool value) {
-    _reduceAnimations = value;
-    _savePreferences();
-    notifyListeners();
-  }
-
   // Constructor
   AppTheme() {
     _loadPreferences();
+    // Asegurar que el modo edge-to-edge esté habilitado desde el inicio
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
+    _updateSystemUIOverlayStyle();
   }
 
   // Método para alternar entre modos de tema
@@ -86,24 +57,38 @@ class AppTheme extends ChangeNotifier {
         mode = ThemeMode.light;
         break;
     }
+    _updateSystemUIOverlayStyle();
   }
 
-  // Método para aumentar el tamaño de la fuente
-  void increaseTextSize() {
-    if (_textScaleFactor < 1.5) {
-      _textScaleFactor += 0.1;
-      _savePreferences();
-      notifyListeners();
-    }
-  }
+  // Método para actualizar el estilo de la barra de estado
+  void _updateSystemUIOverlayStyle() {
+    final isDark = mode == ThemeMode.dark ||
+        (mode == ThemeMode.system &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
 
-  // Método para disminuir el tamaño de la fuente
-  void decreaseTextSize() {
-    if (_textScaleFactor > 0.8) {
-      _textScaleFactor -= 0.1;
-      _savePreferences();
-      notifyListeners();
-    }
+    final backgroundColor = isDark ? const Color(0xFF121212) : Colors.white;
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      // Barra de estado
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+
+      // Barra de navegación
+      systemNavigationBarColor: backgroundColor,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
+    ));
+
+    // Configurar el color de fondo y el comportamiento de la barra de navegación
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
   }
 
   // Método para guardar preferencias
@@ -113,15 +98,11 @@ class AppTheme extends ChangeNotifier {
       prefs.setInt('theme_color', _color!.value);
     }
     prefs.setString('theme_mode', _mode.toString());
-    prefs.setString('text_direction', _textDirection.toString());
-    prefs.setDouble('text_scale_factor', _textScaleFactor);
-    prefs.setBool('high_contrast', _highContrast);
-    prefs.setBool('reduce_animations', _reduceAnimations);
     if (_locale != null) {
       prefs.setString('locale', _locale.toString());
     }
   }
-  
+
   // Método público para guardar preferencias inmediatamente
   Future<void> savePreferencesNow() async {
     await _savePreferences();
@@ -130,12 +111,12 @@ class AppTheme extends ChangeNotifier {
   // Método para cargar preferencias
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     final colorValue = prefs.getInt('theme_color');
     if (colorValue != null) {
       _color = Color(colorValue);
     }
-    
+
     final modeString = prefs.getString('theme_mode');
     if (modeString != null) {
       if (modeString.contains('ThemeMode.light')) {
@@ -146,30 +127,50 @@ class AppTheme extends ChangeNotifier {
         _mode = ThemeMode.system;
       }
     }
-    
-    final dirString = prefs.getString('text_direction');
-    if (dirString != null) {
-      _textDirection = dirString.contains('rtl') 
-          ? TextDirection.rtl 
-          : TextDirection.ltr;
-    }
-    
-    _textScaleFactor = prefs.getDouble('text_scale_factor') ?? 1.0;
-    _highContrast = prefs.getBool('high_contrast') ?? false;
-    _reduceAnimations = prefs.getBool('reduce_animations') ?? false;
-    
+
     notifyListeners();
   }
 
   // Método para obtener el ThemeData del tema claro
   ThemeData getLightTheme() {
-    final baseTheme = ThemeData(
+    final baseColorScheme = ColorScheme.fromSeed(
+      seedColor: color,
+      brightness: Brightness.light,
+      // Ajustar colores para un diseño más moderno
+      primary: color,
+      primaryContainer: color.withOpacity(0.12),
+      secondary: color.withBlue(min(color.blue + 20, 255)),
+      surface: Colors.white,
+      background: Colors.grey[50]!,
+      surfaceVariant: Colors.grey[100]!,
+    );
+
+    return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: color,
-        brightness: Brightness.light,
-      ),
+      colorScheme: baseColorScheme,
+      // Usar una fuente moderna y más ligera
       fontFamily: 'Roboto',
+      // Reducir tamaños de texto por defecto
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        displayMedium: TextStyle(
+            fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        displaySmall: TextStyle(
+            fontSize: 22, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        headlineLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+        bodyMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.normal),
+        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+        labelLarge: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      ),
       // Configuraciones para pantalla completa
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -177,21 +178,187 @@ class AppTheme extends ChangeNotifier {
         systemOverlayStyle: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: Colors.transparent,
         ),
+        titleTextStyle: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: baseColorScheme.onSurface),
+        iconTheme: IconThemeData(color: baseColorScheme.onSurface, size: 22),
+      ),
+      // Estilos más modernos para tarjetas
+      cardTheme: CardTheme(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.grey[200]!, width: 1),
+        ),
+        color: Colors.white,
+        margin: EdgeInsets.zero,
+      ),
+      // Botones más planos y modernos
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: baseColorScheme.primary,
+          foregroundColor: baseColorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          textStyle: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          elevation: 0,
+          foregroundColor: baseColorScheme.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          side: BorderSide(color: baseColorScheme.outline, width: 1),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          textStyle: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: baseColorScheme.primary,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          textStyle: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        ),
+      ),
+      // Iconos pequeños y nítidos
+      iconTheme: IconThemeData(
+        size: 22,
+        color: baseColorScheme.onSurface,
+      ),
+      // Inputs más modernos
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: baseColorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: baseColorScheme.primary, width: 1),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        hintStyle: TextStyle(
+            fontSize: 14,
+            color: baseColorScheme.onSurfaceVariant.withOpacity(0.7)),
+        labelStyle:
+            TextStyle(fontSize: 14, color: baseColorScheme.onSurfaceVariant),
+      ),
+      // Chips más compactos
+      chipTheme: ChipThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHighest,
+        labelStyle: const TextStyle(fontSize: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      // Tabs más compactos
+      tabBarTheme: const TabBarTheme(
+        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        unselectedLabelStyle:
+            TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+        indicatorSize: TabBarIndicatorSize.label,
+      ),
+      // Diseño compacto para Dialogs
+      dialogTheme: DialogTheme(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titleTextStyle:
+            const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        contentTextStyle: const TextStyle(fontSize: 14),
+      ),
+      // Snackbars más compactos y modernos
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        contentTextStyle: const TextStyle(fontSize: 13),
+        actionTextColor: baseColorScheme.primary,
+      ),
+      // Ajustes para checkboxes y switches
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+        side: const BorderSide(width: 1.5),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return baseColorScheme.primary;
+          }
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return baseColorScheme.primary.withOpacity(0.3);
+          }
+          return null;
+        }),
       ),
     );
-    
-    return _applyAccessibilitySettings(baseTheme);
   }
 
   // Método para obtener el ThemeData del tema oscuro
   ThemeData getDarkTheme() {
-    final baseTheme = ThemeData(
+    final baseColorScheme = ColorScheme.fromSeed(
+      seedColor: color,
+      brightness: Brightness.dark,
+      // Ajustar colores para un diseño más moderno
+      primary: color.withOpacity(0.9),
+      primaryContainer: color.withOpacity(0.2),
+      secondary: color.withBlue(min(color.blue + 20, 255)).withOpacity(0.9),
+      surface: const Color(0xFF1E1E1E),
+      background: const Color(0xFF121212),
+      surfaceVariant: const Color(0xFF2C2C2C),
+    );
+
+    return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: color,
-        brightness: Brightness.dark,
-      ),
+      colorScheme: baseColorScheme,
+      // Usar una fuente moderna y más ligera
       fontFamily: 'Roboto',
+      // Reducir tamaños de texto por defecto
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        displayMedium: TextStyle(
+            fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        displaySmall: TextStyle(
+            fontSize: 22, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        headlineLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        headlineMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+        bodyMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.normal),
+        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+        labelLarge: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      ),
       // Configuraciones para pantalla completa
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -199,59 +366,163 @@ class AppTheme extends ChangeNotifier {
         systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
           statusBarColor: Colors.transparent,
         ),
+        titleTextStyle: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: baseColorScheme.onSurface),
+        iconTheme: IconThemeData(color: baseColorScheme.onSurface, size: 22),
+      ),
+      // Estilos más modernos para tarjetas
+      cardTheme: CardTheme(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF2C2C2C), width: 1),
+        ),
+        color: baseColorScheme.surface,
+        margin: EdgeInsets.zero,
+      ),
+      // Botones más planos y modernos
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: baseColorScheme.primary,
+          foregroundColor: baseColorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          textStyle: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          elevation: 0,
+          foregroundColor: baseColorScheme.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          side: BorderSide(color: baseColorScheme.outline, width: 1),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          textStyle: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: baseColorScheme.primary,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          textStyle: const TextStyle(
+              fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1),
+        ),
+      ),
+      // Iconos pequeños y nítidos
+      iconTheme: IconThemeData(
+        size: 22,
+        color: baseColorScheme.onSurface,
+      ),
+      // Inputs más modernos
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: baseColorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: baseColorScheme.primary, width: 1),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        hintStyle: TextStyle(
+            fontSize: 14,
+            color: baseColorScheme.onSurfaceVariant.withOpacity(0.7)),
+        labelStyle:
+            TextStyle(fontSize: 14, color: baseColorScheme.onSurfaceVariant),
+      ),
+      // Chips más compactos
+      chipTheme: ChipThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHighest,
+        labelStyle: const TextStyle(fontSize: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      // Tabs más compactos
+      tabBarTheme: const TabBarTheme(
+        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        unselectedLabelStyle:
+            TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+        indicatorSize: TabBarIndicatorSize.label,
+      ),
+      // Diseño compacto para Dialogs
+      dialogTheme: DialogTheme(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        titleTextStyle:
+            const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        contentTextStyle: const TextStyle(fontSize: 14),
+      ),
+      // Snackbars más compactos y modernos
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        contentTextStyle: const TextStyle(fontSize: 13),
+        actionTextColor: baseColorScheme.primary,
+      ),
+      // Ajustes para checkboxes y switches
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+        side: const BorderSide(width: 1.5),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return baseColorScheme.primary;
+          }
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return baseColorScheme.primary.withOpacity(0.3);
+          }
+          return null;
+        }),
       ),
     );
-    
-    return _applyAccessibilitySettings(baseTheme);
-  }
-
-  // Aplicar configuraciones de accesibilidad al tema
-  ThemeData _applyAccessibilitySettings(ThemeData baseTheme) {
-    var theme = baseTheme;
-    
-    // Aplicar alto contraste si está activado
-    if (_highContrast) {
-      final colorScheme = theme.colorScheme;
-      theme = theme.copyWith(
-        colorScheme: colorScheme.copyWith(
-          // Aumentar el contraste entre fondo y texto
-          onBackground: colorScheme.brightness == Brightness.dark 
-              ? Colors.white 
-              : Colors.black,
-          surface: colorScheme.brightness == Brightness.dark 
-              ? Colors.black 
-              : Colors.white,
-          onSurface: colorScheme.brightness == Brightness.dark 
-              ? Colors.white 
-              : Colors.black,
-        ),
-      );
-    }
-    
-    // Aplicar reducción de animaciones
-    if (_reduceAnimations) {
-      theme = theme.copyWith(
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
-          },
-        ),
-        // Reducir duración de las animaciones
-        splashFactory: InkRipple.splashFactory,
-      );
-    }
-    
-    return theme;
   }
 
   @override
   String toString() {
     return 'AppTheme(mode: $_mode)';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AppTheme &&
+        other._mode == _mode &&
+        other.color.value == color.value &&
+        other.locale == _locale;
+  }
+
+  @override
+  int get hashCode => Object.hash(_mode, color, _locale);
 }
 
 Color get systemAccentColor {
@@ -262,3 +533,6 @@ Color get systemAccentColor {
   }
   return Colors.blue;
 }
+
+// Función auxiliar para min
+int min(int a, int b) => a < b ? a : b;
