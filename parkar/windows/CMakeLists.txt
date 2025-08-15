@@ -1,4 +1,4 @@
-# Project-level configuration.
+# Project-area configuration.
 cmake_minimum_required(VERSION 3.14)
 project(parkar LANGUAGES CXX)
 

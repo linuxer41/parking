@@ -17,6 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _showPassword = false;
   bool _showConfirmPassword = false;
   bool _isLoading = false;
@@ -28,6 +29,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -52,6 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _emailController.text,
           _passwordController.text,
           _nameController.text,
+          _phoneController.text,
         );
 
         if (!mounted) return;
@@ -98,7 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             margin: const EdgeInsets.only(bottom: 20),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withOpacity(0.5),
+              color: colorScheme.errorContainer.withValues(alpha: 127),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -273,7 +276,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  disabledBackgroundColor: colorScheme.primary.withOpacity(0.4),
+                  disabledBackgroundColor:
+                      colorScheme.primary.withValues(alpha: 102),
                 ),
                 child: _isLoading
                     ? SizedBox(
@@ -318,7 +322,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Text(
                 'Iniciar sesión',
                 style: textTheme.labelMedium?.copyWith(
-                  color: colorScheme.primary,
+                  color: colorScheme.primary.withValues(alpha: 127),
                 ),
               ),
             ),

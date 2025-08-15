@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.4
+  sdk: ^3.8.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -53,14 +53,33 @@ dependencies:
   provider: ^6.1.2   # Para gestión de estado
   # Nuevas dependencias para PDF y manejo de fechas
   intl: ^0.20.2      # Formateador de fechas y números
-  pdf: ^3.10.8       # Generación de PDFs
-  path_provider: ^2.1.2  # Acceso a directorios del sistema
+  pdf: ^3.11.3       # Generación de PDFs
+  path_provider: ^2.1.5  # Acceso a directorios del sistema
   share_plus: ^7.2.2     # Compartir archivos
   fl_chart: ^0.71.0
   
   # Nuevas dependencias para sistema de reservas
   table_calendar: ^3.1.0
   flutter_datetime_picker_plus: ^2.1.0
+  
+  # WebSocket para real-time updates
+  web_socket_channel: ^2.4.0
+  printing: ^5.14.2
+  
+  # Selector de país y teléfono
+  country_picker: ^2.0.25
+  phone_numbers_parser: ^8.0.0
+  
+  # Geolocalización y geocodificación
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
+  
+  # Mapa interactivo moderno y gratuito
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.0
+  
+  # URL launcher para WhatsApp
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

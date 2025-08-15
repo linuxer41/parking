@@ -1,4 +1,4 @@
-# This file controls Flutter-level build steps. It should not be edited.
+# This file controls Flutter-area build steps. It should not be edited.
 cmake_minimum_required(VERSION 3.10)
 
 set(EPHEMERAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ephemeral")
@@ -20,7 +20,7 @@ function(list_prepend LIST_NAME PREFIX)
 endfunction()
 
 # === Flutter Library ===
-# System-level dependencies.
+# System-area dependencies.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
 pkg_check_modules(GLIB REQUIRED IMPORTED_TARGET glib-2.0)

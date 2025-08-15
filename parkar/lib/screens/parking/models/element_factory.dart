@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math.dart' as vector_math;
-import 'dart:math' as math;
 
+import '../../../models/element_model.dart';
 import 'enums.dart';
 import 'parking_elements.dart';
 import 'parking_spot.dart';
@@ -9,75 +9,118 @@ import 'parking_facility.dart';
 
 /// Factory para crear elementos del sistema de parkeo
 class ElementFactory {
-  // Generador de IDs únicos
-  static int _nextId = 1;
 
-  /// Genera un ID único
-  static String generateId(String prefix) {
-    final id = '$prefix-${_nextId.toString().padLeft(4, '0')}';
-    _nextId++;
-    return id;
+  static ParkingElement? createFromModel(ElementModel model) {
+    switch (model.type) {
+      case ElementType.spot:
+        return createSpot(model);
+      case ElementType.signage:
+        return createSignage(model);
+      case ElementType.facility:
+        return createFacility(model);
+    }
   }
 
-  /// Crea un espacio de estacionamiento
-  static ParkingSpot createSpot({
-    required vector_math.Vector2 position,
-    required SpotType type,
-    required String label,
-    SpotCategory category = SpotCategory.normal,
-    double rotation = 0.0,
-    double scale = 1.0,
-  }) {
+  static ParkingSpot createSpot(ElementModel model) {
+    SpotType spotType;
+    switch (model.subType) {
+      case 1:
+        spotType = SpotType.bicycle;
+        break;
+      case 2:
+        spotType = SpotType.motorcycle;
+        break;
+      case 3:
+        spotType = SpotType.vehicle;
+        break;
+      case 4:
+        spotType = SpotType.truck;
+        break;
+      default:
+        spotType = SpotType.vehicle;
+    }
+
+
     return ParkingSpot(
-      id: generateId('spot'),
-      position: position,
-      type: type,
-      label: label,
-      category: category,
-      rotation: rotation,
-      scale: scale,
+      id: model.id,
+      position: vector_math.Vector2(model.posX, model.posY),
+      type: spotType,
+      label: model.name,
+      isOccupied: model.isOccupied,
+      rotation: model.rotation,
+      scale: model.scale,
+      occupancy: model.occupancy,
     );
   }
 
-  /// Crea una señalización
-  static ParkingSignage createSignage({
-    required vector_math.Vector2 position,
-    required SignageType type,
-    String? text,
-    double rotation = 0.0,
-    double scale = 1.0,
-  }) {
+  static ParkingSignage createSignage(ElementModel model) {
+    SignageType signageType;
+    switch (model.subType) {
+      case 1:
+        signageType = SignageType.entrance;
+        break;
+      case 2:
+        signageType = SignageType.exit;
+        break;
+      case 3:
+        signageType = SignageType.direction;
+        break;
+      case 4:
+        signageType = SignageType.bidirectional;
+        break;
+      case 5:
+        signageType = SignageType.stop;
+        break;
+      default:
+        signageType = SignageType.direction;
+    }
+
     return ParkingSignage(
-      id: generateId('sign'),
-      position: position,
-      type: type,
-      text: text,
-      rotation: rotation,
-      scale: scale,
+      id: model.id,
+      position: vector_math.Vector2(model.posX, model.posY),
+      type: signageType,
+      text: model.name,
+      rotation: model.rotation,
+      scale: model.scale,
     );
   }
 
-  /// Crea una instalación
-  static ParkingFacility createFacility({
-    required vector_math.Vector2 position,
-    required FacilityType type,
-    required String name,
-    bool isAvailable = true,
-    double rotation = 0.0,
-    double scale = 1.0,
-  }) {
+  static ParkingFacility createFacility(ElementModel model) {
+    FacilityType facilityType;
+    switch (model.subType) {
+      case 1:
+        facilityType = FacilityType.office;
+        break;
+      case 2:
+        facilityType = FacilityType.bathroom;
+        break;
+      case 3:
+        facilityType = FacilityType.cafeteria;
+        break;
+      case 4:
+        facilityType = FacilityType.elevator;
+        break;
+      case 5:
+        facilityType = FacilityType.stairs;
+        break;
+      case 6:
+        facilityType = FacilityType.information;
+        break;
+      default:
+        facilityType = FacilityType.elevator;
+    }
+
     return ParkingFacility(
-      id: generateId('fac'),
-      position: position,
-      type: type,
-      name: name,
-      isAvailable: isAvailable,
-      rotation: rotation,
-      scale: scale,
+      id: model.id,
+      position: vector_math.Vector2(model.posX, model.posY),
+      type: facilityType,
+      name: model.name,
+      isAvailable: model.isAvailable,
+      rotation: model.rotation,
+      scale: model.scale,
     );
   }
 
-  /// Crea un elemento desde un JSON genérico
   static ParkingElement? fromJson(Map<String, dynamic> json) {
     final String type = json['type'] as String;
 
@@ -91,45 +134,5 @@ class ElementFactory {
       default:
         return null;
     }
-  }
-
-  /// Genera una fila de espacios de estacionamiento
-  static List<ParkingSpot> generateSpotRow({
-    required vector_math.Vector2 startPosition,
-    required int count,
-    required SpotType type,
-    required String labelPrefix,
-    double spacing = 10.0,
-    SpotCategory category = SpotCategory.normal,
-    double rotation = 0.0,
-  }) {
-    final List<ParkingSpot> spots = [];
-    final ElementVisuals visuals = ElementProperties.spotVisuals[type]!;
-    final double width = visuals.width + spacing;
-
-    for (int i = 0; i < count; i++) {
-      final label = '$labelPrefix-${(i + 1).toString().padLeft(2, '0')}';
-      final position = vector_math.Vector2(
-        startPosition.x + i * width * math.cos(rotation),
-        startPosition.y + i * width * math.sin(rotation),
-      );
-
-      spots.add(
-        createSpot(
-          position: position,
-          type: type,
-          label: label,
-          category: category,
-          rotation: rotation,
-        ),
-      );
-    }
-
-    return spots;
-  }
-
-  /// Reinicia el generador de IDs
-  static void resetIdGenerator() {
-    _nextId = 1;
   }
 }

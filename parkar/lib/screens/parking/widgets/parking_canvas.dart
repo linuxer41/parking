@@ -9,8 +9,13 @@ import 'package:vector_math/vector_math.dart' as vector_math;
 import '../core/parking_state.dart';
 import '../models/enums.dart';
 import '../models/parking_elements.dart';
+import '../models/parking_signage.dart';
 import '../models/parking_spot.dart';
 import 'context_toolbar.dart';
+import 'register_occupancy.dart';
+import 'manage_access.dart';
+import 'manage_reservation.dart';
+import 'manage_subscription.dart';
 
 /// Widget que renderiza el canvas del sistema de parkeo
 class ParkingCanvas extends StatefulWidget {
@@ -46,6 +51,9 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   // Mostrar mensaje de colisión
   bool _collisionDetected = false;
   Offset _collisionPosition = Offset.zero;
+  
+  // Estado de hover para tooltips
+  ParkingSpot? _hoveredSpot;
 
   // GlobalKey para obtener el tamaño del widget
   final GlobalKey _canvasKey = GlobalKey();
@@ -59,170 +67,183 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   @override
   void initState() {
     super.initState();
-    // Programar la centralización después de que el widget esté construido
-    WidgetsBinding.instance.addPostFrameCallback((_) => _centerViewOnOrigin());
-
-    // Inicializar gestor de atajos de teclado después del primer frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final parkingState = Provider.of<ParkingState>(context, listen: false);
-      parkingState.initKeyboardShortcutsManager(_showActionMessage);
-    });
-  }
-
-  // Método para centrar la vista en el origen
-  void _centerViewOnOrigin() {
-    final RenderBox? renderBox =
-        _canvasKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox != null) {
-      final Size size = renderBox.size;
-      final parkingState = Provider.of<ParkingState>(context, listen: false);
-      parkingState.centerViewOnOrigin(size);
-    }
+    final parkingState = Provider.of<ParkingState>(context, listen: false);
+    parkingState.initKeyboardShortcutsManager(_showActionMessage);
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
-      onKey: _handleKeyEvent,
+      onKeyEvent: _handleKeyEvent,
       child: Consumer<ParkingState>(
         builder: (context, parkingState, child) {
           final theme = Theme.of(context);
           final colorScheme = theme.colorScheme;
 
-          return Listener(
-            onPointerSignal: (PointerSignalEvent signal) {
-              if (signal is PointerScrollEvent) {
-                // Manejo del zoom con el scroll del mouse
-                final double scrollDelta = signal.scrollDelta.dy;
-
-                // Determinar el factor de zoom basado en la dirección del scroll
-                // Valores negativos aumentan el zoom, positivos lo disminuyen
-                // Usar un factor más suave para un zoom más gradual
-                final double zoomFactor = scrollDelta > 0 ? 0.95 : 1.05;
-
-                // Actualizar la posición del cursor para asegurar un zoom centrado
-                final cursorWorldPos = parkingState.camera.screenToWorld(
-                  signal.position,
-                );
-                parkingState.cursorPosition = cursorWorldPos;
-
-                // Aplicar zoom centrado en la posición actual del cursor
-                parkingState.zoomCamera(
-                  zoomFactor,
-                  signal.position,
-                );
-              }
+          return MouseRegion(
+            onHover: (event) {
+              // Funcionalidad de hover temporalmente deshabilitada
+              // No hacer nada
             },
-            child: GestureDetector(
-              // Manejar tanto arrastre como zoom con el reconocedor de escala
-              onScaleStart: (details) =>
-                  _handleScaleStart(details, parkingState),
-              onScaleUpdate: (details) =>
-                  _handleScaleUpdate(details, parkingState),
-              onScaleEnd: (details) => _handleScaleEnd(details, parkingState),
+            onExit: (_) {
+              // Funcionalidad de hover temporalmente deshabilitada
+              // No hacer nada
+            },
+            child: Listener(
+              onPointerSignal: (PointerSignalEvent signal) {
+                if (signal is PointerScrollEvent) {
+                  // Manejo del zoom con el scroll del mouse
+                  final double scrollDelta = signal.scrollDelta.dy;
 
-              // Manejar tap para selección o elemento en modo de creación
-              onTapDown: (details) => _handleTapDown(details, parkingState),
+                  // Determinar el factor de zoom basado en la dirección del scroll
+                  // Valores negativos aumentan el zoom, positivos lo disminuyen
+                  // Usar un factor más suave para un zoom más gradual
+                  final double zoomFactor = scrollDelta > 0 ? 0.95 : 1.05;
 
-              child: SizedBox(
-                key: _canvasKey,
-                width: double.infinity,
-                height: double.infinity,
-                child: Stack(
-                  children: [
-                    // Canvas principal
-                    CustomPaint(
-                      painter: _ParkingCanvasPainter(
-                        parkingState: parkingState,
-                        colorScheme: colorScheme,
-                        selectionRect: _selectionRect,
-                      ),
-                      size: Size.infinite,
-                    ),
+                  // Actualizar la posición del cursor para asegurar un zoom centrado
+                  final cursorWorldPos = parkingState.camera.screenToWorld(
+                    signal.position,
+                  );
+                  parkingState.cursorPosition = cursorWorldPos;
 
-                    // Barra de herramientas contextual
-                    if (parkingState.isEditMode &&
-                        parkingState.selectedElements.isNotEmpty)
-                      ContextToolbar(
-                        parkingState: parkingState,
-                        onRotateClockwise: () =>
-                            _rotateSelectedElement(parkingState, 30),
-                        onRotateCounterClockwise: () =>
-                            _rotateSelectedElement(parkingState, -30),
-                        onCopy: () => _copySelectedElements(parkingState),
-                        onDelete: () => _deleteSelectedElements(parkingState),
-                        onEditLabel: () => _editElementLabel(parkingState),
-                        onAlignTop: () =>
-                            _alignElements(parkingState, Alignment.topCenter),
-                        onAlignBottom: () => _alignElements(
-                            parkingState, Alignment.bottomCenter),
-                        onAlignLeft: () =>
-                            _alignElements(parkingState, Alignment.centerLeft),
-                        onAlignRight: () =>
-                            _alignElements(parkingState, Alignment.centerRight),
-                        onAlignCenter: () =>
-                            _alignElements(parkingState, Alignment.center),
-                        onDistributeHorizontal: () => _distributeElementsEvenly(
-                            parkingState,
-                            horizontal: true),
-                        onDistributeVertical: () => _distributeElementsEvenly(
-                            parkingState,
-                            horizontal: false),
-                        selectedElementPosition: () {
-                          // Obtener el elemento seleccionado
-                          final element = parkingState.selectedElements.first;
+                  // Aplicar zoom centrado en la posición actual del cursor
+                  parkingState.zoomCamera(
+                    zoomFactor,
+                    signal.position,
+                  );
+                }
+              },
+              child: GestureDetector(
+                // Manejar tanto arrastre como zoom con el reconocedor de escala
+                onScaleStart: (details) =>
+                    _handleScaleStart(details, parkingState),
+                onScaleUpdate: (details) =>
+                    _handleScaleUpdate(details, parkingState),
+                onScaleEnd: (details) => _handleScaleEnd(details, parkingState),
 
-                          // Obtener la posición actual en pantalla
-                          final screenPos = parkingState.camera
-                              .worldToScreen(element.position);
+                // Manejar tap para selección o elemento en modo de creación
+                onTapDown: (details) => _handleTapDown(details, parkingState),
 
-                          // Obtener dimensiones del elemento
-                          final size = element.getSize();
-                          final scaledHeight =
-                              size.height * element.scale * parkingState.zoom;
-
-                          // Calcular posición para la barra (exactamente debajo del elemento)
-                          return Offset(
-                            screenPos.dx, // Centrado en X
-                            screenPos.dy +
-                                (scaledHeight / 2) +
-                                10, // 10px debajo del elemento
-                          );
-                        }(),
-                        centerHorizontally: true,
+                child: SizedBox(
+                  key: _canvasKey,
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: Stack(
+                    children: [
+                      // Canvas principal
+                      CustomPaint(
+                        painter: _ParkingCanvasPainter(
+                          parkingState: parkingState,
+                          colorScheme: colorScheme,
+                          selectionRect: _selectionRect,
+                        ),
+                        size: Size.infinite,
                       ),
 
-                    // Mostrar mensaje de colisión si existe
-                    if (_collisionDetected)
-                      Positioned(
-                        left: _collisionPosition.dx,
-                        top: _collisionPosition.dy - 60,
-                        child: Material(
-                          elevation: 8,
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.red.withOpacity(0.9),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: Colors.white, size: 16),
-                                SizedBox(width: 4),
-                                Text(
-                                  "¡Colisión detectada!",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                      // Barra de herramientas contextual
+                      if (parkingState.isEditMode &&
+                          parkingState.selectedElements.isNotEmpty)
+                        ContextToolbar(
+                          parkingState: parkingState,
+                          onRotateClockwise: () {
+                            print("Callback onRotateClockwise llamado");
+                            _rotateSelectedElement(parkingState, 30);
+                          },
+                          onRotateCounterClockwise: () {
+                            print("Callback onRotateCounterClockwise llamado");
+                            _rotateSelectedElement(parkingState, -30);
+                          },
+                          onCopy: () {
+                            print("Callback onCopy llamado");
+                            _copySelectedElements(parkingState);
+                          },
+                          onDelete: () {
+                            print("Callback onDelete llamado");
+                            _deleteSelectedElements(parkingState);
+                          },
+                          onEditLabel: () {
+                            print("Botón de editar etiqueta presionado");
+                            _editElementLabel(parkingState);
+                          },
+                          onAlignTop: () =>
+                              _alignElements(parkingState, Alignment.topCenter),
+                          onAlignBottom: () => _alignElements(
+                              parkingState, Alignment.bottomCenter),
+                          onAlignLeft: () =>
+                              _alignElements(parkingState, Alignment.centerLeft),
+                          onAlignRight: () =>
+                              _alignElements(parkingState, Alignment.centerRight),
+                          onAlignCenter: () =>
+                              _alignElements(parkingState, Alignment.center),
+                          onDistributeHorizontal: () => _distributeElementsEvenly(
+                              parkingState,
+                              horizontal: true),
+                          onDistributeVertical: () => _distributeElementsEvenly(
+                              parkingState,
+                              horizontal: false),
+                          selectedElementPosition: () {
+                            // Obtener el elemento seleccionado
+                            final element = parkingState.selectedElements.first;
+
+                            // Obtener la posición actual en pantalla
+                            final screenPos = parkingState.camera
+                                .worldToScreen(element.position);
+
+                            // Obtener dimensiones del elemento
+                            final size = element.getSize();
+                            final scaledHeight =
+                                size.height * element.scale * parkingState.zoom;
+
+                            // Calcular posición para la barra (exactamente debajo del elemento)
+                            return Offset(
+                              screenPos.dx, // Centrado en X
+                              screenPos.dy +
+                                  (scaledHeight / 2) +
+                                  10, // 10px debajo del elemento
+                            );
+                          }(),
+                          centerHorizontally: true,
+                        ),
+
+                      // Mostrar mensaje de colisión si existe
+                      if (_collisionDetected)
+                        Positioned(
+                          left: _collisionPosition.dx,
+                          top: _collisionPosition.dy - 60,
+                          child: Material(
+                            elevation: 8,
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.red.withAlpha(230),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded,
+                                      color: Colors.white, size: 16),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    "¡Colisión detectada!",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                      
+                      // Tooltip para espacio al hacer hover (modo normal) - temporalmente deshabilitado
+                      // if (!parkingState.isEditMode && _hoveredSpot != null)
+                      //   SpotInfoPopup(
+                      //     spot: _hoveredSpot!,
+                      //     position: parkingState.camera.worldToScreen(_hoveredSpot!.position),
+                      //   ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -600,42 +621,109 @@ class _ParkingCanvasState extends State<ParkingCanvas>
           parkingState.clearSelection();
           parkingState.selectElement(element);
         }
-      } else if (!isShiftPressed) {
-        // Si no hemos hecho clic en un elemento y no estamos manteniendo Shift,
-        // deseleccionar todo
-        parkingState.clearSelection();
+      } else {
+        // Verificar si el clic está en la barra de herramientas
+        // Si hay elementos seleccionados, verificar si el clic está cerca de la barra de herramientas
+        if (parkingState.selectedElements.isNotEmpty) {
+          final selectedElement = parkingState.selectedElements.first;
+          final screenPos =
+              parkingState.camera.worldToScreen(selectedElement.position);
+          final size = selectedElement.getSize();
+          final scaledHeight =
+              size.height * selectedElement.scale * parkingState.zoom;
+
+          // Calcular la posición aproximada de la barra de herramientas
+          final toolbarY = screenPos.dy + (scaledHeight / 2) + 10;
+          final toolbarX = screenPos.dx;
+
+          // Verificar si el clic está en el área de la barra de herramientas
+          final clickX = details.localPosition.dx;
+          final clickY = details.localPosition.dy;
+
+          // Área aproximada de la barra de herramientas (ajustar según sea necesario)
+          final toolbarArea = Rect.fromCenter(
+            center: Offset(toolbarX, toolbarY),
+            width: 200, // Ancho aproximado de la barra
+            height: 50, // Alto aproximado de la barra
+          );
+
+          if (toolbarArea.contains(Offset(clickX, clickY))) {
+            print(
+                "Clic detectado en la barra de herramientas, no deseleccionar");
+            return; // No deseleccionar si el clic está en la barra de herramientas
+          }
+        }
+
+        // Solo deseleccionar si no estamos manteniendo Shift y no es un clic en la barra de herramientas
+        if (!isShiftPressed) {
+          parkingState.clearSelection();
+        }
       }
     }
-    // En modo normal, si hacemos clic en un spot, mostrar modal
+    // En modo normal, si hacemos clic en un spot, mostrar modal o destacarlo
     else if (!parkingState.isEditMode) {
       final element = parkingState.findElementAt(worldPoint);
+      
+      // Primero, quitar el destacado de todos los spots
+      parkingState.clearAllHighlights();
+      
       if (element != null && element is ParkingSpot) {
-        if (element.isOccupied) {
-          _showVehicleExitModal(context, element);
+        // Destacar el spot al hacer clic en él
+        element.isHighlighted = true;
+        
+        // Mostrar el modal apropiado según el estado del spot
+        if (element.occupancy != null) {
+          // Si está ocupado, verificar si tiene acceso (vehículo estacionado)
+          if (element.occupancy?.access != null) {
+            ManageAccess.show(context, element);
+          } else if (element.occupancy?.reservation != null) {
+            // Si tiene reserva, mostrar modal de reserva
+            ManageReservation.show(context, element);
+          } else if (element.occupancy?.subscription != null) {
+            // Si tiene suscripción, mostrar modal de suscripción
+            ManageSubscription.show(context, element);
+          } else {
+            // Estado ocupado pero sin información específica
+            RegisterOccupancy.show(context, element);
+          }
         } else {
-          _showVehicleEntryModal(context, element);
+          // Si está libre, mostrar modal de entrada
+          RegisterOccupancy.show(context, element);
         }
+      }
+      // Si se hace clic en un área vacía, simplemente se limpia el destacado (ya realizado arriba)
+    }
+  }
+  
+  // Método para quitar el destacado de todos los spots
+  void _clearAllHighlights(ParkingState parkingState) {
+    for (final element in parkingState.allElements) {
+      if (element is ParkingSpot && element.isHighlighted) {
+        element.isHighlighted = false;
       }
     }
   }
 
   // Método para manejar eventos de teclado
-  bool _handleKeyEvent(RawKeyEvent event) {
+  bool _handleKeyEvent(KeyEvent event) {
     // Actualizar estado de teclas modificadoras
-    if (event is RawKeyDownEvent) {
+    if (event is KeyDownEvent) {
       setState(() {
-        _isShiftPressed = event.isShiftPressed;
+        _isShiftPressed = event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+            event.logicalKey == LogicalKeyboardKey.shiftRight;
       });
-    } else if (event is RawKeyUpEvent) {
+    } else if (event is KeyUpEvent) {
       setState(() {
-        _isShiftPressed = event.isShiftPressed;
+        _isShiftPressed = false;
       });
     }
 
     final parkingState = Provider.of<ParkingState>(context, listen: false);
     final keyboardManager = parkingState.keyboardShortcutsManager;
     if (keyboardManager != null) {
-      return keyboardManager.handleKeyEvent(event);
+      // TODO: Actualizar KeyboardShortcutsManager para manejar KeyEvent directamente
+      // Por ahora, comentamos esta línea para evitar errores
+      // return keyboardManager.handleKeyEvent(_convertKeyEventToRawKeyEvent(event));
     }
     return false;
   }
@@ -645,12 +733,24 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
   /// Rota el elemento seleccionado en X grados
   void _rotateSelectedElement(ParkingState parkingState, double degrees) {
-    if (parkingState.selectedElements.length != 1) return;
+    print("_rotateSelectedElement llamado con $degrees grados");
+    if (parkingState.selectedElements.length != 1) {
+      print(
+          "No hay exactamente un elemento seleccionado: ${parkingState.selectedElements.length}");
+      return;
+    }
 
     final element = parkingState.selectedElements.first;
-    if (element.isLocked) return;
+    print("Elemento a rotar: ${element.runtimeType} con ID: ${element.id}");
+
+    if (element.isLocked) {
+      print("El elemento está bloqueado, no se puede rotar");
+      return;
+    }
 
     final newRotation = element.rotation + degrees;
+    print("Rotación actual: ${element.rotation}, nueva rotación: $newRotation");
+
     setState(() {
       element.rotation = newRotation;
     });
@@ -700,12 +800,19 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
   /// Elimina los elementos seleccionados
   void _deleteSelectedElements(ParkingState parkingState) {
-    if (parkingState.selectedElements.isEmpty) return;
+    print("_deleteSelectedElements llamado");
+    if (parkingState.selectedElements.isEmpty) {
+      print("No hay elementos seleccionados para eliminar");
+      return;
+    }
 
     final count = parkingState.selectedElements.length;
+    print("Eliminando $count elementos");
 
     // Eliminar elementos seleccionados
     for (final element in List.from(parkingState.selectedElements)) {
+      print(
+          "Eliminando elemento: ${element.runtimeType} con ID: ${element.id}");
       parkingState.removeElement(element);
     }
 
@@ -724,55 +831,257 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
   /// Muestra un diálogo para editar la etiqueta del elemento
   void _editElementLabel(ParkingState parkingState) {
-    if (parkingState.selectedElements.length != 1) return;
+    print("_editElementLabel llamado");
+    if (parkingState.selectedElements.length != 1) {
+      print(
+          "No hay exactamente un elemento seleccionado: ${parkingState.selectedElements.length}");
+      return;
+    }
 
     final element = parkingState.selectedElements.first;
+    print(
+        "Elemento seleccionado: ${element.runtimeType} con ID: ${element.id}");
+
+    // No permitir editar señales
+    if (element is ParkingSignage) {
+      print("Es una señal, no se permite editar");
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede editar el texto de las señales'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     // Obtener la etiqueta actual
     String currentLabel = element.label ?? '';
+    print("Etiqueta actual: $currentLabel");
 
-    // Mostrar diálogo para editar
-    showDialog(
-      context: context,
-      builder: (context) {
-        final textController = TextEditingController(text: currentLabel);
+    // Si es un ParkingSpot, mostrar opciones adicionales
+    if (element is ParkingSpot) {
+      print("Es un ParkingSpot, mostrando diálogo con opciones adicionales");
+      final spot = element;
 
-        return AlertDialog(
-          title: const Text('Editar etiqueta'),
-          content: TextField(
-            controller: textController,
-            decoration: const InputDecoration(
-              labelText: 'Etiqueta',
-              hintText: 'Ingrese una etiqueta para el elemento',
-            ),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                // Actualizar la etiqueta del elemento
-                element.label = textController.text.trim();
-                Navigator.pop(context);
+      // Variables para almacenar los valores seleccionados
+      SpotType selectedType = spot.type;
+      bool isActive = true; // Default to active
 
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Etiqueta actualizada'),
-                    duration: Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
+      // Mostrar diálogo con opciones adicionales
+      showDialog(
+        context: context,
+        builder: (context) {
+          final textController = TextEditingController(text: currentLabel);
+
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                title: const Text('Editar espacio de estacionamiento'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Campo para la etiqueta
+                      TextField(
+                        controller: textController,
+                        decoration: const InputDecoration(
+                          labelText: 'Etiqueta',
+                          hintText: 'Ingrese una etiqueta para el espacio',
+                        ),
+                        autofocus: true,
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Selector de tipo de espacio
+                      const Text(
+                        'Tipo de espacio',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: SpotType.values.map((type) {
+                          final isSelected = selectedType == type;
+
+                          // Determinar el icono según el tipo
+                          IconData iconData;
+                          switch (type) {
+                            case SpotType.bicycle:
+                              iconData = Icons.pedal_bike;
+                              break;
+                            case SpotType.vehicle:
+                              iconData = Icons.directions_car;
+                              break;
+                            case SpotType.motorcycle:
+                              iconData = Icons.motorcycle;
+                              break;
+                            case SpotType.truck:
+                              iconData = Icons.local_shipping;
+                              break;
+                          }
+
+                          return FilterChip(
+                            selected: isSelected,
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(iconData, size: 16),
+                                const SizedBox(width: 4),
+                                Text(_formatSpotType(type)),
+                              ],
+                            ),
+                            onSelected: (selected) {
+                              setState(() {
+                                selectedType = type;
+                              });
+                            },
+                            backgroundColor: isSelected
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.1)
+                                : null,
+                            selectedColor: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.2),
+                            checkmarkColor:
+                                Theme.of(context).colorScheme.primary,
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Checkbox para activar/desactivar el espacio
+                      SwitchListTile(
+                        title: const Text('Espacio activo'),
+                        subtitle: const Text('Determina si el espacio está disponible para uso'),
+                        value: isActive,
+                        onChanged: (value) {
+                          setState(() {
+                            isActive = value;
+                          });
+                        },
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
                   ),
-                );
-              },
-              child: const Text('Guardar'),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      // Actualizar todos los valores del spot
+                      spot.label = textController.text.trim();
+
+                      // Crear un nuevo spot con los valores actualizados
+                      final newSpot = ParkingSpot(
+                        id: spot.id,
+                        position: vector_math.Vector2(
+                            spot.position.x, spot.position.y),
+                        type: selectedType,
+                        label: textController.text.trim(),
+                        isOccupied: spot.isOccupied,
+                        rotation: spot.rotation,
+                        scale: spot.scale,
+                        isVisible: isActive, // Use isActive for visibility
+                        isLocked: spot.isLocked,
+                        occupancy: spot.occupancy,
+                      );
+
+                      // Actualizar el elemento en el estado
+                      parkingState.updateElement(spot, newSpot);
+
+                      Navigator.pop(context);
+
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Espacio actualizado'),
+                          duration: Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: const Text('Guardar'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } else {
+      // Para otros tipos de elementos, mostrar solo edición de etiqueta
+      showDialog(
+        context: context,
+        builder: (context) {
+          final textController = TextEditingController(text: currentLabel);
+
+          return AlertDialog(
+            title: const Text('Editar etiqueta'),
+            content: TextField(
+              controller: textController,
+              decoration: const InputDecoration(
+                labelText: 'Etiqueta',
+                hintText: 'Ingrese una etiqueta para el elemento',
+              ),
+              autofocus: true,
             ),
-          ],
-        );
-      },
-    );
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Actualizar la etiqueta del elemento
+                  element.label = textController.text.trim();
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Etiqueta actualizada'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  // Método auxiliar para formatear el tipo de spot
+  String _formatSpotType(SpotType type) {
+    switch (type) {
+      case SpotType.bicycle:
+        return 'Bicicleta';
+      case SpotType.vehicle:
+        return 'Auto';
+      case SpotType.motorcycle:
+        return 'Moto';
+      case SpotType.truck:
+        return 'Camión';
+      default:
+        return 'Desconocido';
+    }
   }
 
   /// Alinea los elementos seleccionados según la alineación especificada
@@ -1063,766 +1372,6 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     return collisionDetected;
   }
 
-  /// Mostrar modal para registrar entrada de vehículo
-  void _showVehicleEntryModal(BuildContext context, ParkingSpot spot) {
-    // Obtener los colores disponibles para selección
-    final Map<String, Color> vehicleColors = {
-      'Blanco': Colors.white,
-      'Negro': Colors.black87,
-      'Gris': Colors.grey,
-      'Plata': Colors.grey.shade300,
-      'Rojo': Colors.red,
-      'Azul': Colors.blue,
-      'Verde': Colors.green,
-      'Amarillo': Colors.amber,
-    };
-
-    // Valor inicial para la placa y color
-    final plateController = TextEditingController();
-    String selectedColor = 'Blanco';
-    String vehicleType = 'Sedan';
-
-    // Lista de tipos de vehículos
-    final vehicleTypes = ['Sedan', 'SUV', 'Pickup', 'Compacto', 'Motocicleta'];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.85,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF1E1E1E)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 15.0,
-                    offset: Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Encabezado con diseño minimalista
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondary
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.login,
-                          color: Theme.of(context).colorScheme.secondary,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Registrar entrada',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            Text(
-                              'Espacio ${spot.label}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.secondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => Navigator.pop(context),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Icon(
-                              Icons.close_rounded,
-                              size: 20,
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white60
-                                  : Colors.black45,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Campo de placa con diseño moderno
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF2A2A2A)
-                          : const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white10
-                            : Colors.black12,
-                        width: 1,
-                      ),
-                    ),
-                    child: TextField(
-                      controller: plateController,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        letterSpacing: 1,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Placa del vehículo',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white38
-                              : Colors.black38,
-                          fontSize: 14,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.credit_card,
-                          size: 18,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white54
-                              : Colors.black45,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      textCapitalization: TextCapitalization.characters,
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Selección de tipo de vehículo
-                  Text(
-                    'Tipo de vehículo',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 40,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: vehicleTypes.map((type) {
-                        final isSelected = vehicleType == type;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              vehicleType = type;
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .secondary
-                                      .withOpacity(0.1)
-                                  : Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.white10
-                                      : Colors.black.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .secondary
-                                        .withOpacity(0.5)
-                                    : Colors.transparent,
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Text(
-                              type,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: isSelected
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white70
-                                        : Colors.black54,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Selección de color
-                  Text(
-                    'Color del vehículo',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white70
-                          : Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: vehicleColors.entries.map((entry) {
-                      final isSelected = selectedColor == entry.key;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedColor = entry.key;
-                          });
-                        },
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: entry.value,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Colors.grey.withOpacity(0.3),
-                              width: isSelected ? 2 : 1,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondary
-                                          .withOpacity(0.3),
-                                      blurRadius: 4,
-                                      spreadRadius: 1,
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: isSelected
-                              ? Icon(
-                                  Icons.check,
-                                  color: _isColorDark(entry.value)
-                                      ? Colors.white
-                                      : Colors.black,
-                                  size: 18,
-                                )
-                              : null,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Botones de acción
-                  Row(
-                    children: [
-                      // Botón de cancelar
-                      Expanded(
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            side: BorderSide(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white30
-                                  : Colors.black26,
-                              width: 1,
-                            ),
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            'Cancelar',
-                            style: TextStyle(
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white70
-                                  : Colors.black54,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      // Botón de confirmar
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.secondary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            if (plateController.text.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'Debe ingresar la placa del vehículo'),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            // Registrar entrada
-                            spot.isOccupied = true;
-                            spot.vehiclePlate =
-                                plateController.text.trim().toUpperCase();
-                            spot.entryTime = DateTime.now();
-                            spot.exitTime = null;
-                            spot.vehicleColor = selectedColor;
-
-                            // Cerrar el diálogo
-                            Navigator.pop(context);
-
-                            // Mostrar confirmación
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Row(
-                                  children: [
-                                    const Icon(Icons.check_circle,
-                                        color: Colors.white),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                          'Vehículo ${spot.vehiclePlate} registrado en ${spot.label}'),
-                                    ),
-                                  ],
-                                ),
-                                backgroundColor: Colors.green,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            );
-
-                            // Imprimir ticket (simulado)
-                            _printEntryTicket(spot, vehicleType, selectedColor);
-                          },
-                          child: const Text('Registrar entrada'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        });
-      },
-    );
-  }
-
-  /// Mostrar modal para registrar salida de vehículo
-  void _showVehicleExitModal(BuildContext context, ParkingSpot spot) {
-    final now = DateTime.now();
-    final entryTime = spot.entryTime ?? now;
-    final duration = now.difference(entryTime);
-
-    // Calcular tarifa (simulado)
-    final hours = (duration.inMinutes / 60).ceil();
-    final cost = hours * 5.0; // $5 por hora
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.85,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF1E1E1E)
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 15.0,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Encabezado con diseño minimalista
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.directions_car,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Salida de vehículo',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          Text(
-                            'Espacio ${spot.label}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () => Navigator.pop(context),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 20,
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Colors.white60
-                                    : Colors.black45,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // Información de ticket con diseño moderno
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF2A2A2A)
-                        : const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildExitInfoRow(
-                          context,
-                          'Placa',
-                          spot.vehiclePlate ?? "No registrada",
-                          Icons.credit_card),
-                      const Divider(height: 20, thickness: 0.5),
-                      _buildExitInfoRow(context, 'Entrada',
-                          _formatDateTime(entryTime), Icons.login),
-                      const Divider(height: 20, thickness: 0.5),
-                      _buildExitInfoRow(context, 'Tiempo',
-                          _formatDuration(duration), Icons.timer),
-                      const Divider(height: 20, thickness: 0.5),
-                      _buildExitInfoRow(
-                        context,
-                        'Tarifa',
-                        '\$${cost.toStringAsFixed(2)}',
-                        Icons.payments,
-                        isHighlighted: true,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Botones con diseño moderno y compacto
-                Row(
-                  children: [
-                    // Botón de imprimir ticket
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          side: BorderSide(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.5),
-                            width: 1.5,
-                          ),
-                        ),
-                        onPressed: () {
-                          // Imprimir ticket
-                          _printExitTicket(spot, cost);
-                          // No liberar el espacio aún
-                          Navigator.pop(context);
-
-                          // Mostrar confirmación de impresión
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Row(
-                                children: [
-                                  Icon(Icons.receipt_long, color: Colors.white),
-                                  SizedBox(width: 8),
-                                  Text('Ticket impreso correctamente'),
-                                ],
-                              ),
-                              backgroundColor: Colors.blueGrey,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.receipt_long, size: 16),
-                        label: const Text('Imprimir ticket'),
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // Botón de confirmar salida
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () {
-                          // Registrar salida
-                          spot.isOccupied = false;
-                          spot.exitTime = now;
-
-                          // Cerrar el diálogo
-                          Navigator.pop(context);
-
-                          // Mostrar confirmación
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  const Icon(Icons.check_circle,
-                                      color: Colors.white),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                        'Vehículo ${spot.vehiclePlate} ha salido de ${spot.label}'),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.logout, size: 16),
-                        label: const Text('Confirmar salida'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Widget para mostrar una fila de información en el modal de salida
-  Widget _buildExitInfoRow(
-      BuildContext context, String label, String value, IconData icon,
-      {bool isHighlighted = false}) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isHighlighted
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
-                : Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black12
-                    : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isHighlighted
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-                  : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: isHighlighted
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white70
-                    : Colors.black54,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white60
-                      : Colors.black45,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: isHighlighted ? FontWeight.w600 : FontWeight.w500,
-                  color: isHighlighted
-                      ? Theme.of(context).colorScheme.primary
-                      : null,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Formatear fecha y hora
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  /// Formatear duración
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-
-    if (hours > 0) {
-      return '$hours h $minutes min';
-    } else {
-      return '$minutes minutos';
-    }
-  }
-
-  /// Determinar si un color es oscuro (para usar texto blanco)
-  bool _isColorDark(Color color) =>
-      (color.red * 0.299 + color.green * 0.587 + color.blue * 0.114) < 128;
-
-  /// Imprimir ticket de entrada (simulado)
-  void _printEntryTicket(
-      ParkingSpot spot, String vehicleType, String vehicleColor) {
-    // Solo simulado por ahora - implementar impresión real de tickets aquí
-  }
-
-  /// Imprimir ticket de salida (simulado)
-  void _printExitTicket(ParkingSpot spot, double cost) {
-    // Solo simulado por ahora - implementar impresión real de tickets aquí
-  }
-
   // Método para manejar doble tap en un elemento (centrar vista)
   void _handleDoubleTap(TapDownDetails details, ParkingState parkingState) {
     final point = details.localPosition;
@@ -1876,7 +1425,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     // Pintar rectángulo de selección si existe
     if (selectionRect != null) {
       final paint = Paint()
-        ..color = Colors.blue.withOpacity(0.3)
+        ..color = Colors.blue.withAlpha(77)
         ..style = PaintingStyle.fill;
 
       canvas.drawRect(selectionRect!, paint);
@@ -1892,6 +1441,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     // Dibujar rectángulos de corrección para elementos seleccionados
     if (parkingState.selectedElements.isNotEmpty) {
       for (final element in parkingState.selectedElements) {
+        if (!element.isVisible) continue;
         _drawSelectionIndicator(canvas, element);
       }
     }
@@ -1906,9 +1456,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     // Actualizar el tamaño del canvas en el estado solo si ha cambiado
     // y hacerlo en un post-frame callback para evitar ciclos de notificación
     if (parkingState.canvasSize != size) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        parkingState.canvasSize = size;
-      });
+      parkingState.canvasSize = size;
     }
 
     // Guardar el estado del canvas
@@ -1951,8 +1499,8 @@ class _ParkingCanvasPainter extends CustomPainter {
 
       final paint = Paint()
         ..color = line.isMainLine
-            ? colorScheme.primary.withOpacity(0.3)
-            : colorScheme.onBackground.withOpacity(0.1)
+            ? colorScheme.primary.withAlpha(77)
+            : colorScheme.onSurface.withAlpha(26)
         ..strokeWidth = line.thickness
         ..style = PaintingStyle.stroke;
 
@@ -2032,8 +1580,8 @@ class _ParkingCanvasPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          colorScheme.background,
-          colorScheme.surfaceVariant,
+          colorScheme.surface,
+          colorScheme.surfaceContainerHighest,
         ],
         stops: const [0.0, 1.0],
       ).createShader(rect)
@@ -2052,7 +1600,7 @@ class _ParkingCanvasPainter extends CustomPainter {
 
     // Dibujar ejes X e Y con el color primario del tema
     final axisPaint = Paint()
-      ..color = colorScheme.primary.withOpacity(0.3)
+      ..color = colorScheme.primary.withAlpha(77)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -2071,7 +1619,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     );
 
     // Dibujar símbolo de cruz en el origen
-    final crossSize = 12.0;
+    const crossSize = 12.0;
     final crossPaint = Paint()
       ..color = colorScheme.primary
       ..style = PaintingStyle.stroke
@@ -2094,7 +1642,7 @@ class _ParkingCanvasPainter extends CustomPainter {
 
     // Círculo decorativo alrededor de la cruz
     final circlePaint = Paint()
-      ..color = colorScheme.primary.withOpacity(0.2)
+      ..color = colorScheme.primary.withAlpha(51)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -2117,9 +1665,7 @@ class _ParkingCanvasPainter extends CustomPainter {
   void _paintElementGroup(
       Canvas canvas, List<ParkingElement> elements, double baseOpacity) {
     for (final element in elements) {
-      // No dibujar si no es visible
       if (!element.isVisible) continue;
-
       // Calcular la posición en pantalla usando la cámara
       final positionScreen =
           parkingState.camera.worldToScreen(element.position);
@@ -2140,7 +1686,7 @@ class _ParkingCanvasPainter extends CustomPainter {
       if (opacity < 1.0) {
         canvas.saveLayer(
           null,
-          Paint()..color = Colors.white.withOpacity(opacity),
+          Paint()..color = Colors.white.withAlpha((opacity * 255).round()),
         );
       }
 
@@ -2156,47 +1702,6 @@ class _ParkingCanvasPainter extends CustomPainter {
     }
   }
 
-  /// Dibujar un elemento individual
-  void _drawElement(Canvas canvas, ParkingElement element, double baseOpacity) {
-    // Usar el método render del propio elemento
-    element.render(canvas, parkingState);
-  }
-
-  /// Dibujar un rectángulo con líneas punteadas
-  void _drawDashedRectangle(Canvas canvas, Rect rect, Paint paint) {
-    const dashWidth = 3.0;
-    const dashSpace = 3.0;
-
-    // Dibujar los cuatro lados del rectángulo con líneas punteadas
-    _drawDashedLine(
-      canvas,
-      Offset(rect.left, rect.top),
-      Offset(rect.right, rect.top),
-      paint,
-    );
-
-    _drawDashedLine(
-      canvas,
-      Offset(rect.right, rect.top),
-      Offset(rect.right, rect.bottom),
-      paint,
-    );
-
-    _drawDashedLine(
-      canvas,
-      Offset(rect.right, rect.bottom),
-      Offset(rect.left, rect.bottom),
-      paint,
-    );
-
-    _drawDashedLine(
-      canvas,
-      Offset(rect.left, rect.bottom),
-      Offset(rect.left, rect.top),
-      paint,
-    );
-  }
-
   /// Dibuja un indicador de selección alrededor del elemento
   void _drawSelectionIndicator(Canvas canvas, ParkingElement element) {
     // Obtener la posición en pantalla
@@ -2206,43 +1711,6 @@ class _ParkingCanvasPainter extends CustomPainter {
     final size = element.getSize();
     final scaledWidth = size.width * element.scale * parkingState.zoom;
     final scaledHeight = size.height * element.scale * parkingState.zoom;
-
-    // Pintar para la forma de colisión (en verde semitransparente)
-    final collisionPaint = Paint()
-      ..color = Colors.green.withOpacity(0.15)
-      ..style = PaintingStyle.fill;
-
-    // Pintar para la línea punteada (indicador de selección en azul)
-    final selectionPaint = Paint()
-      ..color = Colors.blue
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    // Guardar el estado del canvas antes de aplicar transformaciones
-    canvas.save();
-
-    // Aplicar la misma transformación que se aplica al elemento
-    canvas.translate(screenPos.dx, screenPos.dy);
-    canvas.rotate(element.rotation * math.pi / 180);
-
-    // Crear rectángulo centrado en el origen (después de la traslación)
-    final elementRect = Rect.fromCenter(
-      center: Offset.zero,
-      width: scaledWidth,
-      height: scaledHeight,
-    );
-
-    // Dibujar rectángulo de colisión (verde semitransparente)
-    canvas.drawRect(elementRect, collisionPaint);
-
-    // Dibujar rectángulo de selección (línea punteada azul)
-    _drawDashedRectangle(canvas, elementRect, selectionPaint);
-
-    // Restaurar el estado del canvas después de dibujar
-    canvas.restore();
-
-    // Dibujar línea desde el elemento hasta donde iría la barra de herramientas
-    // Calcular la posición de la barra considerando la rotación del elemento
 
     // Rotación en radianes
     final angleRad = element.rotation * math.pi / 180;
@@ -2261,7 +1729,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     );
 
     final linePaint = Paint()
-      ..color = Colors.red
+      ..color = colorScheme.primary.withOpacity(0.7)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -2273,9 +1741,9 @@ class _ParkingCanvasPainter extends CustomPainter {
 
     // Dibujar un punto donde debería estar la barra de herramientas
     final pointPaint = Paint()
-      ..color = Colors.red
+      ..color = colorScheme.primary
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(toolbarPosition, 3.0, pointPaint);
+    canvas.drawCircle(toolbarPosition, 2.0, pointPaint);
   }
 }

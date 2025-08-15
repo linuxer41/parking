@@ -178,18 +178,35 @@ class ParkingState with ChangeNotifier {
     }
   }
 
+  // Método para limpiar el estado de destacado de todos los spots
+  void clearAllHighlights() {
+    bool changed = false;
+    
+    for (final element in allElements) {
+      if (element is ParkingSpot && element.isHighlighted) {
+        element.isHighlighted = false;
+        changed = true;
+      }
+    }
+    
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
   // Métodos para alternar estados
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
 
-    // Si salimos del modo edición, limpiar la selección
-    if (!_isEditMode) {
-      clearSelection();
+    // Siempre limpiar la selección al cambiar de modo
+    clearSelection();
+    
+    // Siempre limpiar el estado de destacado al cambiar de modo
+    clearAllHighlights();
 
-      // Asegurar que todos los elementos permanezcan visibles
-      for (final element in allElements) {
-        element.isVisible = true;
-      }
+    // Asegurar que todos los elementos permanezcan visibles
+    for (final element in allElements) {
+      element.isVisible = true;
     }
 
     notifyListeners();
@@ -833,6 +850,40 @@ class ParkingState with ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  /// Reemplaza un elemento existente con una nueva versión
+  void updateElement(ParkingElement oldElement, ParkingElement newElement) {
+    // Verificar que el elemento existe
+    if (!allElements.contains(oldElement)) {
+      print("Error: No se puede actualizar un elemento que no existe");
+      return;
+    }
+
+    // Verificar que los IDs coinciden
+    if (oldElement.id != newElement.id) {
+      print("Error: Los IDs de los elementos deben coincidir para actualizar");
+      return;
+    }
+
+    // Guardar el estado de selección
+    final wasSelected = oldElement.isSelected;
+
+    // Eliminar el elemento antiguo
+    removeElement(oldElement);
+
+    // Añadir el nuevo elemento
+    addElement(newElement);
+
+    // Restaurar selección si estaba seleccionado
+    if (wasSelected) {
+      selectElement(newElement);
+    }
+
+    // Notificar cambios
+    notifyListeners();
+
+    print("Elemento actualizado con éxito: ${newElement.id}");
   }
 
   /// Método auxiliar para aplicar propiedades a un elemento

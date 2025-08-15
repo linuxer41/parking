@@ -4,6 +4,8 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   flutter_acrylic
+  geolocator_windows
+  printing
   screen_retriever_windows
   share_plus
   system_theme

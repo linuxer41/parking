@@ -2,17 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 
-import '../utils/drawing_utils.dart';
 import 'enums.dart';
 
-/// Archivo unificado que contiene todas las clases base para elementos del sistema de parkeo
-/// Incluye: Size3D, ElementVisuals, ElementProperties, ParkingElement
-
-//------------------------------------------------------------------------------
-// PARTE 1: PROPIEDADES VISUALES Y DIMENSIONES
-//------------------------------------------------------------------------------
-
-/// Clase para manejar dimensiones en 3D (ancho, alto y profundidad)
 class Size3D {
   double width;
   double height;
@@ -66,16 +57,23 @@ class ElementVisuals {
 
 /// Propiedades visuales de los elementos
 class ElementProperties {
-  // Colores principales
-  static const Color blue = Color(0xFF2196F3);
-  static const Color green = Color(0xFF4CAF50);
-  static const Color red = Color(0xFFE53935);
-  static const Color orange = Color(0xFFFF9800);
-  static const Color purple = Color(0xFF9C27B0);
-  static const Color gold = Color(0xFFFFD700);
-  static const Color gray = Color(0xFF9E9E9E);
+  // Colores principales - Más vivos y saturados
+  static const Color blue = Color(0xFF1976D2);         // Azul más vivo
+  static const Color green = Color(0xFF2E7D32);        // Verde más vivo
+  static const Color red = Color(0xFFD32F2F);          // Rojo más vivo
+  static const Color orange = Color(0xFFE65100);       // Naranja más vivo
+  static const Color purple = Color(0xFF7B1FA2);       // Púrpura más vivo
+  static const Color gold = Color(0xFFFFC107);         // Dorado más vivo
+  static const Color gray = Color(0xFF616161);         // Gris más oscuro
   static const Color white = Color(0xFFFFFFFF);
-  static const Color darkText = Color(0xFF333333);
+  static const Color darkText = Color(0xFF212121);     // Texto más oscuro
+
+  // Estado de espacios (colores más vivos)
+  static const Color availableColor = Color(0xFF00C853);    // Verde brillante
+  static const Color occupiedColor = Color(0xFFD50000);     // Rojo brillante
+  static const Color reservedColor = Color(0xFFFF6D00);     // Naranja brillante
+  static const Color subscribedColor = Color(0xFFAA00FF);   // Púrpura brillante
+  static const Color maintenanceColor = Color(0xFF455A64);  // Gris azulado más oscuro
 
   // Colores para los tabs de categorías
   static const Color spacesTabColor = blue;
@@ -98,44 +96,37 @@ class ElementProperties {
       width: 60.0,
       height: 30.0,
     ),
-    SignageType.path: const ElementVisuals(
+    SignageType.direction: const ElementVisuals(
       color: blue,
       icon: Icons.trending_flat,
-      label: 'Vía',
+      label: 'Dirección',
       width: 60.0,
       height: 30.0,
     ),
-    SignageType.info: const ElementVisuals(
-      color: blue,
-      icon: Icons.info_outline,
-      label: 'Info',
-      width: 60.0,
-      height: 30.0,
-    ),
-    SignageType.noParking: const ElementVisuals(
-      color: red,
-      icon: Icons.do_not_disturb,
-      label: 'No Est',
-      width: 60.0,
-      height: 30.0,
-    ),
-    SignageType.oneWay: const ElementVisuals(
-      color: blue,
-      icon: Icons.trending_flat,
-      label: 'Vía',
-      width: 60.0,
-      height: 30.0,
-    ),
-    SignageType.twoWay: const ElementVisuals(
+    SignageType.bidirectional: const ElementVisuals(
       color: blue,
       icon: Icons.sync_alt,
-      label: 'Doble Vía',
+      label: 'Bidireccional',
+      width: 60.0,
+      height: 30.0,
+    ),
+    SignageType.stop: const ElementVisuals(
+      color: red,
+      icon: Icons.do_not_disturb,
+      label: 'Pare',
       width: 60.0,
       height: 30.0,
     ),
   };
 
   static final Map<SpotType, ElementVisuals> spotVisuals = {
+    SpotType.bicycle: const ElementVisuals(
+      color: green,
+      icon: Icons.pedal_bike,
+      label: 'Bicicleta',
+      width: 50.0,
+      height: 100.0,
+    ),
     SpotType.vehicle: const ElementVisuals(
       color: blue,
       icon: Icons.directions_car,
@@ -159,30 +150,28 @@ class ElementProperties {
     ),
   };
 
-  static final Map<SpotCategory, ElementVisuals> spotCategoryVisuals = {
-    SpotCategory.normal: const ElementVisuals(
-      color: green,
-      icon: Icons.check_circle_outline,
-      label: 'Normal',
-    ),
-    SpotCategory.disabled: const ElementVisuals(
-      color: purple,
-      icon: Icons.accessible,
-      label: 'Discapacitado',
-    ),
-    SpotCategory.reserved: const ElementVisuals(
-      color: orange,
-      icon: Icons.bookmark_border,
-      label: 'Reservado',
-    ),
-    SpotCategory.vip: const ElementVisuals(
-      color: gold,
-      icon: Icons.star_border,
-      label: 'VIP',
-    ),
-  };
-
   static final Map<FacilityType, ElementVisuals> facilityVisuals = {
+    FacilityType.office: const ElementVisuals(
+      color: purple,
+      icon: Icons.business,
+      label: 'Oficina',
+      width: 80.0,
+      height: 80.0,
+    ),
+    FacilityType.bathroom: const ElementVisuals(
+      color: blue,
+      icon: Icons.wc,
+      label: 'Baño',
+      width: 70.0,
+      height: 70.0,
+    ),
+    FacilityType.cafeteria: const ElementVisuals(
+      color: orange,
+      icon: Icons.local_cafe,
+      label: 'Cafetería',
+      width: 80.0,
+      height: 80.0,
+    ),
     FacilityType.elevator: const ElementVisuals(
       color: purple,
       icon: Icons.elevator,
@@ -197,33 +186,12 @@ class ElementProperties {
       width: 60.0,
       height: 40.0,
     ),
-    FacilityType.bathroom: const ElementVisuals(
+    FacilityType.information: const ElementVisuals(
       color: blue,
-      icon: Icons.wc,
-      label: 'Baño',
-      width: 70.0,
-      height: 70.0,
-    ),
-    FacilityType.paymentStation: const ElementVisuals(
-      color: green,
-      icon: Icons.payments_outlined,
-      label: 'Pago',
+      icon: Icons.info_outline,
+      label: 'Información',
       width: 60.0,
       height: 60.0,
-    ),
-    FacilityType.chargingStation: const ElementVisuals(
-      color: green,
-      icon: Icons.electric_car,
-      label: 'Carga',
-      width: 70.0,
-      height: 70.0,
-    ),
-    FacilityType.securityPost: const ElementVisuals(
-      color: red,
-      icon: Icons.security,
-      label: 'Seguridad',
-      width: 70.0,
-      height: 70.0,
     ),
   };
 }

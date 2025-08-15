@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Propuesta Pagos QR - MAS DELI</title>
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --secondary: #10b981;
+        --dark: #1f2937;
+        --light: #f3f4f6;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: var(--dark);
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid var(--primary);
+        padding-bottom: 20px;
+      }
+      h1 {
+        color: var(--primary);
+        margin-bottom: 5px;
+      }
+      h2 {
+        color: var(--primary);
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 8px;
+        margin-top: 30px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+      .badge-primary {
+        background-color: var(--primary);
+        color: white;
+      }
+      .badge-secondary {
+        background-color: var(--secondary);
+        color: white;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      th {
+        background-color: var(--light);
+      }
+      .signature {
+        margin-top: 50px;
+      }
+      .signature-line {
+        width: 300px;
+        border-top: 1px solid var(--dark);
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 50px;
+        text-align: center;
+        font-size: 0.9em;
+        color: #6b7280;
+      }
+      .included,
+      .excluded {
+        padding-left: 20px;
+        position: relative;
+      }
+      .included:before {
+        content: "✓";
+        color: var(--secondary);
+        position: absolute;
+        left: 0;
+      }
+      .excluded:before {
+        content: "✗";
+        color: #ef4444;
+        position: absolute;
+        left: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>PROPUESTA TÉCNICA</h1>
+      <h2>Sistema de Pagos QR para Restaurantes</h2>
+      <p>
+        <strong>Cliente:</strong> MAS DELI - Propietaria: Iris Tatiana Vargas
+      </p>
+      <p><strong>Fecha:</strong> <span id="current-date"></span></p>
+      <p><strong>Elaborado por:</strong> IATThings</p>
+    </header>
+
+    <section>
+      <h2>1. Resumen Ejecutivo</h2>
+      <p>
+        Implementación de un sistema de pagos QR completo para MAS DELI con las
+        siguientes características:
+      </p>
+      <ul>
+        <li><strong>Tiempo de implementación:</strong> 30 días hábiles</li>
+        <li>
+          <strong>Inversión inicial:</strong> 1,900 Bs (40% anticipado: 760 Bs)
+        </li>
+        <li>
+          <strong>Mantenimiento mensual:</strong> 210 Bs (soporte técnico
+          incluido)
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. Cronograma de Implementación</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Fase</th>
+            <th>Duración</th>
+            <th>Actividades</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-primary">1. Configuración</span></td>
+            <td>Días 1-10</td>
+            <td>Activación de cuenta e integración con sistema contable</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-primary">2. Pruebas</span></td>
+            <td>Días 11-20</td>
+            <td>Simulación de transacciones y ajustes finales</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-primary">3. Lanzamiento</span></td>
+            <td>Días 21-30</td>
+            <td>Capacitación al personal y entrega de materiales</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. Estructura de Costos</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Concepto</th>
+            <th>Monto (Bs)</th>
+            <th>Condición de Pago</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Anticipo (40%)</td>
+            <td>760</td>
+            <td>Al firma del contrato</td>
+          </tr>
+          <tr>
+            <td>Saldo implementación</td>
+            <td>1,140</td>
+            <td>Al finalizar el proyecto (día 30)</td>
+          </tr>
+          <tr>
+            <td>Mantenimiento mensual</td>
+            <td>210</td>
+            <td>A partir del segundo mes</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. Alcance del Servicio</h2>
+      <h3>Incluye:</h3>
+      <ul>
+        <li class="included">Software de pagos QR con generación dinámica</li>
+        <li class="included">Dashboard de analíticas en tiempo real</li>
+        <li class="included">Capacitación presencial (4 horas)</li>
+        <li class="included">Soporte técnico prioritario vía WhatsApp</li>
+      </ul>
+
+      <h3>No incluye:</h3>
+      <ul>
+        <li class="excluded">Dispositivos POS físicos</li>
+        <li class="excluded">Comisiones por transacciones bancarias</li>
+        <li class="excluded">Impresión de materiales promocionales</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. Proyección Financiera</h2>
+      <table>
+        <tbody>
+          <tr>
+            <td><strong>Implementación inicial</strong></td>
+            <td>1,900 Bs</td>
+          </tr>
+          <tr>
+            <td><strong>Mantenimiento anual (12 meses)</strong></td>
+            <td>2,520 Bs</td>
+          </tr>
+          <tr style="font-weight: bold; background-color: var(--light)">
+            <td>TOTAL PRIMER AÑO</td>
+            <td>4,420 Bs</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. Términos y Condiciones</h2>
+      <ul>
+        <li>
+          <strong>Garantía:</strong> 3 meses de soporte técnico gratuito
+          post-implementación
+        </li>
+        <li>
+          <strong>Confidencialidad:</strong> Protección de datos bajo Ley N°164
+        </li>
+        <li>
+          <strong>Validez:</strong> Esta propuesta tiene validez por 15 días
+          naturales
+        </li>
+        <li>
+          <strong>Penalidades:</strong> 2% de recargo por día de mora en pagos
+        </li>
+      </ul>
+    </section>
+
+    <div class="signature">
+      <p>Aceptación de la propuesta:</p>
+      <p>Nombre: ___________________________________</p>
+      <p>C.I.: _____________________________________</p>
+      <div class="signature-line"></div>
+      <p>Firma</p>
+      <p>Fecha: ____________________________________</p>
+    </div>
+
+    <div class="footer">
+      <p>
+        <strong>IATThings</strong> - Soluciones tecnológicas para tu negocio
+      </p>
+      <p>📧 contacto@iatthings.bo | 📞 +591 XXX XXX XXX</p>
+    </div>
+
+    <script>
+      // Mostrar fecha actual automáticamente
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      document.getElementById("current-date").textContent =
+        new Date().toLocaleDateString("es-BO", options);
+
+      // Opcional: Imprimir al cargar (descomentar si se necesita)
+      window.onload = function () {
+        window.print();
+      };
+    </script>
+  </body>
+</html>

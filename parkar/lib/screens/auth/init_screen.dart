@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/services/user_service.dart';
 import 'package:parkar/state/app_state_container.dart';
+
 import '../../widgets/auth/auth_layout.dart';
 
 class InitScreen extends StatelessWidget {
@@ -11,141 +11,155 @@ class InitScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userService = AppStateContainer.di(context).resolve<UserService>();
-    final parkingService =
-        AppStateContainer.di(context).resolve<ParkingService>();
     final state = AppStateContainer.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
     return AuthLayout(
-      title: "Seleccionar empresa",
+      title: "Seleccionar estacionamiento",
       children: [
         Text(
-          'Selecciona la empresa y el estacionamiento donde trabajarás',
+          'Selecciona el estacionamiento donde trabajarás',
           style: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
           textAlign: TextAlign.center,
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
 
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 280), // Altura máxima
-          child: FutureBuilder(
-            future: userService.getCompanies(state.user!.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                );
-              } else if (snapshot.hasError) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.errorContainer.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+          child: state.currentUser == null
+              ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline, color: colorScheme.error),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Error: ${snapshot.error}',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.error,
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.primary.withValues(alpha: 140),
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                    ],
-                  ),
-                );
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.business_outlined,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
-                          size: 36),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
                       Text(
-                        'No hay empresas disponibles',
-                        style: textTheme.titleSmall?.copyWith(
+                        'Cargando información del usuario...',
+                        style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ],
                   ),
-                );
-              }
-
-              final companies = snapshot.data!;
-              return ListView.builder(
-                itemCount: companies.length,
-                padding: EdgeInsets.zero,
-                itemBuilder: (context, index) {
-                  final company = companies[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: colorScheme.outline.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        dividerColor: Colors.transparent,
-                      ),
-                      child: ExpansionTile(
-                        title: Text(
-                          company.name,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
+                )
+              : FutureBuilder(
+                  future: userService.getParkings(state.currentUser!.id),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.primary.withValues(alpha: 140),
                           ),
                         ),
-                        iconColor: colorScheme.primary,
-                        collapsedIconColor: colorScheme.onSurfaceVariant,
-                        tilePadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        childrenPadding:
-                            const EdgeInsets.only(left: 8, right: 8, bottom: 8),
-                        children: company.parkings.map((parking) {
-                          return ListTile(
+                      );
+                    } else if (snapshot.hasError) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.errorContainer.withValues(
+                            alpha: 127,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline, color: colorScheme.error),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Error: ${snapshot.error}',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.error,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerHighest.withValues(
+                            alpha: 127,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_parking_rounded,
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 178,
+                              ),
+                              size: 36,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No hay estacionamientos disponibles',
+                              style: textTheme.titleSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final parkings = snapshot.data!;
+                    return ListView.builder(
+                      itemCount: parkings.length,
+                      padding: EdgeInsets.zero,
+                      itemBuilder: (context, index) {
+                        final parking = parkings[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: colorScheme.outline.withValues(alpha: 51),
+                              width: 1,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ListTile(
                             title: Text(
                               parking.name,
-                              style: textTheme.bodyMedium,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Selecciona para ver detalles',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
                             leading: Icon(
                               Icons.local_parking_rounded,
-                              size: 18,
                               color: colorScheme.primary,
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            dense: true,
+                            contentPadding: const EdgeInsets.all(16),
                             onTap: () async {
                               // Mostrar indicador de carga mientras se carga el parqueo
                               showDialog(
@@ -161,18 +175,13 @@ class InitScreen extends StatelessWidget {
                               );
 
                               try {
-                                // Seleccionar el parqueo
-                                final detailedParking = await parkingService
-                                    .getDetailed(parking.id);
+                                // Establecer el estacionamiento detallado en el estado
+                                state.setCurrentParking(parking);
+
                                 if (context.mounted) {
                                   Navigator.of(context).pop(); // Cerrar diálogo
+                                  context.go('/home');
                                 }
-
-                                state.setCompany(company);
-                                state.setParking(detailedParking);
-                                state.setLevel(detailedParking.levels.first);
-
-                                if (context.mounted) context.go('/home');
                               } catch (e) {
                                 if (context.mounted) {
                                   Navigator.of(context).pop(); // Cerrar diálogo
@@ -183,7 +192,8 @@ class InitScreen extends StatelessWidget {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                          'Error al cargar el estacionamiento: $e'),
+                                        'Error al cargar el estacionamiento: $e',
+                                      ),
                                       backgroundColor: colorScheme.error,
                                       behavior: SnackBarBehavior.floating,
                                     ),
@@ -191,15 +201,12 @@ class InitScreen extends StatelessWidget {
                                 }
                               }
                             },
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
         ),
 
         const SizedBox(height: 16),
@@ -214,13 +221,11 @@ class InitScreen extends StatelessWidget {
           icon: Icon(
             Icons.logout_rounded,
             size: 16,
-            color: colorScheme.primary,
+            color: colorScheme.primary.withValues(alpha: 178),
           ),
           label: Text(
             'Cerrar sesión',
-            style: textTheme.labelMedium?.copyWith(
-              color: colorScheme.primary,
-            ),
+            style: textTheme.labelMedium?.copyWith(color: colorScheme.primary),
           ),
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 8),

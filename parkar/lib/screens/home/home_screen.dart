@@ -40,21 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
       const DashboardScreen(),
       const HistoryScreen(),
       UserControlPanel(
-        onEditProfile: () {},
         onLogout: () {
           appState.logout();
           context.go('/login');
         },
-        onToggleTheme: () {
-          // Implementar cambio de tema
-          final currentTheme = appState.theme;
-          if (currentTheme != null) {
-            currentTheme.toggleThemeMode();
-            appState.setTheme(currentTheme);
-          }
-        },
-        userName: appState.user?.name,
-        userEmail: appState.user?.email,
+        userName: appState.currentUser?.name,
+        userEmail: appState.currentUser?.email,
       ),
     ];
   }
@@ -103,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         surfaceTintColor: Colors.transparent,
                         indicatorColor:
                             colorScheme.secondaryContainer.withOpacity(0.7),
-                        destinations: [
+                        destinations: const [
                           NavigationDestination(
                             icon: Icon(Icons.local_parking_outlined, size: 22),
                             selectedIcon: Icon(Icons.local_parking, size: 22),
@@ -166,26 +157,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     onDestinationSelected: (index) {
                       setState(() => _selectedIndex = index);
                     },
-                    destinations: [
+                    destinations: const [
                       NavigationRailDestination(
-                        icon: const Icon(Icons.local_parking_outlined),
-                        selectedIcon: const Icon(Icons.local_parking),
-                        label: const Text('Parqueo'),
+                        icon: Icon(Icons.local_parking_outlined),
+                        selectedIcon: Icon(Icons.local_parking),
+                        label: Text('Parqueo'),
                       ),
                       NavigationRailDestination(
-                        icon: const Icon(Icons.dashboard_outlined),
-                        selectedIcon: const Icon(Icons.dashboard),
-                        label: const Text('Panel'),
+                        icon: Icon(Icons.dashboard_outlined),
+                        selectedIcon: Icon(Icons.dashboard),
+                        label: Text('Panel'),
                       ),
                       NavigationRailDestination(
-                        icon: const Icon(Icons.list_alt_outlined),
-                        selectedIcon: const Icon(Icons.list_alt),
-                        label: const Text('Registros'),
+                        icon: Icon(Icons.list_alt_outlined),
+                        selectedIcon: Icon(Icons.list_alt),
+                        label: Text('Registros'),
                       ),
                       NavigationRailDestination(
-                        icon: const Icon(Icons.more_horiz),
-                        selectedIcon: const Icon(Icons.more_horiz),
-                        label: const Text('Más'),
+                        icon: Icon(Icons.more_horiz),
+                        selectedIcon: Icon(Icons.more_horiz),
+                        label: Text('Más'),
                       ),
                     ],
                   ),

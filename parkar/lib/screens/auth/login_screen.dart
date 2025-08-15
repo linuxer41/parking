@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/services/parking_service.dart';
-import '../../models/user_model.dart';
-import '../../services/user_service.dart';
-import '../../state/app_state_container.dart';
+
 import '../../services/auth_service.dart';
+import '../../state/app_state_container.dart';
 import '../../widgets/auth/auth_layout.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,12 +14,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(
-    text: 'admin@example.com',
-  );
-  final _passwordController = TextEditingController(
-    text: 'password123',
-  );
+  final _emailController = TextEditingController(text: 'admin@example.com');
+  final _passwordController = TextEditingController(text: 'password123');
   bool _showPassword = false;
   bool _isLoading = false;
   String? _errorMessage;
@@ -42,47 +36,40 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final appState = AppStateContainer.of(context);
       final authService = AppStateContainer.di(context).resolve<AuthService>();
-      final userService = AppStateContainer.di(context).resolve<UserService>();
-      final parkingService =
-          AppStateContainer.di(context).resolve<ParkingService>();
 
       try {
-        final response = await authService.login(
+        final authResponse = await authService.login(
           _emailController.text,
           _passwordController.text,
         );
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response['message']),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        // Usar el modelo de respuesta de autenticación
+        print('Token recibido en login: ${authResponse.token}');
+        appState.setAccessToken(authResponse.token);
+        print('Token después de setAccessToken: ${appState.authToken}');
+        appState.setCurrentUser(authResponse.user);
 
-        final user = UserModel.fromJson(response['data']['user']);
-        appState.setAccessToken(response['data']['authToken']);
-        appState.setRefreshToken(response['data']['refreshToken']);
-        appState.setUser(user);
+        // Los parkings ahora vienen en la respuesta
+        final parkings = authResponse.parkings;
+        print('Parkings recibidos: ${parkings.length}');
 
-        final companies = await userService.getCompanies(user.id);
-        // Si solo hay una compañía, seleccionarla por defecto
-        if (companies.length == 1) {
-          // Si solo hay un parqueo, seleccionarlo por defecto
-          if (companies.first.parkings.length == 1) {
-            appState.setCompany(companies.first);
-            final targetParking = companies.first.parkings.first;
-            final detailedParking =
-                await parkingService.getDetailed(targetParking.id);
-            appState.setParking(detailedParking);
-            appState.setLevel(detailedParking.levels.first);
-            if (mounted) context.go('/home');
-            return;
-          }
+        // Si solo hay un estacionamiento, seleccionarlo por defecto
+        if (parkings.length == 1) {
+          appState.setCurrentParking(parkings.first);
+          if (mounted) context.go('/home');
+          return;
         }
-        if (mounted) context.go('/init');
+
+        // Si hay múltiples estacionamientos, ir a la pantalla de selección
+        if (parkings.length > 1) {
+          if (mounted) context.go('/select');
+          return;
+        }
+
+        // Si no hay estacionamientos, ir directamente al home
+        if (mounted) context.go('/home');
       } catch (e) {
         setState(() {
           _errorMessage = 'Error al iniciar sesión: $e';
@@ -115,13 +102,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return AuthLayout(
       title: 'Iniciar Sesión',
+      subtitle: 'Ingresa tus credenciales para acceder',
       children: [
         if (_errorMessage != null)
           Container(
             margin: const EdgeInsets.only(bottom: 20),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withOpacity(0.5),
+              color: colorScheme.errorContainer.withValues(alpha: 127),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -173,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: textTheme.bodyMedium,
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Campo de Contraseña moderno y compacto
               TextFormField(
@@ -231,23 +219,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     '¿Olvidaste tu contraseña?',
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
+                      color: colorScheme.primary.withValues(alpha: 127),
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 40),
 
               // Botón de Iniciar Sesión moderno y minimalista
               FilledButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  disabledBackgroundColor: colorScheme.primary.withOpacity(0.4),
+                  disabledBackgroundColor: colorScheme.primary.withValues(
+                    alpha: 60,
+                  ),
                 ),
                 child: _isLoading
                     ? SizedBox(
@@ -266,25 +256,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
 
-              const SizedBox(height: 16),
-
-              // Botón de registro con estilo moderno
-              OutlinedButton(
-                onPressed: () {
-                  context.go('/register');
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              // Link de regreso a bienvenida
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      context.go('/welcome');
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 0,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      '← Volver al inicio',
+                      style: textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                ),
-                child: Text(
-                  'Crear cuenta nueva',
-                  style: textTheme.labelLarge?.copyWith(
-                    color: colorScheme.primary,
-                  ),
-                ),
+                ],
               ),
             ],
           ),

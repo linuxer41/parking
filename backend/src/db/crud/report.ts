@@ -1,39 +1,39 @@
-import { BaseCrud } from './base-crud';
-import { 
-  OccupancyReport, 
-  RevenueReport, 
-  VehicleReport, 
-  ReportFilter 
-} from '../../models/report';
+import { BaseCrud } from "./base-crud";
+import {
+  OccupancyReport,
+  RevenueReport,
+  VehicleReport,
+  ReportFilter,
+} from "../../models/report";
 
 class ReportCrud extends BaseCrud<any, any, any> {
   constructor() {
-    super('');
+    super("");
   }
 
   async getOccupancyReport(filter: ReportFilter): Promise<OccupancyReport> {
-    const groupBy = filter.groupBy || 'day';
-    let groupFormat = '';
-    
-    switch(groupBy) {
-      case 'day':
-        groupFormat = 'YYYY-MM-DD';
+    const groupBy = filter.groupBy || "day";
+    let groupFormat = "";
+
+    switch (groupBy) {
+      case "day":
+        groupFormat = "YYYY-MM-DD";
         break;
-      case 'week':
-        groupFormat = 'IYYY-IW';
+      case "week":
+        groupFormat = "IYYY-IW";
         break;
-      case 'month':
-        groupFormat = 'YYYY-MM';
+      case "month":
+        groupFormat = "YYYY-MM";
         break;
     }
 
     const sql = `
       WITH spot_counts AS (
         SELECT 
-          l.id as level_id,
+          l.id as area_id,
           l."parkingId",
           jsonb_array_length(l.spots) as total_spots
-        FROM t_level l
+        FROM t_area l
         WHERE l."parkingId" = $1
       ),
       total_spots AS (
@@ -45,25 +45,25 @@ class ReportCrud extends BaseCrud<any, any, any> {
       ),
       hourly_entries AS (
         SELECT 
-          TO_CHAR(e."dateTime", '${groupFormat}') as date_group,
-          EXTRACT(HOUR FROM e."dateTime") as hour,
+          TO_CHAR(a."entryTime", '${groupFormat}') as date_group,
+          EXTRACT(HOUR FROM a."entryTime") as hour,
           COUNT(*) as entries
-        FROM t_entry e
-        WHERE e."parkingId" = $1
-          AND e."dateTime" >= $2
-          AND e."dateTime" <= $3
+        FROM t_access a
+        WHERE a."parkingId" = $1
+          AND a."entryTime" >= $2
+          AND a."entryTime" <= $3
         GROUP BY date_group, hour
       ),
       hourly_exits AS (
         SELECT 
-          TO_CHAR(ex."dateTime", '${groupFormat}') as date_group,
-          EXTRACT(HOUR FROM ex."dateTime") as hour,
+          TO_CHAR(a."exitTime", '${groupFormat}') as date_group,
+          EXTRACT(HOUR FROM a."exitTime") as hour,
           COUNT(*) as exits
-        FROM t_exit ex
-        JOIN t_entry e ON e.id = ex."entryId"
-        WHERE e."parkingId" = $1
-          AND ex."dateTime" >= $2
-          AND ex."dateTime" <= $3
+        FROM t_access a
+        WHERE a."parkingId" = $1
+          AND a."exitTime" IS NOT NULL
+          AND a."exitTime" >= $2
+          AND a."exitTime" <= $3
         GROUP BY date_group, hour
       ),
       occupancy AS (
@@ -96,47 +96,47 @@ class ReportCrud extends BaseCrud<any, any, any> {
       GROUP BY p.name, ts.total_spots
     `;
 
-    const res = await this.query<OccupancyReport>({ 
-      sql, 
-      params: [filter.parkingId, filter.startDate, filter.endDate] 
+    const res = await this.query<OccupancyReport>({
+      sql,
+      params: [filter.parkingId, filter.startDate, filter.endDate],
     });
-    
+
     return res[0];
   }
 
   async getRevenueReport(filter: ReportFilter): Promise<RevenueReport> {
-    const groupBy = filter.groupBy || 'day';
-    let groupFormat = '';
-    
-    switch(groupBy) {
-      case 'day':
-        groupFormat = 'YYYY-MM-DD';
+    const groupBy = filter.groupBy || "day";
+    let groupFormat = "";
+
+    switch (groupBy) {
+      case "day":
+        groupFormat = "YYYY-MM-DD";
         break;
-      case 'week':
-        groupFormat = 'IYYY-IW';
+      case "week":
+        groupFormat = "IYYY-IW";
         break;
-      case 'month':
-        groupFormat = 'YYYY-MM';
+      case "month":
+        groupFormat = "YYYY-MM";
         break;
     }
 
     const sql = `
       WITH regular_revenue AS (
         SELECT 
-          TO_CHAR(ex."dateTime", '${groupFormat}') as date_group,
-          SUM(ex.amount) as amount
-        FROM t_exit ex
-        JOIN t_entry e ON e.id = ex."entryId"
-        WHERE e."parkingId" = $1
-          AND ex."dateTime" >= $2
-          AND ex."dateTime" <= $3
+          TO_CHAR(a."exitTime", '${groupFormat}') as date_group,
+          SUM(a.amount) as amount
+        FROM t_access a
+        WHERE a."parkingId" = $1
+          AND a."exitTime" IS NOT NULL
+          AND a."exitTime" >= $2
+          AND a."exitTime" <= $3
         GROUP BY date_group
       ),
       subscription_revenue AS (
         SELECT 
           TO_CHAR(s."startDate", '${groupFormat}') as date_group,
           SUM((p."price" / p."duration")) as amount
-        FROM t_subscriber s
+        FROM t_subscription s
         JOIN t_parking park ON park.id = s."parkingId"
         JOIN jsonb_to_recordset(park."subscriptionPlans") AS p(id text, price numeric, duration integer)
           ON p.id = s."planId"
@@ -185,11 +185,11 @@ class ReportCrud extends BaseCrud<any, any, any> {
       GROUP BY p.name
     `;
 
-    const res = await this.query<RevenueReport>({ 
-      sql, 
-      params: [filter.parkingId, filter.startDate, filter.endDate] 
+    const res = await this.query<RevenueReport>({
+      sql,
+      params: [filter.parkingId, filter.startDate, filter.endDate],
     });
-    
+
     return res[0];
   }
 
@@ -197,16 +197,16 @@ class ReportCrud extends BaseCrud<any, any, any> {
     const sql = `
       WITH vehicle_counts AS (
         SELECT 
-          v."typeId",
+          v."type",
           jsonb_array_elements(p."vehicleTypes") ->> 'name' as type_name,
           COUNT(*) as count
-        FROM t_entry e
-        JOIN t_vehicle v ON v.id = e."vehicleId"
-        JOIN t_parking p ON p.id = e."parkingId"
-        WHERE e."parkingId" = $1
-          AND e."dateTime" >= $2
-          AND e."dateTime" <= $3
-        GROUP BY v."typeId", type_name
+        FROM t_access a
+        JOIN t_vehicle v ON v.id = a."vehicleId"
+        JOIN t_parking p ON p.id = a."parkingId"
+        WHERE a."parkingId" = $1
+          AND a."entryTime" >= $2
+          AND a."entryTime" <= $3
+        GROUP BY v."type", type_name
       ),
       total_count AS (
         SELECT SUM(count) as total FROM vehicle_counts
@@ -218,7 +218,7 @@ class ReportCrud extends BaseCrud<any, any, any> {
         (SELECT total FROM total_count) as "totalVehicles",
         json_agg(
           json_build_object(
-            'vehicleTypeId', vc."typeId",
+            'vehicleTypeId', vc."type",
             'vehicleTypeName', vc.type_name,
             'count', vc.count,
             'percentage', ROUND((vc.count * 100.0 / tc.total), 2)
@@ -229,13 +229,13 @@ class ReportCrud extends BaseCrud<any, any, any> {
       GROUP BY p.name, tc.total
     `;
 
-    const res = await this.query<VehicleReport>({ 
-      sql, 
-      params: [filter.parkingId, filter.startDate, filter.endDate] 
+    const res = await this.query<VehicleReport>({
+      sql,
+      params: [filter.parkingId, filter.startDate, filter.endDate],
     });
-    
+
     return res[0];
   }
 }
 
-export const reportCrud = new ReportCrud(); 
+export const reportCrud = new ReportCrud();

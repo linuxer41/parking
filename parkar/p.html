@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrato Implementación QR | MAS DELI</title>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --accent: #2c5282;
+            --text: #2d3748;
+            --light: #f7fafc;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: var(--text);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        h1, h2 {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        h2 {
+            font-size: 18px;
+            margin-top: 30px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: var(--light);
+            font-weight: 500;
+        }
+        .signature-box {
+            margin-top: 50px;
+            width: 60%;
+            float: right;
+        }
+        .signature-line {
+            border-top: 1px solid var(--text);
+            margin: 30px 0 10px;
+        }
+        .footer {
+            clear: both;
+            text-align: center;
+            font-size: 12px;
+            color: #718096;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .compact-list {
+            padding-left: 20px;
+        }
+        .compact-list li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ACUERDO DE IMPLEMENTACIÓN - SISTEMA QR</h1>
+    <p style="text-align: center; margin-bottom: 30px;">Entre MAS DELI (Iris Tatiana Vargas) e IAthings</p>
+
+    <h2>1. SERVICIOS</h2>
+    <p>IAthings implementará un sistema de pagos QR que incluye:</p>
+    <ul class="compact-list">
+        <li>Integración con el banco a elección de MAS DELI (Sujeto a la disponibilidad de la institución)</li>
+        <li>Generación de códigos QR</li>
+        <li>Capacitación</li>
+    </ul>
+
+    <h2>2. PLAZOS</h2>
+    <table>
+        <tr>
+            <th>Fase</th>
+            <th>Duración</th>
+        </tr>
+        <tr>
+            <td>Configuración</td>
+            <td>10 días hábiles</td>
+        </tr>
+        <tr>
+            <td>Pruebas</td>
+            <td>8 días hábiles</td>
+        </tr>
+        <tr>
+            <td>Implementación</td>
+            <td>5 días hábiles</td>
+        </tr>
+    </table>
+
+    <h2>3. INVERSIÓN</h2>
+    <table>
+        <tr>
+            <th>Concepto</th>
+            <th>Monto (Bs)</th>
+        </tr>
+        <tr>
+            <td>Implementación inicial</td>
+            <td>1,900</td>
+        </tr>
+        <tr>
+            <td>Servidor y mantenimiento mensual</td>
+            <td>210</td>
+        </tr>
+    </table>
+    <p style="font-size: 14px; margin-top: -10px;">* 40% anticipado (760 Bs), 60% al finalizar</p>
+
+    <h2>4. TÉRMINOS</h2>
+    <ul class="compact-list">
+        <li>Soporte técnico en horario comercial</li>
+        <li>Confidencialidad de datos</li>
+    </ul>
+
+    <div class="signature-box">
+        <p>ACEPTO LOS TÉRMINOS DEL PRESENTE ACUERDO:</p>
+        <p>Nombre: ___________________________</p>
+        <p>CI: _______________________________</p>
+        <div class="signature-line"></div>
+        <p>Firma</p>
+        <p>Fecha: ___/___/_______</p>
+    </div>
+
+    <div class="footer">
+        <p>IAthings | contacto@iathings.com | +591 XXX XXX XXX</p>
+        <p>Documento válido por 15 días | Costos no incluyen IVA</p>
+    </div>
+
+    <script>
+        // Fecha automática
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            const dateElements = document.querySelectorAll('.current-date');
+            dateElements.forEach(el => {
+                el.textContent = today.toLocaleDateString('es-BO', options);
+            });
+        });
+    </script>
+</body>
+</html>

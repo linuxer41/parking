@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/vehicle_model.dart';
-import '../../services/vehicle_service.dart';
+import '../../models/access_model.dart';
+import '../../services/parking_service.dart';
+import '../../state/app_state_container.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -10,146 +11,157 @@ class HistoryScreen extends StatefulWidget {
   _HistoryScreenState createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
-  final VehicleService _vehicleService = VehicleService();
-  List<Vehicle> _vehicles = [];
+class _HistoryScreenState extends State<HistoryScreen>
+    with TickerProviderStateMixin {
+  final ParkingService _parkingService = ParkingService();
+
+  // Data lists
+  final List<AccessModel> _activeAccesses = [];
+  final List<AccessModel> _completedAccesses = [];
+
+  // Combined list for display
+  List<AccessModel> _displayItems = [];
+
   bool _isLoading = true;
   String _searchQuery = '';
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
 
-  // Para filtrar por tipo de vehículo
+  // For filtering by type
   String? _selectedVehicleType;
   final List<String> _vehicleTypes = [
     'Todos',
+    'Bicicleta',
     'Automóvil',
     'Motocicleta',
-    'Camión'
+    'Camión',
   ];
 
-  // Para ordenar
+  // For sorting
   final String _sortBy = 'date';
   final bool _sortAscending = false;
+
+  // Tab controller
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _loadVehicles();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadData();
   }
 
-  Future<void> _loadVehicles() async {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // En una implementación real, obtendríamos los datos del servicio
-      // Aquí estamos simulando datos para el ejemplo
-      await Future.delayed(const Duration(milliseconds: 800));
+      final appState = AppStateContainer.of(context);
+      final parkingId = appState.currentParking?.id;
 
-      final now = DateTime.now();
-      final vehicles = List.generate(50, (index) {
-        final isExit = index % 3 == 0; // Algunos vehículos ya han salido
-        final entryTime = now.subtract(
-            Duration(hours: index + (index % 5), minutes: index * 7 % 60));
-        final exitTime = isExit
-            ? entryTime
-                .add(Duration(hours: 1 + (index % 4), minutes: index * 11 % 60))
-            : null;
-        final vehicleType = index % 5 == 0
-            ? 'Camión'
-            : (index % 3 == 0 ? 'Motocicleta' : 'Automóvil');
+      if (parkingId == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
-        return Vehicle(
-          id: 'VEH-${1000 + index}',
-          licensePlate: 'ABC-${123 + index}',
-          entryTime: entryTime,
-          exitTime: exitTime,
-          spotId: 'SPOT-${100 + (index % 20)}',
-          type: vehicleType,
-          ownerName: 'Cliente ${index + 1}',
-          cost: isExit ? (10.0 + index % 30) : null,
-        );
-      });
+      // Load active and completed accesses
+      final activeAccesses = [];
+      final completedAccesses = [];
 
       setState(() {
-        _vehicles = vehicles;
+        // _activeAccesses = activeAccesses;
+        // _completedAccesses = completedAccesses;
         _isLoading = false;
       });
+
+      _applyFilters();
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar historial: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al cargar historial: $e')));
     }
   }
 
   void _applyFilters() {
-    setState(() {
-      _isLoading = true;
-    });
+    List<AccessModel> filteredItems = [];
 
-    // Filtrar vehículos según los criterios seleccionados
-    List<Vehicle> filteredVehicles = _vehicles.where((vehicle) {
-      // Filtrar por búsqueda de texto (placa o nombre)
-      bool matchesSearch = _searchQuery.isEmpty ||
-          vehicle.licensePlate
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()) ||
-          (vehicle.ownerName
-                  ?.toLowerCase()
-                  .contains(_searchQuery.toLowerCase()) ??
-              false);
+    // Get items based on selected tab
+    switch (_tabController.index) {
+      case 0: // All
+        filteredItems = [..._activeAccesses, ..._completedAccesses];
+        break;
+      case 1: // Active
+        filteredItems = [..._activeAccesses];
+        break;
+      case 2: // Completed
+        filteredItems = [..._completedAccesses];
+        break;
+    }
 
-      // Filtrar por rango de fechas
-      bool matchesDateRange = true;
-      if (_selectedStartDate != null) {
-        matchesDateRange =
-            matchesDateRange && vehicle.entryTime.isAfter(_selectedStartDate!);
-      }
-      if (_selectedEndDate != null) {
-        // Añadir un día completo para incluir el día seleccionado
-        final endDatePlusDay = _selectedEndDate!.add(const Duration(days: 1));
-        matchesDateRange =
-            matchesDateRange && vehicle.entryTime.isBefore(endDatePlusDay);
-      }
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filteredItems = filteredItems.where((access) {
+        return access.vehicle.plate.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            access.entryEmployee.name.toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            access.spot.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
 
-      // Filtrar por tipo de vehículo
-      bool matchesType = _selectedVehicleType == null ||
-          _selectedVehicleType == 'Todos' ||
-          vehicle.type == _selectedVehicleType;
+    // Apply date range filter
+    if (_selectedStartDate != null || _selectedEndDate != null) {
+      filteredItems = filteredItems.where((access) {
+        DateTime itemDate = access.entryTime;
 
-      return matchesSearch && matchesDateRange && matchesType;
-    }).toList();
+        bool matchesStart =
+            _selectedStartDate == null || itemDate.isAfter(_selectedStartDate!);
+        bool matchesEnd =
+            _selectedEndDate == null ||
+            itemDate.isBefore(_selectedEndDate!.add(const Duration(days: 1)));
 
-    // Ordenar la lista filtrada
-    filteredVehicles.sort((a, b) {
+        return matchesStart && matchesEnd;
+      }).toList();
+    }
+
+    // Apply vehicle type filter
+    if (_selectedVehicleType != null && _selectedVehicleType != 'Todos') {
+      filteredItems = filteredItems.where((access) {
+        String vehicleType = access.vehicle.type;
+        return _getVehicleTypeName(vehicleType) == _selectedVehicleType;
+      }).toList();
+    }
+
+    // Sort items
+    filteredItems.sort((a, b) {
       if (_sortBy == 'date') {
         return _sortAscending
             ? a.entryTime.compareTo(b.entryTime)
             : b.entryTime.compareTo(a.entryTime);
       } else if (_sortBy == 'plate') {
         return _sortAscending
-            ? a.licensePlate.compareTo(b.licensePlate)
-            : b.licensePlate.compareTo(a.licensePlate);
-      } else if (_sortBy == 'cost') {
-        final aCost = a.cost ?? 0.0;
-        final bCost = b.cost ?? 0.0;
-        return _sortAscending ? aCost.compareTo(bCost) : bCost.compareTo(aCost);
+            ? a.vehicle.plate.compareTo(b.vehicle.plate)
+            : b.vehicle.plate.compareTo(a.vehicle.plate);
       }
       return 0;
     });
 
-    // Actualizar la lista filtrada después de un breve retraso para mostrar el efecto de carga
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _vehicles = filteredVehicles;
-          _isLoading = false;
-        });
-      }
+    setState(() {
+      _displayItems = filteredItems;
     });
   }
 
@@ -160,12 +172,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       _selectedEndDate = null;
       _selectedVehicleType = null;
     });
-    _loadVehicles();
+    _applyFilters();
   }
 
   Future<void> _selectDateRange(BuildContext context) async {
     final initialDateRange = DateTimeRange(
-      start: _selectedStartDate ??
+      start:
+          _selectedStartDate ??
           DateTime.now().subtract(const Duration(days: 7)),
       end: _selectedEndDate ?? DateTime.now(),
     );
@@ -177,9 +190,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme,
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: Theme.of(context).colorScheme),
           child: child!,
         );
       },
@@ -194,63 +207,117 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  String _getVehicleTypeName(String type) {
+    switch (type.toLowerCase()) {
+      case 'bicycle':
+      case 'bicicleta':
+        return 'Bicicleta';
+      case 'car':
+      case 'automovil':
+      case 'sedan':
+        return 'Automóvil';
+      case 'motorcycle':
+      case 'motocicleta':
+        return 'Motocicleta';
+      case 'truck':
+      case 'camion':
+        return 'Camión';
+      default:
+        return 'Automóvil';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width <= 400;
 
     return Scaffold(
-      // Sin AppBar para un diseño más minimalista
+      appBar: AppBar(
+        title: Text(
+          'Registros',
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
+          ),
+        ),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Encabezado con título simple
+            // Tab bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text(
-                'Registros',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.5,
+              padding: EdgeInsets.fromLTRB(
+                isSmallScreen ? 12 : 16,
+                8,
+                isSmallScreen ? 12 : 16,
+                0,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  tabs: const [
+                    Tab(text: 'Todos'),
+                    Tab(text: 'Activos'),
+                    Tab(text: 'Completados'),
+                  ],
+                  onTap: (index) {
+                    _applyFilters();
+                  },
+                  indicatorColor: colorScheme.primary,
+                  labelColor: colorScheme.primary,
+                  unselectedLabelColor: colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
 
-            // Filtros mejorados
+            // Filters
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.black12 : Colors.grey[100],
+                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Barra de búsqueda
+                    // Search bar
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.black26 : Colors.white,
+                        color: colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isDark ? Colors.white10 : Colors.black12,
-                          width: 1,
+                          color: colorScheme.outlineVariant.withOpacity(0.3),
+                          width: 0.5,
                         ),
                       ),
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'Buscar por placa o nombre',
+                          hintText: 'Buscar por placa, empleado o espacio',
                           prefixIcon: Icon(
                             Icons.search,
-                            color: isDark ? Colors.white54 : Colors.black45,
+                            color: colorScheme.onSurfaceVariant,
                             size: 20,
                           ),
                           border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                          ),
                         ),
                         onChanged: (value) {
                           _searchQuery = value;
@@ -261,12 +328,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                    // Filtros de fecha y tipo
+                    // Date and type filters
                     Row(
                       children: [
-                        // Selector de fecha
+                        // Date selector
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.date_range, size: 16),
@@ -276,26 +343,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: BorderSide(
+                                color: colorScheme.outlineVariant.withOpacity(
+                                  0.3,
+                                ),
+                                width: 0.5,
                               ),
                             ),
                             onPressed: () => _selectDateRange(context),
                           ),
                         ),
 
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
 
-                        // Selector de tipo de vehículo
+                        // Vehicle type selector
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.black26 : Colors.white,
+                              color: colorScheme.surface,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isDark ? Colors.white10 : Colors.black12,
-                                width: 1,
+                                color: colorScheme.outlineVariant.withOpacity(
+                                  0.3,
+                                ),
+                                width: 0.5,
                               ),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -323,24 +400,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ],
                     ),
 
-                    // Información de rango de fechas seleccionadas
+                    // Date range info
                     if (_selectedStartDate != null || _selectedEndDate != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today,
-                                size: 14, color: colorScheme.primary),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: colorScheme.primary,
+                            ),
                             const SizedBox(width: 4),
-                            Text(
-                              _getDateRangeText(),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: Text(
+                                _getDateRangeText(),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                            const Spacer(),
                             TextButton(
                               onPressed: () {
                                 setState(() {
@@ -349,7 +430,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 });
                                 _applyFilters();
                               },
-                              child: const Text('Limpiar fechas'),
+                              child: const Text('Limpiar'),
                             ),
                           ],
                         ),
@@ -359,7 +440,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
             ),
 
-            // Lista de vehículos
+            // List
             Expanded(
               child: _isLoading
                   ? Center(
@@ -367,36 +448,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         color: colorScheme.primary,
                       ),
                     )
-                  : _vehicles.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.directions_car,
-                                size: 80,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No se encontraron registros',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton(
-                                onPressed: _resetFilters,
-                                child: const Text('Limpiar filtros'),
-                              ),
-                            ],
+                  : _displayItems.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.directions_car,
+                            size: 80,
+                            color: colorScheme.onSurfaceVariant.withOpacity(
+                              0.5,
+                            ),
                           ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadVehicles,
-                          color: colorScheme.primary,
-                          child: _buildVehicleList(theme),
-                        ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No se encontraron registros',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: _resetFilters,
+                            child: const Text('Limpiar filtros'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadData,
+                      color: colorScheme.primary,
+                      child: _buildItemList(theme),
+                    ),
             ),
           ],
         ),
@@ -404,197 +487,238 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildVehicleList(ThemeData theme) {
+  Widget _buildItemList(ThemeData theme) {
     return ListView.builder(
       padding: const EdgeInsets.all(8.0),
-      itemCount: _vehicles.length,
+      itemCount: _displayItems.length,
       itemBuilder: (context, index) {
-        final vehicle = _vehicles[index];
-        final isActive = vehicle.exitTime == null;
+        final access = _displayItems[index];
+        return _buildAccessCard(theme, access);
+      },
+    );
+  }
 
-        // Calcular duración
-        String durationText = '';
-        if (vehicle.exitTime != null) {
-          final duration = vehicle.exitTime!.difference(vehicle.entryTime);
-          final hours = duration.inHours;
-          final minutes = duration.inMinutes % 60;
-          durationText = '${hours}h ${minutes}m';
-        } else {
-          final duration = DateTime.now().difference(vehicle.entryTime);
-          final hours = duration.inHours;
-          final minutes = duration.inMinutes % 60;
-          durationText = '${hours}h ${minutes}m (Activo)';
-        }
+  Widget _buildAccessCard(ThemeData theme, AccessModel access) {
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    final isActive = access.isActive;
+    final durationText = access.formattedDuration;
+    final colorScheme = theme.colorScheme;
 
-        // Formato de fechas
-        final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4.0),
-          shape: RoundedRectangleBorder(
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      elevation: 1,
+      shadowColor: colorScheme.primary.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isActive
+              ? colorScheme.primary.withOpacity(0.2)
+              : colorScheme.outlineVariant.withOpacity(0.2),
+          width: 0.5,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showAccessDetails(access),
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            side: isActive
-                ? BorderSide(
-                    color: theme.colorScheme.primary.withOpacity(0.3), width: 1)
-                : BorderSide.none,
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
           ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _showVehicleDetails(vehicle),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? colorScheme.primary
+                          : colorScheme.secondary,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      access.vehicle.plate,
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _getVehicleTypeName(access.vehicle.type),
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (isActive)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.green.withOpacity(0.3),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        'ACTIVO',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10,
+                        ),
+                      ),
+                    )
+                  else if (access.amount != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.tertiary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: colorScheme.tertiary.withOpacity(0.3),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        '\$${access.amount!.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: colorScheme.tertiary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Entrada',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dateFormat.format(access.entryTime),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isActive ? 'Espacio' : 'Salida',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isActive
+                              ? access.spot.name
+                              : access.exitTime != null
+                              ? dateFormat.format(access.exitTime!)
+                              : 'Pendiente',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? theme.colorScheme.primary
-                              : Colors.grey[600],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          vehicle.licensePlate,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                       Text(
-                        vehicle.type,
+                        durationText,
                         style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (vehicle.cost != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.tertiary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '\$${vehicle.cost!.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: theme.colorScheme.tertiary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Entrada',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              dateFormat.format(vehicle.entryTime),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Salida',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              vehicle.exitTime != null
-                                  ? dateFormat.format(vehicle.exitTime!)
-                                  : 'En curso',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: vehicle.exitTime == null
-                                    ? theme.colorScheme.primary
-                                    : null,
-                              ),
-                            ),
-                          ],
+                          fontSize: 12,
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            durationText,
-                            style: const TextStyle(
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                      Icon(
+                        Icons.person,
+                        size: 14,
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      Row(
-                        children: [
-                          const Icon(Icons.local_parking, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Espacio: ${vehicle.spotId}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 4),
+                      Text(
+                        access.entryEmployee.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurface,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  void _showVehicleDetails(Vehicle vehicle) {
-    // Formato de fechas para la vista detallada
+  void _showAccessDetails(AccessModel access) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm:ss');
-
-    // Calcular duración
-    final duration = vehicle.exitTime != null
-        ? vehicle.exitTime!.difference(vehicle.entryTime)
-        : DateTime.now().difference(vehicle.entryTime);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    final durationText = '$hours horas y $minutes minutos';
+    final isActive = access.isActive;
 
     showModalBottomSheet(
       context: context,
@@ -612,10 +736,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Detalles del Vehículo',
+                    isActive
+                        ? 'Detalles de Acceso Activo'
+                        : 'Detalles de Acceso Completado',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -625,14 +751,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(height: 16),
 
-              // ID y placa
+              // Access number and plate
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: _detailItem(
-                      label: 'ID',
-                      value: vehicle.id,
+                      label: 'Número',
+                      value: access.number.toString(),
                       icon: Icons.confirmation_number,
                     ),
                   ),
@@ -640,7 +766,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   Expanded(
                     child: _detailItem(
                       label: 'Placa',
-                      value: vehicle.licensePlate,
+                      value: access.vehicle.plate,
                       icon: Icons.directions_car,
                     ),
                   ),
@@ -648,73 +774,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Tipo y propietario
+              // Vehicle type and spot
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: _detailItem(
                       label: 'Tipo',
-                      value: vehicle.type,
+                      value: _getVehicleTypeName(access.vehicle.type),
                       icon: Icons.category,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _detailItem(
-                      label: 'Propietario',
-                      value: vehicle.ownerName ?? 'No registrado',
-                      icon: Icons.person,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Hora de entrada y salida
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: _detailItem(
-                      label: 'Entrada',
-                      value: dateFormat.format(vehicle.entryTime),
-                      icon: Icons.login,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _detailItem(
-                      label: 'Salida',
-                      value: vehicle.exitTime != null
-                          ? dateFormat.format(vehicle.exitTime!)
-                          : 'En curso',
-                      icon: Icons.logout,
-                      color: vehicle.exitTime == null
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Duración y espacio
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: _detailItem(
-                      label: 'Duración',
-                      value: durationText,
-                      icon: Icons.access_time,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _detailItem(
                       label: 'Espacio',
-                      value: vehicle.spotId,
+                      value: access.spot.name,
                       icon: Icons.local_parking,
                     ),
                   ),
@@ -722,48 +797,130 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Costo
-              if (vehicle.cost != null)
-                _detailItem(
-                  label: 'Costo Total',
-                  value: '\$${vehicle.cost!.toStringAsFixed(2)}',
-                  icon: Icons.attach_money,
-                  color: Theme.of(context).colorScheme.tertiary,
-                  isBold: true,
-                  isLarge: true,
+              // Entry time and employee
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _detailItem(
+                      label: 'Entrada',
+                      value: dateFormat.format(access.entryTime),
+                      icon: Icons.login,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _detailItem(
+                      label: 'Empleado',
+                      value: access.entryEmployee.name,
+                      icon: Icons.person,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Duration and parking
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _detailItem(
+                      label: 'Duración',
+                      value: access.formattedDuration,
+                      icon: Icons.access_time,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _detailItem(
+                      label: 'Estacionamiento',
+                      value: access.parking.name,
+                      icon: Icons.local_parking,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Show exit information if completed
+              if (!isActive && access.exitTime != null) ...[
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: _detailItem(
+                        label: 'Salida',
+                        value: dateFormat.format(access.exitTime!),
+                        icon: Icons.logout,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _detailItem(
+                        label: 'Monto',
+                        value: access.amount != null
+                            ? '\$${access.amount!.toStringAsFixed(2)}'
+                            : 'N/A',
+                        icon: Icons.attach_money,
+                        color: Theme.of(context).colorScheme.tertiary,
+                        isBold: true,
+                      ),
+                    ),
+                  ],
                 ),
+              ],
 
               const SizedBox(height: 24),
 
-              // Botones de acción
+              // Action buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  if (vehicle.exitTime != null)
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.receipt_long, size: 16),
-                      label: const Text('Ver Factura'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.receipt_long, size: 16),
+                    label: Text(isActive ? 'Imprimir Ticket' : 'Ver Factura'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        // Implementar visualización de factura
-                      },
                     ),
-                  if (vehicle.exitTime == null)
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // TODO: Implement ticket/invoice printing
+                    },
+                  ),
+                  if (isActive)
                     ElevatedButton.icon(
                       icon: const Icon(Icons.logout, size: 16),
                       label: const Text('Registrar Salida'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                       onPressed: () {
                         Navigator.pop(context);
-                        // Implementar registro de salida
+                        // TODO: Navigate to exit registration
+                      },
+                    )
+                  else
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.print, size: 16),
+                      label: const Text('Imprimir'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        // TODO: Implement printing
                       },
                     ),
                 ],
@@ -786,11 +943,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(
-          icon,
-          size: isLarge ? 20 : 16,
-          color: color ?? Colors.grey[600],
-        ),
+        Icon(icon, size: isLarge ? 20 : 16, color: color ?? Colors.grey[600]),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -798,10 +951,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const SizedBox(height: 2),
               Text(

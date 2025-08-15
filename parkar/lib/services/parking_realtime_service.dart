@@ -1,162 +1,180 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/level_model.dart';
-import '../state/app_state.dart';
-import 'service_locator.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
-class ParkingRealtimeService {
-  static final ParkingRealtimeService _instance =
-      ParkingRealtimeService._internal();
-  factory ParkingRealtimeService() => _instance;
-  ParkingRealtimeService._internal();
+import '../config/app_config.dart';
 
-  final String baseUrl = 'http://192.168.100.8:3001';
-  final http.Client _httpClient = http.Client();
+/// Simple WebSocket service for real-time parking spot updates
+class ParkingRealtimeService with ChangeNotifier {
+  // WebSocket connection
+  WebSocketChannel? _channel;
 
-  Timer? _pollingTimer;
-  final _parkingSpotsController = StreamController<List<SpotModel>>.broadcast();
+  // Ping timer to keep the connection alive
+  Timer? _pingTimer;
+
+  // Reconnection timer
+  Timer? _reconnectTimer;
+
+  // WebSocket connection status
+  bool _isConnected = false;
+
+  // Current parking ID being monitored
+  String? _currentParkingId;
+
+  // Callback for spot updates
+  Function(String spotId, String? accessId)? onSpotUpdate;
 
   // Getters
-  Stream<List<SpotModel>> get parkingSpots => _parkingSpotsController.stream;
+  bool get isConnected => _isConnected;
 
-  // Obtener el AppState desde el ServiceLocator
-  AppState get _state => ServiceLocator().getAppState();
+  /// Constructor
+  ParkingRealtimeService();
 
-  // Construir encabezados para API
-  Map<String, String> _buildHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${_state.authToken}',
-      'Access-Code': '${_state.employee?.id}:${_state.currentParking?.id}',
-    };
+  /// Start monitoring a parking with real-time updates
+  void startMonitoring(String parkingId) {
+    // Stop any existing monitoring
+    stopMonitoring();
+
+    _currentParkingId = parkingId;
+
+    // Connect to WebSocket
+    _connectWebSocket(parkingId);
   }
 
-  // Iniciar actualización en tiempo real
-  void startRealtimeUpdates({Duration interval = const Duration(seconds: 5)}) {
-    // Detener cualquier timer existente
-    stopRealtimeUpdates();
-
-    // Verificar si tenemos la información necesaria
-    if (_state.currentLevel == null || _state.currentParking == null) {
-      print('No hay nivel o estacionamiento seleccionado');
-      return;
-    }
-
-    // Hacer una primera actualización inmediata
-    _fetchParkingStatus();
-
-    // Iniciar el timer para actualizaciones periódicas
-    _pollingTimer = Timer.periodic(interval, (_) => _fetchParkingStatus());
-  }
-
-  // Detener actualizaciones en tiempo real
-  void stopRealtimeUpdates() {
-    _pollingTimer?.cancel();
-    _pollingTimer = null;
-  }
-
-  // Actualizar ocupación de un espacio de estacionamiento
-  Future<bool> updateSpotOccupancy(String spotId, bool isOccupied,
-      String? vehiclePlate, String? vehicleColor) async {
+  /// Connect to WebSocket for real-time updates
+  void _connectWebSocket(String parkingId) {
     try {
-      if (_state.currentLevel == null) return false;
+      final wsUrl = Uri.parse('${AppConfig.wsEndpoint}/ws/$parkingId');
+      _channel = WebSocketChannel.connect(wsUrl);
 
-      final uri = Uri.parse(
-          '$baseUrl/level/${_state.currentLevel!.id}/spot/$spotId/status');
+      // Set up listener for WebSocket messages
+      _channel!.stream.listen(
+        (message) {
+          _handleWebSocketMessage(message);
+        },
+        onError: (error) {
+          debugPrint('WebSocket error: $error');
+          _isConnected = false;
+          _scheduleReconnection();
+          notifyListeners();
+        },
+        onDone: () {
+          debugPrint('WebSocket connection closed');
+          _isConnected = false;
+          _scheduleReconnection();
+          notifyListeners();
+        },
+      );
 
-      final response = await _httpClient.patch(
-        uri,
-        headers: _buildHeaders(),
-        body: jsonEncode({
-          'isOccupied': isOccupied,
-          'vehiclePlate': vehiclePlate,
-          'vehicleColor': vehicleColor,
+      // Setup ping to keep the connection alive
+      _pingTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => _sendPing(),
+      );
+
+      _isConnected = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error connecting to WebSocket: $e');
+      _isConnected = false;
+      notifyListeners();
+    }
+  }
+
+  /// Schedule WebSocket reconnection
+  void _scheduleReconnection() {
+    // Cancel any existing reconnection timer
+    _reconnectTimer?.cancel();
+
+    // Try to reconnect after a delay
+    _reconnectTimer = Timer(
+      const Duration(seconds: 5),
+      () {
+        if (_currentParkingId != null) {
+          debugPrint('Attempting to reconnect WebSocket...');
+          _connectWebSocket(_currentParkingId!);
+        }
+      },
+    );
+  }
+
+  /// Send ping to keep WebSocket connection alive
+  void _sendPing() {
+    if (_channel != null && _isConnected) {
+      try {
+        _channel!.sink.add(jsonEncode({
+          'type': 'ping',
           'timestamp': DateTime.now().toIso8601String(),
-        }),
-      );
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        // Actualización exitosa, refrescar datos
-        _fetchParkingStatus();
-        return true;
+        }));
+      } catch (e) {
+        debugPrint('Error sending ping: $e');
       }
-
-      return false;
-    } catch (e) {
-      print('Error al actualizar spot: $e');
-      return false;
     }
   }
 
-  // Obtener estado actualizado del estacionamiento
-  void _fetchParkingStatus() async {
+  /// Handle incoming WebSocket message
+  void _handleWebSocketMessage(dynamic message) {
     try {
-      if (_state.currentLevel == null) return;
+      final data = jsonDecode(message);
 
-      final uri = Uri.parse('$baseUrl/level/${_state.currentLevel!.id}/spots');
+      switch (data['type']) {
+        case 'pong':
+          // Connection is alive, nothing to do
+          break;
 
-      final response = await _httpClient.get(
-        uri,
-        headers: _buildHeaders(),
-      );
+        case 'parking_update':
+          _handleParkingUpdate(data['data']);
+          break;
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final spots = data.map((item) => SpotModel.fromJson(item)).toList();
+        case 'error':
+          debugPrint('WebSocket error from server: ${data['message']}');
+          break;
 
-        // Enviar datos al stream
-        if (!_parkingSpotsController.isClosed) {
-          _parkingSpotsController.add(spots);
-        }
+        default:
+          // Ignore other message types
+          break;
       }
     } catch (e) {
-      print('Error al obtener estado del estacionamiento: $e');
+      debugPrint('Error processing WebSocket message: $e');
     }
   }
 
-  // Método para simular actualizaciones (para desarrollo)
-  void simulateRealtimeUpdates() {
-    if (_state.currentLevel == null || _state.currentLevel!.spots.isEmpty) {
-      return;
-    }
+  /// Handle parking update notifications
+  void _handleParkingUpdate(Map<String, dynamic> data) {
+    if (data['type'] == 'spot_update') {
+      final spotId = data['spotId'];
+      final accessId = data['accessId'];
 
-    // Crear una copia de los spots actuales
-    final spots = List<SpotModel>.from(_state.currentLevel!.spots);
-
-    // Simular cambios aleatorios en la ocupación
-    if (spots.isNotEmpty) {
-      final random = DateTime.now().millisecondsSinceEpoch % spots.length;
-      // Invertir el estado de ocupación del spot aleatorio
-      final updatedSpots = spots.map((spot) {
-        if (spots.indexOf(spot) == random) {
-          return SpotModel(
-            id: spot.id,
-            name: spot.name,
-            posX: spot.posX,
-            posY: spot.posY,
-            posZ: spot.posZ,
-            rotation: spot.rotation,
-            scale: spot.scale,
-            vehicleId: spot.vehicleId == null ? 'simulated-vehicle' : null,
-            spotType: spot.spotType,
-            spotCategory: spot.spotCategory,
-          );
-        }
-        return spot;
-      }).toList();
-
-      // Enviar al stream
-      if (!_parkingSpotsController.isClosed) {
-        _parkingSpotsController.add(updatedSpots);
+      // Notify listeners about the spot update
+      if (onSpotUpdate != null) {
+        onSpotUpdate!(spotId, accessId);
       }
+
+      notifyListeners();
     }
   }
 
-  // Liberar recursos
+  /// Stop monitoring
+  void stopMonitoring() {
+    // Close WebSocket connection
+    _channel?.sink.close();
+    _channel = null;
+
+    // Cancel timers
+    _pingTimer?.cancel();
+    _pingTimer = null;
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+
+    _currentParkingId = null;
+    _isConnected = false;
+  }
+
+  @override
   void dispose() {
-    stopRealtimeUpdates();
-    _parkingSpotsController.close();
-    _httpClient.close();
+    stopMonitoring();
+    super.dispose();
   }
 }

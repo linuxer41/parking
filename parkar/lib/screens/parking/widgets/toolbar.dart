@@ -15,7 +15,7 @@ class ParkingToolbar extends StatefulWidget {
 class _ParkingToolbarState extends State<ParkingToolbar>
     with SingleTickerProviderStateMixin {
   // Estado de expansión de la barra
-  bool _isExpanded = true;
+  bool _isExpanded = false;  // Cambiado a false para iniciar contraído
 
   // Controlador de animación para expandir/colapsar
   late AnimationController _animationController;
@@ -37,8 +37,8 @@ class _ParkingToolbarState extends State<ParkingToolbar>
       curve: Curves.easeInOut,
     );
 
-    // Iniciar en estado expandido
-    _animationController.value = 1.0;
+    // Iniciar en estado contraído
+    _animationController.value = 0.0;  // Cambiado a 0.0 para iniciar contraído
   }
 
   @override
@@ -89,12 +89,21 @@ class _ParkingToolbarState extends State<ParkingToolbar>
           // Verificar si hay elementos en el clipboard
           final hasClipboardItems = parkingState.clipboardManager.hasItems;
 
+          // Calcular la altura del panel superior
+          // Valor fijo que asegura que no haya sobreposición con el panel superior
+          double topPanelHeight = 120;
+
+          // Añadir el padding del SafeArea en dispositivos con notch
+          if (MediaQuery.of(context).padding.top > 0) {
+            topPanelHeight += MediaQuery.of(context).padding.top;
+          }
+
           // Utilizamos un Stack para contener el Positioned
           return Stack(
             children: [
               Positioned(
                 left: 12,
-                top: 16,
+                top: topPanelHeight, // Posicionar debajo del panel superior
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 50,
@@ -210,99 +219,114 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                             // Título de sección: ACCIONES
                             _buildSectionTitle(context, 'ACCIONES'),
 
-                            // Herramientas de historia (historial)
-                            _buildBlenderStyleButton(
-                              context,
-                              icon: Icons.undo,
-                              label: '←',
-                              tooltip: 'Deshacer última acción',
-                              onPressed: parkingState.historyManager.canUndo
-                                  ? () => parkingState.undoLastAction()
-                                  : null,
-                              colorScheme: colorScheme,
-                              isDisabled: !parkingState.historyManager.canUndo,
+                            // Herramientas de historia (historial) - versión mejorada
+                            Row(
+                              children: [
+                                _buildBlenderStyleButton(
+                                  context,
+                                  icon: Icons.undo_rounded,
+                                  label: 'Deshacer',
+                                  tooltip: 'Deshacer última acción',
+                                  onPressed: parkingState.historyManager.canUndo
+                                      ? () => parkingState.undoLastAction()
+                                      : null,
+                                  colorScheme: colorScheme,
+                                  isDisabled: !parkingState.historyManager.canUndo,
+                                ),
+                                _buildBlenderStyleButton(
+                                  context,
+                                  icon: Icons.redo_rounded,
+                                  label: 'Rehacer',
+                                  tooltip: 'Rehacer última acción',
+                                  onPressed: parkingState.historyManager.canRedo
+                                      ? () => parkingState.redoLastAction()
+                                      : null,
+                                  colorScheme: colorScheme,
+                                  isDisabled: !parkingState.historyManager.canRedo,
+                                ),
+                              ],
                             ),
-                            _buildBlenderStyleButton(
-                              context,
-                              icon: Icons.redo,
-                              label: '→',
-                              tooltip: 'Rehacer última acción',
-                              onPressed: parkingState.historyManager.canRedo
-                                  ? () => parkingState.redoLastAction()
-                                  : null,
-                              colorScheme: colorScheme,
-                              isDisabled: !parkingState.historyManager.canRedo,
-                            ),
-                            // Botones de copiar/pegar
-                            _buildBlenderStyleButton(
-                              context,
-                              icon: Icons.content_copy,
-                              label: 'Copiar',
-                              tooltip: 'Copiar selección',
-                              onPressed: hasSelection
-                                  ? () {
-                                      // Implementar copia al clipboard
-                                      parkingState.clipboardManager
-                                          .copyElements(
-                                              parkingState.selectedElements);
-                                      // Mostrar snackbar con tema personalizado
-                                      final snackBar = SnackBar(
-                                        content: Text(
-                                          'Elementos copiados al portapapeles',
-                                          style: TextStyle(
-                                            color: colorScheme.onInverseSurface,
-                                          ),
-                                        ),
-                                        duration: const Duration(seconds: 1),
-                                        backgroundColor:
-                                            colorScheme.inverseSurface,
-                                      );
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(snackBar);
-                                    }
-                                  : null,
-                              colorScheme: colorScheme,
-                              isDisabled: !hasSelection,
-                            ),
-                            _buildBlenderStyleButton(
-                              context,
-                              icon: Icons.content_paste,
-                              label: 'Pegar',
-                              tooltip: 'Pegar elementos copiados',
-                              onPressed: hasClipboardItems
-                                  ? () {
-                                      // Pegar en la posición del cursor
-                                      final elements = parkingState
-                                          .clipboardManager
-                                          .pasteElements(
-                                        parkingState.cursorPosition.x,
-                                        parkingState.cursorPosition.y,
-                                      );
+                            
+                            // Separador ligero
+                            const SizedBox(height: 4),
+                            
+                            // Botones de copiar/pegar - versión mejorada
+                            Row(
+                              children: [
+                                _buildBlenderStyleButton(
+                                  context,
+                                  icon: Icons.content_copy_rounded,
+                                  label: 'Copiar',
+                                  tooltip: 'Copiar selección',
+                                  onPressed: hasSelection
+                                      ? () {
+                                          // Implementar copia al clipboard
+                                          parkingState.clipboardManager
+                                              .copyElements(
+                                                  parkingState.selectedElements);
+                                          // Mostrar snackbar con tema personalizado
+                                          final snackBar = SnackBar(
+                                            content: Text(
+                                              'Elementos copiados',
+                                              style: TextStyle(
+                                                color: colorScheme.onInverseSurface,
+                                              ),
+                                            ),
+                                            duration: const Duration(seconds: 1),
+                                            backgroundColor:
+                                                colorScheme.inverseSurface,
+                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(snackBar);
+                                        }
+                                      : null,
+                                  colorScheme: colorScheme,
+                                  isDisabled: !hasSelection,
+                                ),
+                                _buildBlenderStyleButton(
+                                  context,
+                                  icon: Icons.content_paste_rounded,
+                                  label: 'Pegar',
+                                  tooltip: 'Pegar elementos copiados',
+                                  onPressed: hasClipboardItems
+                                      ? () {
+                                          // Pegar en la posición del cursor
+                                          final elements = parkingState
+                                              .clipboardManager
+                                              .pasteElements(
+                                            parkingState.cursorPosition.x,
+                                            parkingState.cursorPosition.y,
+                                          );
 
-                                      // Añadir los elementos pegados al estado
-                                      for (final element in elements) {
-                                        parkingState.addElement(element);
-                                      }
+                                          // Añadir los elementos pegados al estado
+                                          for (final element in elements) {
+                                            parkingState.addElement(element);
+                                          }
 
-                                      // Mostrar snackbar con tema personalizado
-                                      final snackBar = SnackBar(
-                                        content: Text(
-                                          '${elements.length} elementos pegados',
-                                          style: TextStyle(
-                                            color: colorScheme.onInverseSurface,
-                                          ),
-                                        ),
-                                        duration: const Duration(seconds: 1),
-                                        backgroundColor:
-                                            colorScheme.inverseSurface,
-                                      );
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(snackBar);
-                                    }
-                                  : null,
-                              colorScheme: colorScheme,
-                              isDisabled: !hasClipboardItems,
+                                          // Mostrar snackbar con tema personalizado
+                                          final snackBar = SnackBar(
+                                            content: Text(
+                                              '${elements.length} elementos pegados',
+                                              style: TextStyle(
+                                                color: colorScheme.onInverseSurface,
+                                              ),
+                                            ),
+                                            duration: const Duration(seconds: 1),
+                                            backgroundColor:
+                                                colorScheme.inverseSurface,
+                                          );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(snackBar);
+                                        }
+                                      : null,
+                                  colorScheme: colorScheme,
+                                  isDisabled: !hasClipboardItems,
+                                ),
+                              ],
                             ),
+                            
+                            // Separador ligero
+                            const SizedBox(height: 8),
                           ],
                         ),
                       ),
@@ -380,18 +404,34 @@ class _ParkingToolbarState extends State<ParkingToolbar>
       preferBelow: false,
       verticalOffset: 20,
       child: Container(
-        width: 42,
-        height: 42,
-        margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 4),
+        width: 56,  // Ancho aumentado para mejor espaciado
+        height: 56, // Alto aumentado para mejor espaciado
+        margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
         decoration: BoxDecoration(
           color: isSelected ? selectedBgColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8), // Bordes más redondeados
+          border: Border.all(
+            color: isSelected 
+              ? colorScheme.primary.withOpacity(0.5)
+              : Colors.transparent,
+            width: 1,
+          ),
+          // Añadir sombra sutil para efecto elevado
+          boxShadow: isSelected 
+            ? [
+                BoxShadow(
+                  color: colorScheme.shadow.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : null,
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: isDisabled ? null : onPressed,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -400,19 +440,19 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                   color: isDisabled
                       ? disabledFgColor
                       : (isSelected ? selectedFgColor : normalFgColor),
-                  size: 16,
+                  size: 22, // Iconos un poco más grandes
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   label,
                   style: TextStyle(
                     color: isDisabled
                         ? disabledFgColor
                         : (isSelected ? selectedFgColor : normalFgColor),
-                    fontSize: 8,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 11, // Texto un poco más grande
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

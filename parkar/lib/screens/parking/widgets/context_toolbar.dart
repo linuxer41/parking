@@ -1,7 +1,8 @@
-import 'dart:math' as math;
+// import 'dart:math';
 import 'package:flutter/material.dart';
 import '../core/parking_state.dart';
-import '../models/parking_elements.dart';
+import '../models/parking_signage.dart';
+// import '../models/enums.dart';
 import 'dart:developer' as developer;
 
 /// Widget que muestra una barra de herramientas contextual
@@ -85,6 +86,10 @@ class ContextToolbar extends StatelessWidget {
 
   /// Construye la barra de herramientas para un solo elemento
   Widget _buildSingleElementToolbar(BuildContext context) {
+    // Verificar si el elemento seleccionado es una señal
+    final isSignage = parkingState.selectedElements.isNotEmpty && 
+                     parkingState.selectedElements.first is ParkingSignage;
+                     
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -117,11 +122,13 @@ class ContextToolbar extends StatelessWidget {
             tooltip: 'Copiar',
             onPressed: onCopy,
           ),
-          _buildToolbarButton(
-            icon: Icons.edit,
-            tooltip: 'Editar etiqueta',
-            onPressed: onEditLabel,
-          ),
+          // Mostrar botón de editar solo si NO es una señal
+          if (!isSignage)
+            _buildToolbarButton(
+              icon: Icons.edit,
+              tooltip: 'Editar etiqueta',
+              onPressed: onEditLabel,
+            ),
           _buildToolbarButton(
             icon: Icons.delete_outline,
             tooltip: 'Eliminar',
@@ -269,7 +276,10 @@ class ContextToolbar extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onPressed,
+          onTap: () {
+            print("Botón de la barra de herramientas presionado: $tooltip");
+            onPressed();
+          },
           borderRadius: BorderRadius.circular(4),
           child: Container(
             padding: const EdgeInsets.all(6),

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import '../core/parking_state.dart';
+// Remove unused imports
+// import 'package:provider/provider.dart';
+// import '../core/parking_state.dart';
 import '../models/enums.dart';
 import '../models/parking_elements.dart';
-import '../../../services/parking_api_service.dart';
+import 'dart:math' as math;
 
 /// Widget que muestra un panel inferior con tabs para agregar diferentes tipos de elementos
 class ElementControlsPanel extends StatefulWidget {
@@ -29,38 +29,46 @@ class ElementControlsPanel extends StatefulWidget {
 
 class _ElementControlsPanelState extends State<ElementControlsPanel> {
   int _selectedElementTab = 0;
-  final ParkingApiService _apiService = ParkingApiService();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    // Usar colores completamente sólidos
-    final backgroundColor = theme.brightness == Brightness.dark
-        ? Colors.grey[850]! // Color oscuro sólido
-        : Colors.white; // Color claro sólido
+    // Determinar si es móvil o tablet
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    // Calcular ancho máximo del contenedor
+    final containerWidth = isMobile ? screenWidth : math.min(600.0, screenWidth);
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 500),
-      height: 95, // Ajustado a 95
+      width: containerWidth,
+      margin: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : (screenWidth - containerWidth) / 2 + 8,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: theme.brightness == Brightness.dark
+            ? colorScheme.surface.withOpacity(0.95)
+            : colorScheme.surface.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: const Offset(0, -2),
+            offset: const Offset(0, 2),
           ),
         ],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Tabs superiores para seleccionar tipo de elemento
             SizedBox(
-              height: 38, // Reducido de 40 a 38
+              height: 38,
               child: Row(
                 children: [
                   Expanded(
@@ -68,7 +76,7 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
                       0,
                       'Espacios',
                       Icons.directions_car,
-                      ElementProperties.spacesTabColor,
+                      colorScheme.primary,
                     ),
                   ),
                   Expanded(
@@ -76,7 +84,7 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
                       1,
                       'Señales',
                       Icons.signpost,
-                      ElementProperties.signsTabColor,
+                      colorScheme.secondary,
                     ),
                   ),
                   Expanded(
@@ -84,19 +92,19 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
                       2,
                       'Instalaciones',
                       Icons.elevator,
-                      ElementProperties.facilitiesTabColor,
+                      colorScheme.tertiary,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Elementos disponibles según el tab seleccionado (sin separador)
-            Expanded(
+            // Elementos disponibles según el tab seleccionado
+            SizedBox(
+              height: 60,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 4, vertical: 4), // Reducido de 6 a 4
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 children: _buildElementsForSelectedTab(),
               ),
             ),
@@ -110,55 +118,40 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
   Widget _buildElementTab(int index, String title, IconData icon, Color color) {
     final isSelected = _selectedElementTab == index;
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    // Colores completamente sólidos para los tabs
-    final backgroundColor = isSelected
-        ? (theme.brightness == Brightness.dark
-            ? Colors.grey[800]! // Color oscuro sólido para tab seleccionado
-            : Color.alphaBlend(color.withOpacity(0.2),
-                Colors.white)) // Mezcla sólida para tema claro
-        : (theme.brightness == Brightness.dark
-            ? Colors.grey[900]! // Color oscuro sólido para tab no seleccionado
-            : Colors.grey[50]!); // Color claro sólido para tab no seleccionado
-
-    // Color del texto y el icono más visible cuando no está activo
-    final textIconColor = isSelected
-        ? color
-        : theme.brightness == Brightness.dark
-            ? Colors.grey[300]! // Gris más claro en modo oscuro
-            : Colors.grey[800]!; // Gris más oscuro en modo claro
-
-    return InkWell(
+    return GestureDetector(
       onTap: () {
         setState(() {
           _selectedElementTab = index;
         });
       },
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        margin: const EdgeInsets.only(right: 4),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isSelected ? color : Colors.transparent,
-              width: 2.0,
-            ),
+          color: isSelected ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : colorScheme.outline.withOpacity(0.2),
+            width: 1,
           ),
-          color: backgroundColor,
         ),
-        child: Column(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              color: textIconColor,
-              size: 18,
+              color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface.withOpacity(0.7),
+              size: 16,
             ),
-            const SizedBox(height: 3), // Aumentado de 2 a 3
+            const SizedBox(width: 4),
             Text(
               title,
               style: TextStyle(
-                color: textIconColor,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface.withOpacity(0.7),
+                fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                fontSize: 12,
               ),
             ),
           ],
@@ -172,6 +165,12 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
     switch (_selectedElementTab) {
       case 0: // Espacios
         return [
+          _buildElementButton(
+            Icons.pedal_bike,
+            ElementProperties.spotVisuals[SpotType.bicycle]!.color,
+            'Bicicleta',
+            () => widget.onAddSpot?.call(SpotType.bicycle),
+          ),
           _buildElementButton(
             Icons.directions_car,
             ElementProperties.spotVisuals[SpotType.vehicle]!.color,
@@ -207,37 +206,43 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
           ),
           _buildElementButton(
             Icons.trending_flat,
-            ElementProperties.signageVisuals[SignageType.path]!.color,
-            'Vía',
-            () => widget.onAddSignage?.call(SignageType.path),
-          ),
-          _buildElementButton(
-            Icons.info_outline,
-            ElementProperties.signageVisuals[SignageType.info]!.color,
-            'Info',
-            () => widget.onAddSignage?.call(SignageType.info),
-          ),
-          _buildElementButton(
-            Icons.do_not_disturb,
-            ElementProperties.signageVisuals[SignageType.noParking]!.color,
-            'No Est.',
-            () => widget.onAddSignage?.call(SignageType.noParking),
-          ),
-          _buildElementButton(
-            Icons.trending_flat,
-            ElementProperties.signageVisuals[SignageType.oneWay]!.color,
-            'Una Vía',
-            () => widget.onAddSignage?.call(SignageType.oneWay),
+            ElementProperties.signageVisuals[SignageType.direction]!.color,
+            'Dirección',
+            () => widget.onAddSignage?.call(SignageType.direction),
           ),
           _buildElementButton(
             Icons.sync_alt,
-            ElementProperties.signageVisuals[SignageType.twoWay]!.color,
-            'Doble Vía',
-            () => widget.onAddSignage?.call(SignageType.twoWay),
+            ElementProperties.signageVisuals[SignageType.bidirectional]!.color,
+            'Bidireccional',
+            () => widget.onAddSignage?.call(SignageType.bidirectional),
+          ),
+          _buildElementButton(
+            Icons.do_not_disturb,
+            ElementProperties.signageVisuals[SignageType.stop]!.color,
+            'Pare',
+            () => widget.onAddSignage?.call(SignageType.stop),
           ),
         ];
       case 2: // Instalaciones
         return [
+          _buildElementButton(
+            Icons.business,
+            ElementProperties.facilityVisuals[FacilityType.office]!.color,
+            'Caja',
+            () => widget.onAddFacility?.call(FacilityType.office),
+          ),
+          _buildElementButton(
+            Icons.wc,
+            ElementProperties.facilityVisuals[FacilityType.bathroom]!.color,
+            'Baño',
+            () => widget.onAddFacility?.call(FacilityType.bathroom),
+          ),
+          _buildElementButton(
+            Icons.local_cafe,
+            ElementProperties.facilityVisuals[FacilityType.cafeteria]!.color,
+            'Cafetería',
+            () => widget.onAddFacility?.call(FacilityType.cafeteria),
+          ),
           _buildElementButton(
             Icons.elevator,
             ElementProperties.facilityVisuals[FacilityType.elevator]!.color,
@@ -251,30 +256,10 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
             () => widget.onAddFacility?.call(FacilityType.stairs),
           ),
           _buildElementButton(
-            Icons.wc,
-            ElementProperties.facilityVisuals[FacilityType.bathroom]!.color,
-            'Baño',
-            () => widget.onAddFacility?.call(FacilityType.bathroom),
-          ),
-          _buildElementButton(
-            Icons.payments_outlined,
-            ElementProperties
-                .facilityVisuals[FacilityType.paymentStation]!.color,
-            'Caja',
-            () => widget.onAddFacility?.call(FacilityType.paymentStation),
-          ),
-          _buildElementButton(
-            Icons.electric_car,
-            ElementProperties
-                .facilityVisuals[FacilityType.chargingStation]!.color,
-            'Carga EV',
-            () => widget.onAddFacility?.call(FacilityType.chargingStation),
-          ),
-          _buildElementButton(
-            Icons.security,
-            ElementProperties.facilityVisuals[FacilityType.securityPost]!.color,
-            'Seguridad',
-            () => widget.onAddFacility?.call(FacilityType.securityPost),
+            Icons.info_outline,
+            ElementProperties.facilityVisuals[FacilityType.information]!.color,
+            'Información',
+            () => widget.onAddFacility?.call(FacilityType.information),
           ),
         ];
       default:
@@ -286,44 +271,41 @@ class _ElementControlsPanelState extends State<ElementControlsPanel> {
   Widget _buildElementButton(
       IconData icon, Color color, String label, VoidCallback onTap) {
     final theme = Theme.of(context);
-
-    // Usar colores completamente sólidos para los botones
-    final backgroundColor = theme.brightness == Brightness.dark
-        ? Colors.grey[800]! // Color oscuro sólido
-        : Color.alphaBlend(
-            color.withOpacity(0.15), Colors.white); // Mezcla sólida
+    final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(5),
-        child: Container(
-          width: 58, // Reducido de 60 a 58
-          padding: const EdgeInsets.symmetric(
-              horizontal: 4, vertical: 3), // Reducido el vertical de 4 a 3
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            border: Border.all(color: color, width: 0.5),
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 15), // Reducido de 16 a 15
-              const SizedBox(height: 1),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w500,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              border: Border.all(color: color.withOpacity(0.5), width: 1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

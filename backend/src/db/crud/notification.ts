@@ -1,15 +1,19 @@
-import { BaseCrud } from './base-crud';
-import { 
-  Notification, 
-  NotificationCreate, 
+import { BaseCrud } from "./base-crud";
+import {
+  Notification,
+  NotificationCreate,
   NotificationUpdate,
-  NotificationFilter
-} from '../../models/notification';
-import { v4 as uuidv4 } from 'uuid';
+  NotificationFilter,
+} from "../../models/notification";
+import { v4 as uuidv4 } from "uuid";
 
-class NotificationCrud extends BaseCrud<Notification, NotificationCreate, NotificationUpdate> {
+class NotificationCrud extends BaseCrud<
+  Notification,
+  NotificationCreate,
+  NotificationUpdate
+> {
   constructor() {
-    super('t_notification');
+    super("t_notification", "n");
   }
 
   async create(data: NotificationCreate): Promise<Notification> {
@@ -17,11 +21,11 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
     const notification = {
       id,
       ...data,
-      status: 'pending'
+      status: "pending",
     };
 
     const sql = `
-      INSERT INTO t_notification (
+      INSERT INTO t_notification n (
         "id", "type", "title", "message", "recipientId", "recipientType", 
         "channel", "parkingId", "relatedEntityId", "relatedEntityType", 
         "status", "metadata", "scheduledFor"
@@ -43,7 +47,7 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
       notification.relatedEntityType || null,
       notification.status,
       notification.metadata ? JSON.stringify(notification.metadata) : null,
-      notification.scheduledFor || null
+      notification.scheduledFor || null,
     ];
 
     const res = await this.query<Notification>({ sql, params });
@@ -52,7 +56,7 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
 
   async findByRecipient(recipientId: string): Promise<Notification[]> {
     const sql = `
-      SELECT * FROM t_notification
+      SELECT * FROM t_notification n
       WHERE "recipientId" = $1
       ORDER BY "createdAt" DESC
     `;
@@ -109,7 +113,7 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
 
   async markAsFailed(id: string, error?: string): Promise<Notification> {
     const metadata = error ? { error } : {};
-    
+
     const sql = `
       UPDATE t_notification
       SET "status" = 'failed', "updatedAt" = NOW(), "metadata" = COALESCE("metadata", '{}'::jsonb) || $2::jsonb
@@ -117,7 +121,10 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
       RETURNING *
     `;
 
-    const res = await this.query<Notification>({ sql, params: [id, JSON.stringify(metadata)] });
+    const res = await this.query<Notification>({
+      sql,
+      params: [id, JSON.stringify(metadata)],
+    });
     return res[0];
   }
 
@@ -156,7 +163,8 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
       params.push(filter.endDate);
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const sql = `
       SELECT * FROM t_notification
@@ -173,9 +181,12 @@ class NotificationCrud extends BaseCrud<Notification, NotificationCreate, Notifi
       WHERE "recipientId" = $1 AND "status" NOT IN ('read', 'failed')
     `;
 
-    const res = await this.query<{ count: number }>({ sql, params: [recipientId] });
+    const res = await this.query<{ count: number }>({
+      sql,
+      params: [recipientId],
+    });
     return parseInt(res[0].count as any);
   }
 }
 
-export const notificationCrud = new NotificationCrud(); 
+export const notificationCrud = new NotificationCrud();

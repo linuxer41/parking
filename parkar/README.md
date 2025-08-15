@@ -8,7 +8,7 @@ Parkar es un sistema avanzado de gestión de estacionamientos desarrollado en Fl
 
 - **Editor Visual**: Diseño de estacionamientos mediante una interfaz drag-and-drop
 - **Gestión de Espacios**: Soporte para diferentes tipos de vehículos (automóviles, motocicletas, camiones)
-- **Categorías Especiales**: Espacios para discapacitados, VIP, y reservados
+- **Categorías Especiales**: Espacios para deshabilitados, VIP, y reservados
 - **Registro de Vehículos**: Control de entrada y salida con información detallada
 - **Herramientas de Edición**: Alineación, distribución, rotación y escalado de elementos
 - **Historial de Acciones**: Sistema completo de deshacer/rehacer

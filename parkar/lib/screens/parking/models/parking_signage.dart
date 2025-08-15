@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 import 'dart:math' show min;
+import 'dart:async';
+import 'dart:math' as math;
 
-import '../utils/drawing_utils.dart';
 import 'enums.dart';
 import 'parking_elements.dart';
+import '../../../models/element_model.dart';
 
 /// Implementación de una señalización de parkeo
 class ParkingSignage extends ParkingElement {
@@ -13,6 +15,13 @@ class ParkingSignage extends ParkingElement {
 
   // Texto adicional (opcional)
   String? text;
+
+  // Estado de selección
+  bool _isSelected = false;
+
+  // Animación para el efecto de selección
+  double _pulseValue = 0.0;
+  Timer? _pulseTimer;
 
   // Constructor
   ParkingSignage({
@@ -25,7 +34,48 @@ class ParkingSignage extends ParkingElement {
     super.isVisible,
     super.isLocked,
     super.isSelected,
-  });
+  }) {
+    if (isSelected) {
+      _startPulseAnimation();
+    }
+  }
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  set isSelected(bool value) {
+    if (value == _isSelected) return;
+    _isSelected = value;
+    
+    if (_isSelected) {
+      _startPulseAnimation();
+    } else {
+      _stopPulseAnimation();
+    }
+    
+    notifyListeners();
+  }
+
+  void _startPulseAnimation() {
+    _pulseTimer?.cancel();
+    _pulseTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      _pulseValue = 0.5 + 0.5 * math.sin(timer.tick * 0.2);
+      notifyListeners();
+    });
+  }
+
+  void _stopPulseAnimation() {
+    _pulseTimer?.cancel();
+    _pulseTimer = null;
+    _pulseValue = 0.0;
+  }
+
+  @override
+  void dispose() {
+    _stopPulseAnimation();
+    super.dispose();
+  }
 
   @override
   Size getSize() {
@@ -89,11 +139,9 @@ class ParkingSignage extends ParkingElement {
     switch (type) {
       case SignageType.entrance:
       case SignageType.exit:
-      case SignageType.noParking:
-      case SignageType.path:
-      case SignageType.oneWay:
-      case SignageType.twoWay:
-      case SignageType.info:
+      case SignageType.direction:
+      case SignageType.bidirectional:
+      case SignageType.stop:
         // Seleccionar el icono apropiado
         IconData iconData;
         switch (type) {
@@ -103,20 +151,14 @@ class ParkingSignage extends ParkingElement {
           case SignageType.exit:
             iconData = Icons.logout;
             break;
-          case SignageType.noParking:
-            iconData = Icons.do_not_disturb;
-            break;
-          case SignageType.path:
+          case SignageType.direction:
             iconData = Icons.trending_flat;
             break;
-          case SignageType.oneWay:
-            iconData = Icons.trending_flat;
-            break;
-          case SignageType.twoWay:
+          case SignageType.bidirectional:
             iconData = Icons.sync_alt;
             break;
-          case SignageType.info:
-            iconData = Icons.info_outline;
+          case SignageType.stop:
+            iconData = Icons.do_not_disturb;
             break;
           default:
             iconData = Icons.sign_language;
@@ -141,8 +183,20 @@ class ParkingSignage extends ParkingElement {
     }
 
     // Dibujar indicador de selección si está seleccionado
-    if (isSelected) {
-      DrawingUtils.drawSelectionIndicator(canvas, rect, 8.0);
+    if (_isSelected) {
+      final selectionCornerRadius = min(width, height) * 0.2;
+      final selectionPaint = Paint()
+        ..color = Colors.white.withOpacity(0.5 + _pulseValue * 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          rect.inflate(4 + _pulseValue * 3),
+          Radius.circular(selectionCornerRadius + 4),
+        ),
+        selectionPaint,
+      );
     }
   }
 
@@ -154,13 +208,10 @@ class ParkingSignage extends ParkingElement {
         return ElementProperties.green;
       case SignageType.exit:
         return ElementProperties.red;
-      case SignageType.noParking:
+      case SignageType.stop:
         return ElementProperties.red;
-      case SignageType.path:
-      case SignageType.oneWay:
-      case SignageType.twoWay:
-        return ElementProperties.blue;
-      case SignageType.info:
+      case SignageType.direction:
+      case SignageType.bidirectional:
         return ElementProperties.blue;
       default:
         return ElementProperties.orange;
@@ -179,16 +230,12 @@ class ParkingSignage extends ParkingElement {
         return "Entrada";
       case SignageType.exit:
         return "Salida";
-      case SignageType.noParking:
-        return "No Estacionar";
-      case SignageType.path:
-        return "Vía";
-      case SignageType.oneWay:
-        return "Una Vía";
-      case SignageType.twoWay:
-        return "Doble Vía";
-      case SignageType.info:
-        return "Información";
+      case SignageType.direction:
+        return "Dirección";
+      case SignageType.bidirectional:
+        return "Bidireccional";
+      case SignageType.stop:
+        return "Pare";
       default:
         return "Señalización";
     }
@@ -294,7 +341,7 @@ class ParkingSignage extends ParkingElement {
         (e) => e.toString() == signageTypeStr,
       );
     } catch (_) {
-      signageType = SignageType.info;
+      signageType = SignageType.direction;
     }
 
     final position = vector_math.Vector2(
@@ -311,6 +358,46 @@ class ParkingSignage extends ParkingElement {
       scale: json['scale'] as double,
       isVisible: json['isVisible'] as bool,
       isLocked: json['isLocked'] as bool,
+    );
+  }
+}
+
+extension ParkingSignageElementConversion on ParkingSignage {
+  // Convertir ParkingSignage a ElementModel
+  ElementModel toElementModel(String areaId, String parkingId) {
+    return ElementModel(
+      id: id,
+      areaId: areaId,
+      parkingId: parkingId,
+      name: text ?? _getSignageLabel(),
+      type: ElementType.signage,
+      subType: type.index + 1, // Add 1 to match backend schema
+      posX: position.x,
+      posY: position.y,
+      posZ: 0.0,
+      rotation: rotation,
+      scale: scale,
+      accessId: null, // Las señalizaciones no tienen accessId
+      occupancy: ElementOccupancyModel(
+        status: 'active',
+      ),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      deletedAt: null,
+    );
+  }
+  
+  // Método estático para crear un ParkingSignage desde un ElementModel
+  static ParkingSignage fromElementModel(ElementModel element) {
+    return ParkingSignage(
+      id: element.id,
+      position: vector_math.Vector2(element.posX, element.posY),
+      type: SignageType.values[element.subType - 1], // Subtract 1 to match enum
+      text: element.name,
+      rotation: element.rotation,
+      scale: element.scale,
+      isVisible: true,
+      isLocked: false,
     );
   }
 }

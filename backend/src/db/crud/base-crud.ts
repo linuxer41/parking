@@ -1,33 +1,72 @@
 import { PoolClient } from "pg";
 import { getConnection } from "../connection";
 
-export class BaseCrud<MainSchema extends {id: string; createdAt: string | Date; updatedAt: string | Date}, CreateSchema extends object, UpdateSchema extends object> {
-  constructor(protected tableName: string) {}
+export class BaseCrud<
+  MainSchema extends {
+    id: string;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+  },
+  CreateSchema extends object,
+  UpdateSchema extends object,
+> {
+  constructor(protected tableName: string, protected tableAlias: string = "t") {}
 
-  baseQuery(){
-    return `SELECT ${this.tableName}.* FROM ${this.tableName}`;
+  baseQuery() {
+    return `SELECT ${this.tableAlias}.* FROM ${this.tableName} ${this.tableAlias}`;
   }
 
-  async query<T extends object>({ sql, params = [] }: { sql: string, params: any[] }): Promise<T[]> {
-    let conn: PoolClient|undefined;
+  async query<T extends object>({
+    sql,
+    params = [],
+  }: {
+    sql: string;
+    params: any[];
+  }): Promise<T[]> {
+    let conn: PoolClient | undefined;
     try {
       conn = await getConnection();
       const result = await conn.query<T>(sql, params);
       return result.rows;
     } catch (error) {
-      console.error('Error al ejecutar la consulta:', this.tableName);
+      console.error("Error al ejecutar la consulta:", this.tableName);
       throw error;
-    }
-    finally {
+    } finally {
       conn?.release();
     }
   }
 
+  async withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await getConnection();
+    try {
+      await client.query('BEGIN');
+      const result = await callback(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error("Error en la transacción:", error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async create({ data }: { data: CreateSchema }): Promise<MainSchema> {
-    const columns = Object.keys(data).map((key) => `"${key}"`).join(', ');
+    data = {
+      ...data,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const columns = Object.keys(data)
+      .map((key) => `"${key}"`)
+      .join(", ");
     // check if is array to inser al jsonstring
-    const values = Object.values(data).map((value) => typeof value === 'object' ? JSON.stringify(value) : value);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const values = Object.values(data).map((value) =>
+      typeof value === "object" ? JSON.stringify(value) : value,
+    );
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
     const sql = `INSERT INTO ${this.tableName} (${columns}) VALUES (${placeholders}) RETURNING *`;
     const res = await this.query<MainSchema>({ sql, params: values });
     const model = await this.findUnique({ where: { id: res[0].id } as any });
@@ -36,49 +75,77 @@ export class BaseCrud<MainSchema extends {id: string; createdAt: string | Date; 
 
   async findUnique({ where }: { where: Partial<MainSchema> }) {
     const conditions = Object.entries(where || {})
-      .map(([key, value], i) => `${this.tableName}."${key}" = $${i + 1}`)
-      .join(' AND ');
+      .map(([key, value], i) => `${this.tableAlias}."${key}" = $${i + 1}`)
+      .join(" AND ");
     const sql = `${this.baseQuery()} WHERE ${conditions} LIMIT 1`;
-    const res = await this.query<MainSchema>({ sql, params: Object.values(where) });
+    const res = await this.query<MainSchema>({
+      sql,
+      params: Object.values(where),
+    });
     return res[0];
   }
 
-  async findMany({ where = {} }: { where?: Partial<MainSchema> }): Promise<MainSchema[]> {
+  async findMany({
+    where = {},
+  }: {
+    where?: Partial<MainSchema>;
+  }): Promise<MainSchema[]> {
     const conditions = Object.entries(where || {})
-      .map(([key, value], i) => `${this.tableName}."${key}" = $${i + 1}`)
-      .join(' AND ');
-    const sql = `${this.baseQuery()} ${conditions ? `WHERE ${conditions}` : ''}`;
+      .map(([key, value], i) => `${this.tableAlias}."${key}" = $${i + 1}`)
+      .join(" AND ");
+    const sql = `${this.baseQuery()} ${conditions ? `WHERE ${conditions}` : ""}`;
     return this.query<MainSchema>({ sql, params: Object.values(where) });
   }
 
-  async findFirst({ where = {} }: { where?: Partial<MainSchema> }): Promise<MainSchema | undefined> {
+  async findFirst({
+    where = {},
+  }: {
+    where?: Partial<MainSchema>;
+  }): Promise<MainSchema | undefined> {
     const conditions = Object.entries(where || {})
-      .map(([key, value], i) => `${this.tableName}."${key}" = $${i + 1}`)
-      .join(' AND ');
-    const sql = `${this.baseQuery()} ${conditions ? `WHERE ${conditions}` : ''} LIMIT 1`;
-    const res = await this.query<MainSchema>({ sql, params: Object.values(where) });
+      .map(([key, value], i) => `${this.tableAlias}."${key}" = $${i + 1}`)
+      .join(" AND ");
+    const sql = `${this.baseQuery()} ${conditions ? `WHERE ${conditions}` : ""} LIMIT 1`;
+    const res = await this.query<MainSchema>({
+      sql,
+      params: Object.values(where),
+    });
     return res[0];
   }
 
-  async update({ where, data }: { where: Partial<MainSchema>, data: UpdateSchema }): Promise<MainSchema> {
+  async update({
+    where,
+    data,
+  }: {
+    where: Partial<MainSchema>;
+    data: UpdateSchema;
+  }): Promise<MainSchema> {
     const setClause = Object.keys(data)
       .map((key, i) => `"${key}" = $${i + 1}`)
-      .join(', ');
+      .join(", ");
     const conditions = Object.keys(where)
       .map((key, i) => `"${key}" = $${Object.keys(data).length + i + 1}`)
-      .join(' AND ');
+      .join(" AND ");
     const sql = `UPDATE ${this.tableName} SET ${setClause} WHERE ${conditions} RETURNING *`;
-    const values = Object.values(data).map((value) => typeof value === 'object' ? JSON.stringify(value) : value);
-    const res = await this.query<MainSchema>({ sql, params: [...values, ...Object.values(where)] });
-    return res[0];
+    const values = Object.values(data).map((value) =>
+      typeof value === "object" ? JSON.stringify(value) : value,
+    );
+    const res = await this.query<MainSchema>({
+      sql,
+      params: [...values, ...Object.values(where)],
+    });
+    return this.findUnique({ where: { id: res[0].id } } as any);
   }
 
   async delete({ where }: { where: Partial<MainSchema> }): Promise<MainSchema> {
     const conditions = Object.keys(where)
       .map((key, i) => `${this.tableName}."${key}" = $${i + 1}`)
-      .join(' AND ');
+      .join(" AND ");
     const sql = `DELETE FROM ${this.tableName} t WHERE ${conditions} RETURNING *`;
-    const res = await this.query<MainSchema>({ sql, params: Object.values(where) });
+    const res = await this.query<MainSchema>({
+      sql,
+      params: Object.values(where),
+    });
     return res[0];
   }
 }

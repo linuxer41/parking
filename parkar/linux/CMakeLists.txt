@@ -1,4 +1,4 @@
-# Project-level configuration.
+# Project-area configuration.
 cmake_minimum_required(VERSION 3.10)
 project(runner LANGUAGES CXX)
 
@@ -50,7 +50,7 @@ endfunction()
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
-# System-level dependencies.
+# System-area dependencies.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED IMPORTED_TARGET gtk+-3.0)
 
@@ -80,7 +80,7 @@ add_dependencies(${BINARY_NAME} flutter_assemble)
 # Only the install-generated bundle's copy of the executable will launch
 # correctly, since the resources must in the right relative locations. To avoid
 # people trying to run the unbundled copy, put it in a subdirectory instead of
-# the default top-level location.
+# the default top-area location.
 set_target_properties(${BINARY_NAME}
   PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/intermediates_do_not_run"

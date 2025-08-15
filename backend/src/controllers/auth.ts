@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { loginBodySchema, signupBodySchema } from "../models/auth";
+import { loginBodySchema, signupBodySchema, CompleteRegistrationSchema } from "../models/auth";
 import { db } from "../db";
 import { reverseGeocodingAPI } from "../utils/geoapify";
 import { jwt } from "@elysiajs/jwt";
@@ -10,17 +10,20 @@ import {
 } from "../config/constants";
 import { getExpTimestamp } from "../utils/common";
 import { authPlugin } from "../plugins/auth";
+import { registrationService } from "../services/registration-service";
 
 export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
   .use(
     jwt({
       name: JWT_NAME,
       secret: Bun.env.JWT_SECRET!,
-    })
+    }),
   )
   .post(
     "/sign-in",
     async ({ body, jwt, cookie: { authToken, refreshToken }, set }) => {
+      console.log(body);
+
       // match user email
       const user = await db.user.findUnique({
         where: { email: body.email },
@@ -29,9 +32,10 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       if (!user) {
         set.status = "Bad Request";
         throw new Error(
-          "The email address or password you entered is incorrect"
+          "The email address or password you entered is incorrect",
         );
       }
+      console.log(user);
 
       // match password
       const matchPassword = await Bun.password.verify(
@@ -41,7 +45,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       if (!matchPassword) {
         set.status = "Bad Request";
         throw new Error(
-          "The email address or password you entered is incorrect"
+          "The email address or password you entered is incorrect",
         );
       }
 
@@ -69,29 +73,18 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
         path: "/",
       });
 
-      // set user profile as online
-    //   const updatedUser = await db.user.update({
-    //     where: {
-    //       id: user.id,
-    //     },
-    //     data: {
-    //       isOnline: true,
-    //       refreshToken: refreshJWTToken,
-    //     },
-    //   });
+      // Get user parkings
+      const userParkings = await db.user.getUserParkings(user.id);
 
       return {
-        message: "Sig-in successfully",
-        data: {
-          user: user,
-          authToken: accessJWTToken,
-          refreshToken: refreshJWTToken,
-        },
+        token: accessJWTToken,
+        user: user,
+        parkings: userParkings || [],
       };
     },
     {
       body: loginBodySchema,
-    }
+    },
   )
   .post(
     "/sign-up",
@@ -110,7 +103,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
         data: {
           ...body,
           password,
-        //   location,
+          //   location,
         },
       });
       return {
@@ -133,7 +126,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
           };
         }
       },
-    }
+    },
   )
   .post(
     "/refresh",
@@ -190,24 +183,67 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
         path: "/",
       });
 
-      // set refresh token in db
-    //   await db.user.update({
-    //     where: {
-    //       id: user.id,
-    //     },
-    //     data: {
-    //       refreshToken: refreshJWTToken,
-    //     },
-    //   });
+      // Get user parkings
+      const userParkings = await db.user.getUserParkings(user.id);
 
       return {
-        message: "Access token generated successfully",
-        data: {
-          authToken: accessJWTToken,
-          refreshToken: refreshJWTToken,
-        },
+        token: accessJWTToken,
+        user: user,
+        parkings: userParkings || [],
       };
-    }
+    },
+  )
+  .post(
+    "/register-complete",
+    async ({ body, jwt, cookie: { authToken, refreshToken }, set }) => {
+      try {
+        console.log(body);
+        // Realizar el registro completo
+        const result = await registrationService.registerComplete(body);
+
+        // Crear tokens de autenticación
+        const accessJWTToken = await jwt.sign({
+          sub: result.user.id,
+          exp: getExpTimestamp(ACCESS_TOKEN_EXP),
+        });
+        
+        const refreshJWTToken = await jwt.sign({
+          sub: result.user.id,
+          exp: getExpTimestamp(REFRESH_TOKEN_EXP),
+        });
+
+        // Configurar cookies
+        authToken.set({
+          value: accessJWTToken,
+          httpOnly: true,
+          maxAge: ACCESS_TOKEN_EXP,
+          path: "/",
+        });
+
+        refreshToken.set({
+          value: refreshJWTToken,
+          httpOnly: true,
+          maxAge: REFRESH_TOKEN_EXP,
+          path: "/",
+        });
+
+        // Obtener los parkings del usuario
+        const userParkings = await db.user.getUserParkings(result.user.id);
+
+        return {
+          token: accessJWTToken,
+          user: result.user,
+          parkings: userParkings || [],
+        };
+      } catch (error) {
+        console.error("Error en registro completo:", error);
+        set.status = "Internal Server Error";
+        throw new Error("Error al realizar el registro completo");
+      }
+    },
+    {
+      body: CompleteRegistrationSchema,
+    },
   )
   .use(authPlugin)
   .post("/logout", async ({ cookie: { authToken, refreshToken }, user }) => {
@@ -229,11 +265,23 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       message: "Logout successfully",
     };
   })
-  .get("/me", ({ user }) => {
+  .get("/me", async ({ user, jwt }) => {
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    // Get user parkings
+    const userParkings = await db.user.getUserParkings(user.id);
+
+    // Generate a fresh token
+    const accessJWTToken = await jwt.sign({
+      sub: user.id,
+      exp: getExpTimestamp(ACCESS_TOKEN_EXP),
+    });
+
     return {
-      message: "Fetch current user",
-      data: {
-        user,
-      },
+      token: accessJWTToken,
+      user: user,
+      parkings: userParkings || [],
     };
   });

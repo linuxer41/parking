@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../state/app_state_container.dart';
-import '../../state/theme.dart';
 import 'about_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_profile_screen.dart';
 import 'help_screen.dart';
 import 'language_screen.dart';
 import 'notifications_settings_screen.dart';
-import 'parking_list_screen.dart';
 import 'theme_screen.dart';
-import 'subscriptions_screen.dart';
 
 // Definición de rutas para el panel de control
 class ControlPanelRoute {
@@ -37,25 +33,18 @@ class ControlPanelSection {
   final String title;
   final List<ControlPanelRoute> routes;
 
-  const ControlPanelSection({
-    required this.title,
-    required this.routes,
-  });
+  const ControlPanelSection({required this.title, required this.routes});
 }
 
 class UserControlPanel extends StatefulWidget {
   final String? userName;
   final String? userEmail;
-  final VoidCallback onEditProfile;
-  final VoidCallback onToggleTheme;
   final VoidCallback onLogout;
 
   const UserControlPanel({
     super.key,
     this.userName,
     this.userEmail,
-    required this.onEditProfile,
-    required this.onToggleTheme,
     required this.onLogout,
   });
 
@@ -64,27 +53,11 @@ class UserControlPanel extends StatefulWidget {
 }
 
 class _UserControlPanelState extends State<UserControlPanel> {
-  late AppTheme _appTheme;
   bool _initialized = false;
 
   // Estado para la página actual en el diseño responsivo
   String _currentPage = 'main';
   Widget? _currentPageWidget;
-
-  // Lista de colores primarios disponibles
-  final List<Color> _availableColors = [
-    Colors.blue,
-    Colors.indigo,
-    Colors.purple,
-    Colors.deepPurple,
-    Colors.pink,
-    Colors.red,
-    Colors.orange,
-    Colors.amber,
-    Colors.green,
-    Colors.teal,
-    Colors.cyan,
-  ];
 
   // Definición de todas las rutas del panel de control
   late List<ControlPanelSection> _controlPanelSections;
@@ -100,18 +73,18 @@ class _UserControlPanelState extends State<UserControlPanel> {
     ]);
 
     // Set system UI overlay style for Android
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
-      final appState = AppStateContainer.of(context);
-      _appTheme = appState.theme ?? AppTheme();
       _initialized = true;
 
       // Inicializar las secciones y rutas
@@ -147,25 +120,6 @@ class _UserControlPanelState extends State<UserControlPanel> {
             title: 'Notificaciones',
             icon: Icons.notifications_outlined,
             builder: (context) => const NotificationsSettingsScreen(),
-          ),
-        ],
-      ),
-
-      // Sección de gestión de estacionamientos
-      ControlPanelSection(
-        title: 'Estacionamientos',
-        routes: [
-          ControlPanelRoute(
-            id: 'parking_list',
-            title: 'Mis estacionamientos',
-            icon: Icons.local_parking_outlined,
-            builder: (context) => const ParkingListScreen(),
-          ),
-          ControlPanelRoute(
-            id: 'subscriptions',
-            title: 'Mis suscripciones',
-            icon: Icons.card_membership_outlined,
-            builder: (context) => const SubscriptionsScreen(),
           ),
         ],
       ),
@@ -230,35 +184,6 @@ class _UserControlPanelState extends State<UserControlPanel> {
     super.dispose();
   }
 
-  // Método para aplicar cambios de tema
-  void _applyThemeChange() {
-    final appState = AppStateContainer.of(context);
-    appState.setTheme(_appTheme);
-
-    // Mostrar mensaje de confirmación
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Tema actualizado'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
-
-  // Método para cambiar el color primario del tema
-  void _changeThemeColor(Color color) {
-    setState(() {
-      _appTheme.color = color;
-    });
-  }
-
-  // Método para cambiar el modo del tema (claro/oscuro)
-  void _toggleThemeMode() {
-    setState(() {
-      _appTheme.toggleThemeMode();
-    });
-  }
-
   // Método para cambiar la página actual
   void _navigateToRoute(ControlPanelRoute route) {
     if (route.id == 'logout') {
@@ -277,9 +202,7 @@ class _UserControlPanelState extends State<UserControlPanel> {
     } else {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => route.builder(context),
-        ),
+        MaterialPageRoute(builder: (context) => route.builder(context)),
       );
     }
   }
@@ -311,15 +234,17 @@ class _UserControlPanelState extends State<UserControlPanel> {
                 context,
                 section.title,
                 section.routes
-                    .map((route) => _buildMenuItem(
-                          context,
-                          route.title,
-                          route.icon,
-                          colorScheme,
-                          onTap: () => _navigateToRoute(route),
-                          textColor: route.textColor,
-                          iconColor: route.iconColor,
-                        ))
+                    .map(
+                      (route) => _buildMenuItem(
+                        context,
+                        route.title,
+                        route.icon,
+                        colorScheme,
+                        onTap: () => _navigateToRoute(route),
+                        textColor: route.textColor,
+                        iconColor: route.iconColor,
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 14),
@@ -332,30 +257,6 @@ class _UserControlPanelState extends State<UserControlPanel> {
     // En vista móvil, mostrar el contenido principal o la página seleccionada
     if (!isDesktop) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            _currentPage == 'main' ? 'Opciones' : 'Volver a Opciones',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: theme.brightness == Brightness.dark
-                  ? Colors.white
-                  : colorScheme.onSurface,
-            ),
-          ),
-          leading: _currentPage != 'main'
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => setState(() {
-                    _currentPage = 'main';
-                    _currentPageWidget = null;
-                  }),
-                )
-              : null,
-          backgroundColor: theme.brightness == Brightness.dark
-              ? colorScheme.surface
-              : colorScheme.surface,
-          elevation: 0,
-        ),
         body: SafeArea(
           child: _currentPage != 'main' && _currentPageWidget != null
               ? _currentPageWidget!
@@ -372,7 +273,8 @@ class _UserControlPanelState extends State<UserControlPanel> {
           children: [
             // Panel izquierdo (menú) - con ancho proporcional
             SizedBox(
-              width: screenWidth *
+              width:
+                  screenWidth *
                   0.3, // 30% del ancho de pantalla, con mínimo y máximo
               child: Container(
                 decoration: BoxDecoration(
@@ -410,13 +312,7 @@ class _UserControlPanelState extends State<UserControlPanel> {
             // Panel derecho (contenido) - ocupa todo el espacio restante
             Expanded(
               child: _currentPage != 'main' && _currentPageWidget != null
-                  ? Column(
-                      children: [
-                        Expanded(
-                          child: _currentPageWidget!,
-                        ),
-                      ],
-                    )
+                  ? Column(children: [Expanded(child: _currentPageWidget!)])
                   : Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -430,8 +326,9 @@ class _UserControlPanelState extends State<UserControlPanel> {
                           Text(
                             'Selecciona una opción',
                             style: textTheme.titleLarge?.copyWith(
-                              color:
-                                  colorScheme.onSurfaceVariant.withOpacity(0.7),
+                              color: colorScheme.onSurfaceVariant.withOpacity(
+                                0.7,
+                              ),
                               fontWeight: FontWeight.w300,
                             ),
                           ),
@@ -447,7 +344,10 @@ class _UserControlPanelState extends State<UserControlPanel> {
 
   // Construir encabezado con información del usuario
   Widget _buildHeader(
-      BuildContext context, ColorScheme colorScheme, TextTheme textTheme) {
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return Row(
       children: [
         Container(
@@ -510,7 +410,10 @@ class _UserControlPanelState extends State<UserControlPanel> {
 
   // Construir sección con título
   Widget _buildSection(
-      BuildContext context, String title, List<Widget> children) {
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -539,9 +442,7 @@ class _UserControlPanelState extends State<UserControlPanel> {
               width: 1,
             ),
           ),
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );

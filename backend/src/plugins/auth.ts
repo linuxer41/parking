@@ -4,16 +4,16 @@ import { JWT_NAME } from "../config/constants";
 import { db } from "../db";
 
 const authPlugin = new Elysia()
-    .use(
-      jwt({
-        name: 'jwt',
-        secret: Bun.env.JWT_SECRET!,
-      })
-    )
-    .derive({ as: 'scoped' }, async ({ headers, jwt, cookie: { authToken }, set }) => {
-      return
-      console.log('DERIVE AUTH');
-      let _authToken = authToken.value || headers.authorization?.split(' ')[1];
+  .use(
+    jwt({
+      name: "jwt",
+      secret: Bun.env.JWT_SECRET!,
+    }),
+  )
+  .derive(
+    { as: "scoped" },
+    async ({ headers, jwt, cookie: { authToken }, set }) => {
+      let _authToken = authToken.value || headers.authorization?.split(" ")[1];
       if (!_authToken) {
         // handle error for access token is not available
         set.status = "Unauthorized";
@@ -39,9 +39,23 @@ const authPlugin = new Elysia()
         throw new Error("Access token is invalid");
       }
 
+      const employee = await db.employee.findUnique({
+        where: {
+          userId: userId,
+        },
+      });
+
+      if (!employee) {
+        // handle error for employee not found from the provided access token
+        set.status = "Forbidden";
+        throw new Error("Employee not found");
+      }
+
       return {
         user,
+        employee,
       };
-    });
+    },
+  );
 
 export { authPlugin };

@@ -1,95 +1,50 @@
-
-import { t } from 'elysia';
-
+import { t } from "elysia";
+import { BaseSchema } from "./base-model";
 
 // Esquemas JSON adicionales
 // No hay esquemas adicionales
 
-// Modelo Principal
+// Modelo Principal con extensión directa
 export const UserSchema = t.Object(
   {
-    id: t.String({
-          description: "Identificador único del usuario",
-          required: true
-        }),
-  name: t.String({
-          description: "Nombre completo del usuario",
-          required: true
-        }),
-  email: t.String({
-          description: "Correo electrónico del usuario",
-          required: true
-        }),
-  password: t.String({
-          description: "Contraseña encriptada del usuario",
-          required: true
-        }),
-  createdAt: t.Union([
-      t.String({
-        description: 'Fecha de creación del registro',
-        required: true
-      }),
-      t.Date({
-        description: 'Fecha de creación del registro',
-        required: true
-      })
-    ]),
-  updatedAt: t.Union([
-      t.String({
-        description: 'Fecha de última actualización del registro',
-        required: true
-      }),
-      t.Date({
-        description: 'Fecha de última actualización del registro',
-        required: true
-      })
-    ]),
+    // Campos base
+    ...BaseSchema.properties,
+    // Campos específicos de Usuario
+    name: t.String({
+      description: "Nombre completo del usuario",
+      required: true,
+    }),
+    email: t.String({
+      description: "Correo electrónico del usuario",
+      required: true,
+    }),
+    phone: t.String({
+      description: "Teléfono del usuario",
+      required: true,
+    }),
+    password: t.String({
+      description: "Contraseña encriptada del usuario",
+      required: true,
+    }),
   },
   {
-    description: 'Esquema principal para la entidad User'
-  }
+    description: "Esquema principal para la entidad User",
+  },
 );
 
 export type User = typeof UserSchema.static;
 
-// Modelo de Creación
-export const UserCreateSchema = t.Object(
-  {
-    name: t.String({
-          description: "Nombre completo del usuario",
-          required: true
-        }),
-  email: t.String({
-          description: "Correo electrónico del usuario",
-          required: true
-        }),
-  password: t.String({
-          description: "Contraseña encriptada del usuario",
-          required: true
-        }),
-  },
-  {
-  description: 'Esquema para la creación de un User'
-  }
-);
+// Modelo de Creación (excluye los campos automáticos como id, createdAt, etc.)
+export const UserCreateSchema = t.Pick(UserSchema, ["name", "email", "password", "phone"], {
+  description: "Esquema para la creación de un User",
+});
 
 export type UserCreate = typeof UserCreateSchema.static;
 
-// Modelo de Actualización
-export const UserUpdateSchema = t.Object(
-  {
-  name: t.Optional(t.String({
-          description: "Nombre completo del usuario",
-          required: true
-        })),
-  email: t.Optional(t.String({
-          description: "Correo electrónico del usuario",
-          required: true
-        })),
-  },
-  {
-  description: 'Esquema para la actualización de un User'
-  }
-);
+// Modelo de Actualización (todos los campos son opcionales)
+export const UserUpdateSchema = t.Pick(UserSchema, ["name", "email"], {
+  description: "Esquema para la actualización de un User",
+});
+
 
 export type UserUpdate = typeof UserUpdateSchema.static;

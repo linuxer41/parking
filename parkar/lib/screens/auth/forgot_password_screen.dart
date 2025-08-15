@@ -35,8 +35,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       final authService = AppStateContainer.di(context).resolve<AuthService>();
 
       try {
-        final response =
-            await authService.forgotPassword(_emailController.text);
+        final response = await authService.forgotPassword(
+          _emailController.text,
+        );
 
         if (!mounted) return;
 
@@ -68,6 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     return AuthLayout(
       title: 'Recuperar Contraseña',
+      subtitle: 'Te enviaremos instrucciones a tu correo',
       children: [
         Text(
           'Ingresa tu correo electrónico y te enviaremos instrucciones para recuperar tu contraseña.',
@@ -82,7 +84,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withOpacity(0.5),
+              color: colorScheme.errorContainer.withValues(alpha: 127),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -105,13 +107,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withOpacity(0.5),
+              color: colorScheme.primaryContainer.withValues(alpha: 127),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
-                Icon(Icons.check_circle_outline,
-                    color: colorScheme.primary, size: 18),
+                Icon(
+                  Icons.check_circle_outline,
+                  color: colorScheme.primary,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -167,7 +172,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  disabledBackgroundColor: colorScheme.primary.withOpacity(0.4),
+                  disabledBackgroundColor: colorScheme.primary.withValues(
+                    alpha: 102,
+                  ),
                 ),
                 child: _isLoading
                     ? SizedBox(
@@ -193,16 +200,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           onPressed: () {
             context.go('/login');
           },
-          icon: Icon(
-            Icons.arrow_back,
-            size: 16,
-            color: colorScheme.primary,
-          ),
+          icon: Icon(Icons.arrow_back, size: 16, color: colorScheme.primary),
           label: Text(
             'Volver a Iniciar Sesión',
-            style: textTheme.labelMedium?.copyWith(
-              color: colorScheme.primary,
-            ),
+            style: textTheme.labelMedium?.copyWith(color: colorScheme.primary),
           ),
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 8),

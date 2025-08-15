@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../state/app_state.dart';
 import '../../state/app_state_container.dart';
-import '../../state/theme.dart';
 import 'responsive_detail_screen.dart';
 
 /// Pantalla para seleccionar el tema de la aplicación
@@ -12,7 +12,7 @@ class ThemeScreen extends StatefulWidget {
 }
 
 class _ThemeScreenState extends State<ThemeScreen> {
-  late AppTheme _appTheme;
+  late AppState _appState;
   bool _initialized = false;
   ThemeMode _selectedThemeMode = ThemeMode.system;
 
@@ -35,41 +35,46 @@ class _ThemeScreenState extends State<ThemeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
-      final appState = AppStateContainer.of(context);
-      _appTheme = appState.theme ?? AppTheme();
-      _selectedThemeMode = _appTheme.mode;
+      _appState = AppStateContainer.theme(context);
+      _selectedThemeMode = _appState.mode;
       _initialized = true;
     }
   }
 
-  // Método para aplicar cambios de tema
-  void _applyThemeChange() {
-    final appState = AppStateContainer.of(context);
-    _appTheme.mode = _selectedThemeMode;
-    appState.setTheme(_appTheme);
+  // Método para cambiar el color primario del tema
+  void _changeThemeColor(Color color) {
+    setState(() {
+      _appState.color = color;
+      // Aplicar el cambio directamente
+      AppStateContainer.theme(context).color = color;
+    });
 
     // Mostrar mensaje de confirmación
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Tema actualizado'),
+        content: Text('Color actualizado'),
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: 1),
       ),
     );
   }
 
-  // Método para cambiar el color primario del tema
-  void _changeThemeColor(Color color) {
-    setState(() {
-      _appTheme.color = color;
-    });
-  }
-
   // Método para cambiar el modo del tema
   void _changeThemeMode(ThemeMode mode) {
     setState(() {
       _selectedThemeMode = mode;
+      // Aplicar el cambio directamente
+      AppStateContainer.theme(context).mode = mode;
     });
+
+    // Mostrar mensaje de confirmación
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Modo de tema actualizado'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   @override
@@ -161,7 +166,7 @@ class _ThemeScreenState extends State<ThemeScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: _availableColors.map((color) {
-                    final isSelected = _appTheme.color.value == color.value;
+                    final isSelected = _appState.color.value == color.value;
                     return InkWell(
                       onTap: () => _changeThemeColor(color),
                       borderRadius: BorderRadius.circular(20),
@@ -198,22 +203,6 @@ class _ThemeScreenState extends State<ThemeScreen> {
               ],
             ),
           ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Botón para aplicar cambios
-        ElevatedButton(
-          onPressed: _applyThemeChange,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: const Text('Aplicar cambios'),
         ),
       ],
     );
@@ -266,7 +255,7 @@ class _ThemeScreenState extends State<ThemeScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? colorScheme.primary.withOpacity(0.2)
-                    : colorScheme.surfaceVariant,
+                    : colorScheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
               child: Icon(

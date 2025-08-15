@@ -1,20 +1,17 @@
 /// Enumeración para los tipos de espacios de estacionamiento
-enum SpotType { vehicle, motorcycle, truck }
-
-/// Enumeración para las categorías de espacios
-enum SpotCategory { normal, disabled, reserved, vip }
+enum SpotType { bicycle, motorcycle, vehicle, truck }
 
 /// Enumeración para los tipos de señalización
-enum SignageType { entrance, exit, path, info, noParking, oneWay, twoWay }
+enum SignageType { entrance, exit, direction, bidirectional, stop }
 
 /// Enumeración para los tipos de instalaciones
 enum FacilityType {
+  office,
+  bathroom,
+  cafeteria,
   elevator,
   stairs,
-  bathroom,
-  paymentStation,
-  chargingStation,
-  securityPost
+  information
 }
 
 /// Modos de edición para el sistema de parkeo

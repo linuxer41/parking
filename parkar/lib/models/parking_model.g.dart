@@ -6,54 +6,132 @@ part of 'parking_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
+ParkingSimpleModel _$ParkingSimpleModelFromJson(Map<String, dynamic> json) =>
+    ParkingSimpleModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      companyId: json['companyId'] as String,
-      company: json['company'] == null
-          ? null
-          : CompanyModel.fromJson(json['company'] as Map<String, dynamic>),
-      vehicleTypes: (json['vehicleTypes'] as List<dynamic>)
-          .map((e) => VehicleTypeModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      params:
-          ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
-      prices: (json['prices'] as List<dynamic>)
-          .map((e) => PriceModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      subscriptionPlans: (json['subscriptionPlans'] as List<dynamic>)
-          .map((e) => SubscriptionPlanModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
+      email: json['email'] as String,
+      phone: json['phone'] as String,
       address: json['address'] as String?,
+      status: json['status'] as String,
+      isOwner: json['isOwner'] as bool,
+      isActive: json['isActive'] as bool,
+      logoUrl: json['logoUrl'] as String?,
+      areaCount: (json['areaCount'] as num?)?.toInt(),
       totalSpots: (json['totalSpots'] as num?)?.toInt(),
+      occupiedSpots: (json['occupiedSpots'] as num?)?.toInt(),
       availableSpots: (json['availableSpots'] as num?)?.toInt(),
-      isOpen: json['isOpen'] as bool?,
-      openingHours: json['openingHours'] as String?,
+      operationMode: $enumDecodeNullable(
+        _$ParkingOperationModeEnumMap,
+        json['operationMode'],
+      ),
+      capacity: (json['capacity'] as num?)?.toDouble(),
+      rates: (json['rates'] as List<dynamic>)
+          .map((e) => RateModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      params: ParkingParamsModel.fromJson(
+        json['params'] as Map<String, dynamic>,
+      ),
     );
+
+Map<String, dynamic> _$ParkingSimpleModelToJson(ParkingSimpleModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'email': instance.email,
+      'phone': instance.phone,
+      'address': instance.address,
+      'status': instance.status,
+      'isOwner': instance.isOwner,
+      'isActive': instance.isActive,
+      'rates': instance.rates,
+      'params': instance.params,
+      'logoUrl': instance.logoUrl,
+      'areaCount': instance.areaCount,
+      'totalSpots': instance.totalSpots,
+      'occupiedSpots': instance.occupiedSpots,
+      'availableSpots': instance.availableSpots,
+      'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
+      'capacity': instance.capacity,
+    };
+
+const _$ParkingOperationModeEnumMap = {
+  ParkingOperationMode.visual: 'visual',
+  ParkingOperationMode.simple: 'simple',
+};
+
+ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
+  id: json['id'] as String,
+  name: json['name'] as String,
+  email: json['email'] as String?,
+  phone: json['phone'] as String?,
+  address: json['address'] as String?,
+  logoUrl: json['logoUrl'] as String?,
+  status: json['status'] as String?,
+  ownerId: json['ownerId'] as String?,
+  isOwner: json['isOwner'] as bool?,
+  isActive: json['isActive'] as bool?,
+  companyId: json['companyId'] as String?,
+  owner: json['owner'] == null
+      ? null
+      : UserModel.fromJson(json['owner'] as Map<String, dynamic>),
+  rates: (json['rates'] as List<dynamic>)
+      .map((e) => RateModel.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  params: ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
+  areas: (json['areas'] as List<dynamic>?)
+      ?.map((e) => AreaModel.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  employees: (json['employees'] as List<dynamic>?)
+      ?.map((e) => EmployeeModel.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  createdAt: DateTime.parse(json['createdAt'] as String),
+  updatedAt: DateTime.parse(json['updatedAt'] as String),
+  deletedAt: json['deletedAt'] == null
+      ? null
+      : DateTime.parse(json['deletedAt'] as String),
+  latitude: (json['latitude'] as num?)?.toDouble(),
+  longitude: (json['longitude'] as num?)?.toDouble(),
+  totalSpots: (json['totalSpots'] as num?)?.toInt(),
+  availableSpots: (json['availableSpots'] as num?)?.toInt(),
+  occupiedSpots: (json['occupiedSpots'] as num?)?.toInt(),
+  areaCount: (json['areaCount'] as num?)?.toInt(),
+  operationMode: $enumDecodeNullable(
+    _$ParkingOperationModeEnumMap,
+    json['operationMode'],
+  ),
+  capacity: (json['capacity'] as num?)?.toDouble(),
+);
 
 Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
+      'email': instance.email,
+      'phone': instance.phone,
+      'address': instance.address,
+      'logoUrl': instance.logoUrl,
+      'status': instance.status,
+      'ownerId': instance.ownerId,
+      'isOwner': instance.isOwner,
+      'isActive': instance.isActive,
       'companyId': instance.companyId,
-      'company': instance.company,
-      'vehicleTypes': instance.vehicleTypes,
+      'owner': instance.owner,
+      'rates': instance.rates,
       'params': instance.params,
-      'prices': instance.prices,
-      'subscriptionPlans': instance.subscriptionPlans,
+      'areas': instance.areas,
+      'employees': instance.employees,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
+      'deletedAt': instance.deletedAt?.toIso8601String(),
       'latitude': instance.latitude,
       'longitude': instance.longitude,
-      'address': instance.address,
       'totalSpots': instance.totalSpots,
       'availableSpots': instance.availableSpots,
-      'isOpen': instance.isOpen,
-      'openingHours': instance.openingHours,
+      'occupiedSpots': instance.occupiedSpots,
+      'areaCount': instance.areaCount,
+      'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
+      'capacity': instance.capacity,
     };
 
 ParkingCreateModel _$ParkingCreateModelFromJson(Map<String, dynamic> json) =>
@@ -79,18 +157,11 @@ Map<String, dynamic> _$ParkingCreateModelToJson(ParkingCreateModel instance) =>
 ParkingUpdateModel _$ParkingUpdateModelFromJson(Map<String, dynamic> json) =>
     ParkingUpdateModel(
       name: json['name'] as String?,
-      vehicleTypes: (json['vehicleTypes'] as List<dynamic>?)
-          ?.map((e) => VehicleTypeModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
       params: json['params'] == null
           ? null
           : ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
-      prices: (json['prices'] as List<dynamic>?)
-          ?.map((e) => PriceModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      subscriptionPlans: (json['subscriptionPlans'] as List<dynamic>?)
-          ?.map(
-              (e) => SubscriptionPlanModel.fromJson(e as Map<String, dynamic>))
+      rates: (json['rates'] as List<dynamic>?)
+          ?.map((e) => RateModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
@@ -99,15 +170,18 @@ ParkingUpdateModel _$ParkingUpdateModelFromJson(Map<String, dynamic> json) =>
       availableSpots: (json['availableSpots'] as num?)?.toInt(),
       isOpen: json['isOpen'] as bool?,
       openingHours: json['openingHours'] as String?,
+      operationMode: $enumDecodeNullable(
+        _$ParkingOperationModeEnumMap,
+        json['operationMode'],
+      ),
+      capacity: (json['capacity'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
     <String, dynamic>{
       'name': instance.name,
-      'vehicleTypes': instance.vehicleTypes,
       'params': instance.params,
-      'prices': instance.prices,
-      'subscriptionPlans': instance.subscriptionPlans,
+      'rates': instance.rates,
       'latitude': instance.latitude,
       'longitude': instance.longitude,
       'address': instance.address,
@@ -115,71 +189,87 @@ Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
       'availableSpots': instance.availableSpots,
       'isOpen': instance.isOpen,
       'openingHours': instance.openingHours,
+      'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
+      'capacity': instance.capacity,
     };
 
-VehicleTypeModel _$VehicleTypeModelFromJson(Map<String, dynamic> json) =>
-    VehicleTypeModel(
-      id: (json['id'] as num).toInt(),
+ParkingPreviewModel _$ParkingPreviewModelFromJson(Map<String, dynamic> json) =>
+    ParkingPreviewModel(
+      id: json['id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String?,
+      address: json['address'] as String,
+      logoUrl: json['logoUrl'] as String,
+      params: ParkingParamsModel.fromJson(
+        json['params'] as Map<String, dynamic>,
+      ),
     );
 
-Map<String, dynamic> _$VehicleTypeModelToJson(VehicleTypeModel instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'description': instance.description,
-    };
+Map<String, dynamic> _$ParkingPreviewModelToJson(
+  ParkingPreviewModel instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'address': instance.address,
+  'logoUrl': instance.logoUrl,
+  'params': instance.params,
+};
 
 ParkingParamsModel _$ParkingParamsModelFromJson(Map<String, dynamic> json) =>
     ParkingParamsModel(
+      theme: json['theme'] as String,
+      slogan: json['slogan'] as String?,
       currency: json['currency'] as String,
       timeZone: json['timeZone'] as String,
+      countryCode: json['countryCode'] as String,
       decimalPlaces: (json['decimalPlaces'] as num).toInt(),
-      theme: json['theme'] as String,
     );
 
 Map<String, dynamic> _$ParkingParamsModelToJson(ParkingParamsModel instance) =>
     <String, dynamic>{
+      'theme': instance.theme,
+      'slogan': instance.slogan,
       'currency': instance.currency,
       'timeZone': instance.timeZone,
+      'countryCode': instance.countryCode,
       'decimalPlaces': instance.decimalPlaces,
-      'theme': instance.theme,
     };
 
-PriceModel _$PriceModelFromJson(Map<String, dynamic> json) => PriceModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      baseTime: (json['baseTime'] as num).toInt(),
-      tolerance: (json['tolerance'] as num).toInt(),
-      pasePrice: (json['pasePrice'] as num).toDouble(),
+BusinessHourModel _$BusinessHourModelFromJson(Map<String, dynamic> json) =>
+    BusinessHourModel(
+      open: json['open'] as String,
+      close: json['close'] as String,
+      is24h: json['is24h'] as bool,
     );
 
-Map<String, dynamic> _$PriceModelToJson(PriceModel instance) =>
+Map<String, dynamic> _$BusinessHourModelToJson(BusinessHourModel instance) =>
     <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'baseTime': instance.baseTime,
-      'tolerance': instance.tolerance,
-      'pasePrice': instance.pasePrice,
+      'open': instance.open,
+      'close': instance.close,
+      'is24h': instance.is24h,
     };
 
-SubscriptionPlanModel _$SubscriptionPlanModelFromJson(
-        Map<String, dynamic> json) =>
-    SubscriptionPlanModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      price: (json['price'] as num).toDouble(),
-      duration: (json['duration'] as num).toInt(),
-    );
+RateModel _$RateModelFromJson(Map<String, dynamic> json) => RateModel(
+  id: json['id'] as String,
+  name: json['name'] as String,
+  vehicleCategory: (json['vehicleCategory'] as num).toInt(),
+  tolerance: (json['tolerance'] as num).toInt(),
+  hourly: (json['hourly'] as num).toDouble(),
+  daily: (json['daily'] as num).toDouble(),
+  weekly: (json['weekly'] as num).toDouble(),
+  monthly: (json['monthly'] as num).toDouble(),
+  yearly: (json['yearly'] as num).toDouble(),
+  isActive: json['isActive'] as bool,
+);
 
-Map<String, dynamic> _$SubscriptionPlanModelToJson(
-        SubscriptionPlanModel instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'description': instance.description,
-      'price': instance.price,
-      'duration': instance.duration,
-    };
+Map<String, dynamic> _$RateModelToJson(RateModel instance) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'vehicleCategory': instance.vehicleCategory,
+  'tolerance': instance.tolerance,
+  'hourly': instance.hourly,
+  'daily': instance.daily,
+  'weekly': instance.weekly,
+  'monthly': instance.monthly,
+  'yearly': instance.yearly,
+  'isActive': instance.isActive,
+};

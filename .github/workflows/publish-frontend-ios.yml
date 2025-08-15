@@ -1,0 +1,57 @@
+name: Build frontend ios
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish-frontend-ios.yml'
+      - '!**/readme.md'
+      - '!**/.env'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish-frontend-ios.yml'
+      - '!**/readme.md'
+      - '!**/.env'
+
+defaults:
+  run:
+    working-directory: ./frontend
+
+env:
+  NODE_ENV: production
+  VITE_API_URL: https://resto-api.iathings.com/api
+
+jobs:
+  release:
+    if: ${{ false }}
+    runs-on: macos-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install
+      - name: Build Svelte app
+        run: bun run build
+      - name: Capacitor update
+        run: bun run cap update
+      - name: Capacitor copy
+        run: bun run cap copy
+      - name: Build iOS app
+        run: |
+          cd ios
+          xcodebuild -workspace YourApp.xcworkspace -scheme YourApp -configuration Release -sdk iphoneos -archivePath $PWD/build/YourApp.xcarchive archive
+      - name: Upload iOS archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-archive
+          path: frontend/ios/build/*.xcarchive
+          retention-days: 7 

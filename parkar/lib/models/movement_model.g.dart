@@ -11,7 +11,8 @@ MovementModel _$MovementModelFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       cashRegisterId: json['cashRegisterId'] as String,
       cashRegister: CashRegisterModel.fromJson(
-          json['cashRegister'] as Map<String, dynamic>),
+        json['cashRegister'] as Map<String, dynamic>,
+      ),
       type: json['type'] as String,
       amount: (json['amount'] as num).toDouble(),
       description: json['description'] as String,
@@ -40,13 +41,13 @@ MovementCreateModel _$MovementCreateModelFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$MovementCreateModelToJson(
-        MovementCreateModel instance) =>
-    <String, dynamic>{
-      'cashRegisterId': instance.cashRegisterId,
-      'type': instance.type,
-      'amount': instance.amount,
-      'description': instance.description,
-    };
+  MovementCreateModel instance,
+) => <String, dynamic>{
+  'cashRegisterId': instance.cashRegisterId,
+  'type': instance.type,
+  'amount': instance.amount,
+  'description': instance.description,
+};
 
 MovementUpdateModel _$MovementUpdateModelFromJson(Map<String, dynamic> json) =>
     MovementUpdateModel(
@@ -56,9 +57,9 @@ MovementUpdateModel _$MovementUpdateModelFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$MovementUpdateModelToJson(
-        MovementUpdateModel instance) =>
-    <String, dynamic>{
-      'type': instance.type,
-      'amount': instance.amount,
-      'description': instance.description,
-    };
+  MovementUpdateModel instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'amount': instance.amount,
+  'description': instance.description,
+};

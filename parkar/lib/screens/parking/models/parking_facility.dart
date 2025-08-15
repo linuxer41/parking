@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
-import 'dart:math' show min;
+import 'dart:async';
+import 'dart:math' as math;
 
-import '../utils/drawing_utils.dart';
 import 'enums.dart';
 import 'parking_elements.dart';
+import '../../../models/element_model.dart';
 
 /// Implementación de una instalación de parkeo
 class ParkingFacility extends ParkingElement {
@@ -16,6 +17,13 @@ class ParkingFacility extends ParkingElement {
 
   // Estado de disponibilidad
   bool _isAvailable;
+
+  // Estado de selección
+  bool _isSelected = false;
+
+  // Animación para el efecto de selección
+  double _pulseValue = 0.0;
+  Timer? _pulseTimer;
 
   // Constructor
   ParkingFacility({
@@ -29,7 +37,48 @@ class ParkingFacility extends ParkingElement {
     super.isVisible,
     super.isLocked,
     super.isSelected,
-  })  : _isAvailable = isAvailable;
+  }) : _isAvailable = isAvailable {
+    if (isSelected) {
+      _startPulseAnimation();
+    }
+  }
+
+  @override
+  bool get isSelected => _isSelected;
+
+  @override
+  set isSelected(bool value) {
+    if (value == _isSelected) return;
+    _isSelected = value;
+    
+    if (_isSelected) {
+      _startPulseAnimation();
+    } else {
+      _stopPulseAnimation();
+    }
+    
+    notifyListeners();
+  }
+
+  void _startPulseAnimation() {
+    _pulseTimer?.cancel();
+    _pulseTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      _pulseValue = 0.5 + 0.5 * math.sin(timer.tick * 0.2);
+      notifyListeners();
+    });
+  }
+
+  void _stopPulseAnimation() {
+    _pulseTimer?.cancel();
+    _pulseTimer = null;
+    _pulseValue = 0.0;
+  }
+
+  @override
+  void dispose() {
+    _stopPulseAnimation();
+    super.dispose();
+  }
 
   // Getters y setters
   bool get isAvailable => _isAvailable;
@@ -122,8 +171,14 @@ class ParkingFacility extends ParkingElement {
     IconData iconData;
 
     switch (type) {
+      case FacilityType.office:
+        iconData = Icons.business;
+        break;
       case FacilityType.bathroom:
         iconData = Icons.wc;
+        break;
+      case FacilityType.cafeteria:
+        iconData = Icons.local_cafe;
         break;
       case FacilityType.elevator:
         iconData = Icons.elevator;
@@ -131,14 +186,8 @@ class ParkingFacility extends ParkingElement {
       case FacilityType.stairs:
         iconData = Icons.stairs;
         break;
-      case FacilityType.paymentStation:
-        iconData = Icons.payments;
-        break;
-      case FacilityType.chargingStation:
-        iconData = Icons.electric_car;
-        break;
-      case FacilityType.securityPost:
-        iconData = Icons.security;
+      case FacilityType.information:
+        iconData = Icons.info_outline;
         break;
       default:
         iconData = Icons.business;
@@ -160,8 +209,19 @@ class ParkingFacility extends ParkingElement {
     }
 
     // Dibujar indicador de selección si está seleccionado
-    if (isSelected) {
-      DrawingUtils.drawSelectionIndicator(canvas, rect, 12.0);
+    if (_isSelected) {
+      final selectionPaint = Paint()
+        ..color = Colors.white.withOpacity(0.5 + _pulseValue * 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          rect.inflate(4 + _pulseValue * 3),
+          const Radius.circular(16),
+        ),
+        selectionPaint,
+      );
     }
   }
 
@@ -207,19 +267,46 @@ class ParkingFacility extends ParkingElement {
   Color _getFacilityColor() {
     // Para instalaciones, obtener color basado en tipo
     switch (type) {
+      case FacilityType.office:
       case FacilityType.elevator:
       case FacilityType.stairs:
         return ElementProperties.purple;
       case FacilityType.bathroom:
+      case FacilityType.information:
         return ElementProperties.blue;
-      case FacilityType.paymentStation:
-      case FacilityType.chargingStation:
-        return ElementProperties.green;
-      case FacilityType.securityPost:
-        return ElementProperties.red;
+      case FacilityType.cafeteria:
+        return ElementProperties.orange;
       default:
         return ElementProperties.purple;
     }
+  }
+
+  /// Obtiene el icono apropiado para la instalación según su tipo
+  IconData _getFacilityIcon() {
+    IconData iconData;
+    switch (type) {
+      case FacilityType.office:
+        iconData = Icons.business;
+        break;
+      case FacilityType.bathroom:
+        iconData = Icons.wc;
+        break;
+      case FacilityType.cafeteria:
+        iconData = Icons.local_cafe;
+        break;
+      case FacilityType.elevator:
+        iconData = Icons.elevator;
+        break;
+      case FacilityType.stairs:
+        iconData = Icons.stairs;
+        break;
+      case FacilityType.information:
+        iconData = Icons.info_outline;
+        break;
+      default:
+        iconData = Icons.business;
+    }
+    return iconData;
   }
 
   @override
@@ -266,7 +353,7 @@ class ParkingFacility extends ParkingElement {
         (e) => e.toString() == facilityTypeStr,
       );
     } catch (_) {
-      facilityType = FacilityType.securityPost;
+      facilityType = FacilityType.office;
     }
 
     final position = vector_math.Vector2(
@@ -284,6 +371,47 @@ class ParkingFacility extends ParkingElement {
       scale: json['scale'] as double,
       isVisible: json['isVisible'] as bool,
       isLocked: json['isLocked'] as bool,
+    );
+  }
+}
+
+extension ParkingFacilityElementConversion on ParkingFacility {
+  // Convertir ParkingFacility a ElementModel
+  ElementModel toElementModel(String areaId, String parkingId) {
+    return ElementModel(
+      id: id,
+      areaId: areaId,
+      parkingId: parkingId,
+      name: name,
+      type: ElementType.facility,
+      subType: type.index + 1, // Add 1 to match backend schema
+      posX: position.x,
+      posY: position.y,
+      posZ: 0.0,
+      rotation: rotation,
+      scale: scale,
+      accessId: null, // Las instalaciones no tienen accessId
+      occupancy: ElementOccupancyModel(
+        status: isAvailable ? 'available' : 'unavailable',
+      ),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      deletedAt: null,
+    );
+  }
+  
+  // Método estático para crear un ParkingFacility desde un ElementModel
+  static ParkingFacility fromElementModel(ElementModel element) {
+    return ParkingFacility(
+      id: element.id,
+      position: vector_math.Vector2(element.posX, element.posY),
+      type: FacilityType.values[element.subType - 1], // Subtract 1 to match enum
+      name: element.name,
+      isAvailable: element.occupancy.status == 'available',
+      rotation: element.rotation,
+      scale: element.scale,
+      isVisible: true,
+      isLocked: false,
     );
   }
 }

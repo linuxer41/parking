@@ -1,0 +1,71 @@
+name: Build frontend android
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish-frontend-android.yml'
+      - '!**/readme.md'
+      - '!**/.env'
+      - '!frontend/ios/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/publish-frontend-android.yml'
+      - '!**/readme.md'
+      - '!**/.env'
+      - '!frontend/ios/**'
+defaults:
+  run:
+    working-directory: ./frontend
+
+env:
+  NODE_ENV: production
+  VITE_API_URL: https://resto-api.iathings.com/api
+
+jobs:
+  build:
+    if: ${{ false }}
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, i686-linux-android, x86_64-linux-android
+      - name: Install Android NDK
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653" "build-tools;34.0.0" "platforms;android-34"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install app dependencies
+        run: bun install
+      - name: Build Svelte app
+        run: bun run build
+      - name: Build Android app with Tauri
+        run: bun run tauri android build
+      - name: Upload release apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: frontend/src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+          retention-days: 7 
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-bundle
+          path: frontend/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
+          retention-days: 7 

@@ -1,226 +1,211 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../state/theme.dart';
-import '../models/composite_models.dart';
-import '../models/level_model.dart';
-import '../models/company_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:system_theme/system_theme.dart';
+
 import '../models/employee_model.dart';
+import '../models/parking_model.dart';
 import '../models/user_model.dart';
 
 class AppState extends ChangeNotifier {
-  UserModel? _user;
-  CompanyModel? _company;
+  // Token and user state
+  UserModel? _currentUser;
   EmployeeModel? _employee;
-  ParkingCompositeModel? _currentParking;
-  LevelModel? _currentLevel;
+  ParkingSimpleModel? _currentParking;
   String? _authToken;
   String? _refreshToken;
-  AppTheme _theme = AppTheme();
+  String? _selectedAreaId;
 
-  UserModel? get user => _user;
-  CompanyModel? get company => _company;
+  // Theme state
+  static const String _colorKey = 'app_theme_color';
+  static const String _modeKey = 'app_theme_mode';
+  static const String _textDirectionKey = 'app_theme_text_direction';
+  static const String _localeLanguageKey = 'app_theme_locale_language';
+  static const String _localeCountryKey = 'app_theme_locale_country';
+
+  Color? _color;
+  ThemeMode _mode = ThemeMode.light;
+  TextDirection _textDirection = TextDirection.ltr;
+  Locale? _locale;
+
+  // User state getters
+  UserModel? get currentUser => _currentUser;
   EmployeeModel? get employee => _employee;
-  ParkingCompositeModel? get currentParking => _currentParking;
-  LevelModel? get currentLevel => _currentLevel;
+  ParkingSimpleModel? get currentParking => _currentParking;
   String? get authToken => _authToken;
   String? get refreshToken => _refreshToken;
-  AppTheme? get theme => _theme;
+  String? get selectedAreaId => _selectedAreaId;
 
-  String? get branchId => currentParking?.id;
+  // Theme getters and setters
+  Color get color => _color ?? systemAccentColor;
+  set color(Color color) {
+    _color = color;
+    _saveColor();
+    notifyListeners();
+  }
+
+  ThemeMode get mode => _mode;
+  set mode(ThemeMode mode) {
+    _mode = mode;
+    _saveMode();
+    notifyListeners();
+  }
+
+  TextDirection get textDirection => _textDirection;
+  set textDirection(TextDirection direction) {
+    _textDirection = direction;
+    _saveTextDirection();
+    notifyListeners();
+  }
+
+  Locale? get locale => _locale;
+  set locale(Locale? locale) {
+    _locale = locale;
+    _saveLocale();
+    notifyListeners();
+  }
+
+
+  // Constructor
+  AppState() {
+    loadState();
+  }
 
   // Cargar el estado desde SharedPreferences
   Future<void> loadState() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Cargar tokens
+    // Cargar tokens y datos del usuario
     _authToken = prefs.getString('authToken');
     _refreshToken = prefs.getString('refreshToken');
+    _selectedAreaId = prefs.getString('selectedAreaId');
 
-    // Cargar datos del usuario (puedes serializar/deserializar modelos)
-    final userJson = prefs.getString('user');
-    if (userJson != null) {
-      try {
-        _user = UserModel.fromJson(jsonDecode(userJson));
-      } catch (e) {
-        // pass
-      }
+    // Cargar configuración del tema
+    final colorValue = prefs.getInt(_colorKey);
+    if (colorValue != null) {
+      _color = Color(colorValue);
     }
 
-    // Cargar datos de la empresa
-    final companyJson = prefs.getString('company');
-    if (companyJson != null) {
-      try {
-        _company = CompanyModel.fromJson(jsonDecode(companyJson));
-      } catch (e) {
-        // pass
-      }
+    final modeIndex = prefs.getInt(_modeKey);
+    if (modeIndex != null) {
+      _mode = ThemeMode.values[modeIndex];
     }
 
-    // Cargar datos del empleado
-    final employeeJson = prefs.getString('employee');
-    if (employeeJson != null) {
-      try {
-        _employee = EmployeeModel.fromJson(jsonDecode(employeeJson));
-      } catch (e) {
-        // pass
-      }
+    final directionIndex = prefs.getInt(_textDirectionKey);
+    if (directionIndex != null) {
+      _textDirection = TextDirection.values[directionIndex];
     }
 
-    // Cargar datos del parking
-    final parkingJson = prefs.getString('parking');
-    if (parkingJson != null) {
-      try {
-        _currentParking =
-            ParkingCompositeModel.fromJson(jsonDecode(parkingJson));
-      } catch (e) {
-        // pass
-      }
+    final language = prefs.getString(_localeLanguageKey);
+    final country = prefs.getString(_localeCountryKey);
+    if (language != null) {
+      _locale = Locale(language, country);
     }
-
-    // Cargar datos del nivel
-    final levelJson = prefs.getString('level');
-    if (levelJson != null) {
-      try {
-        _currentLevel = LevelModel.fromJson(jsonDecode(levelJson));
-      } catch (e) {
-        // pass
-      }
-    }
-
-    // Cargar tema (si es necesario)
-    // final themeMode = prefs.getString('themeMode');
-    // if (themeMode != null) {
-    //   _theme = AppTheme.fromString(themeMode);
-    // }
 
     notifyListeners();
   }
 
-  // Guardar el estado en SharedPreferences
+  // Guardar el estado en SharedPreferences (tokens)
   Future<void> saveState() async {
     final prefs = await SharedPreferences.getInstance();
 
     // Guardar tokens
     await prefs.setString('authToken', _authToken ?? '');
     await prefs.setString('refreshToken', _refreshToken ?? '');
-
-    // Guardar datos del usuario (serializar modelos)
-    if (_user != null) {
-      try {
-        await prefs.setString('user', jsonEncode(_user!.toJson()));
-      } catch (e) {
-        // pass
-      }
+    if (_selectedAreaId != null) {
+      await prefs.setString('selectedAreaId', _selectedAreaId!);
+    } else {
+      await prefs.remove('selectedAreaId');
     }
-
-    // Guardar datos de la empresa
-    if (_company != null) {
-      try {
-        await prefs.setString('company', jsonEncode(_company!.toJson()));
-      } catch (e) {
-        // pass
-      }
-    }
-
-    // Guardar datos del empleado
-    if (_employee != null) {
-      try {
-        await prefs.setString('employee', jsonEncode(_employee!.toJson()));
-      } catch (e) {
-        // pass
-      }
-    }
-
-    // Guardar datos del parking
-    if (_currentParking != null) {
-      try {
-        await prefs.setString('parking', jsonEncode(_currentParking!.toJson()));
-      } catch (e) {
-        // pass
-      }
-    }
-
-    // Guardar datos del nivel
-    if (_currentLevel != null) {
-      try {
-        await prefs.setString('level', jsonEncode(_currentLevel!.toJson()));
-      } catch (e) {
-        // pass
-      }
-    }
-
-    // Guardar tema (si es necesario)
-    await prefs.setString('themeMode', _theme.toString());
   }
 
-  void setUser(UserModel? user) {
-    _user = user;
-    saveState(); // Guardar el estado después de cambiar el usuario
-    notifyListeners();
+  // Métodos para guardar configuración de tema
+  Future<void> _saveColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_color != null) {
+      await prefs.setInt(_colorKey, _color!.value);
+    }
   }
 
-  void setCompany(CompanyModel? company) {
-    _company = company;
-    saveState(); // Guardar el estado después de cambiar la empresa
+  Future<void> _saveMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_modeKey, _mode.index);
+  }
+
+  Future<void> _saveTextDirection() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_textDirectionKey, _textDirection.index);
+  }
+
+  Future<void> _saveLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_locale != null) {
+      await prefs.setString(_localeLanguageKey, _locale!.languageCode);
+      if (_locale!.countryCode != null) {
+        await prefs.setString(_localeCountryKey, _locale!.countryCode!);
+      } else {
+        await prefs.remove(_localeCountryKey);
+      }
+    } else {
+      await prefs.remove(_localeLanguageKey);
+      await prefs.remove(_localeCountryKey);
+    }
+  }
+
+  // User state setters
+  void setCurrentUser(UserModel? currentUser) {
+    _currentUser = currentUser;
     notifyListeners();
   }
 
   void setEmployee(EmployeeModel? employee) {
     _employee = employee;
-    saveState(); // Guardar el estado después de cambiar el empleado
     notifyListeners();
   }
 
-  void setParking(ParkingCompositeModel? parking) {
+  // Actualizado para aceptar ParkingModel completo o ParkingSimpleModel
+  void setCurrentParking(ParkingSimpleModel parking) {
     _currentParking = parking;
-    saveState(); // Guardar el estado después de cambiar el parking
+    _selectedAreaId = null;
     notifyListeners();
   }
 
-  void setLevel(LevelModel? level) {
-    _currentLevel = level;
-    saveState(); // Guardar el estado después de cambiar el parking
+  void setCurrentArea(String areaId) {
+    _selectedAreaId = areaId;
+    saveState();
     notifyListeners();
   }
 
   void setAccessToken(String? authToken) {
     _authToken = authToken;
-    saveState(); // Guardar el estado después de cambiar el token
+    saveState();
     notifyListeners();
   }
 
   void setRefreshToken(String? refreshToken) {
     _refreshToken = refreshToken;
-    saveState(); // Guardar el estado después de cambiar el token
-    notifyListeners();
-  }
-
-  void setTheme(AppTheme theme) {
-    // Actualizar el tema directamente sin preocuparse por mantener la misma instancia
-    // ya que simplificamos el objeto AppTheme
-    _theme.mode = theme.mode;
-    _theme.color = theme.color;
-    if (theme.locale != _theme.locale) {
-      _theme.locale = theme.locale;
-    }
-
-    // Guardar las preferencias y notificar inmediatamente
-    _theme.savePreferencesNow();
+    saveState();
     notifyListeners();
   }
 
   void logout() {
-    _user = null;
-    _company = null;
+    _currentUser = null;
     _employee = null;
     _currentParking = null;
-    _currentLevel = null;
     _authToken = null;
     _refreshToken = null;
-    _theme = AppTheme();
-    saveState(); // Guardar el estado después de cerrar sesión
+    _selectedAreaId = null;
+    saveState();
     notifyListeners();
   }
+}
+
+// Función auxiliar para obtener el color del sistema
+Color get systemAccentColor {
+  if ((defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.android) &&
+      !kIsWeb) {
+    return SystemTheme.accentColor.accent;
+  }
+  return Colors.blue;
 }

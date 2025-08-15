@@ -349,42 +349,4 @@ class DrawingUtils {
       ),
     );
   }
-
-  /// Dibuja un indicador de selección con líneas punteadas celestes alrededor de un elemento
-  static void drawSelectionIndicator(Canvas canvas, Rect rect,
-      [double cornerRadius = 8.0]) {
-    // Paint para el borde punteado
-    final selectionPaint = Paint()
-      ..color = Colors.lightBlue
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    // Crear un path para el rectángulo redondeado
-    final path = Path();
-    path.addRRect(
-      RRect.fromRectAndRadius(
-        rect.inflate(3.0), // Hacer el rectángulo ligeramente más grande
-        Radius.circular(cornerRadius),
-      ),
-    );
-
-    // Dibujar el borde punteado
-    const dashWidth = 5.0;
-    const dashSpace = 5.0;
-    final pathMetrics = path.computeMetrics();
-
-    for (final metric in pathMetrics) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final start = distance;
-        distance += dashWidth;
-        final end = distance < metric.length ? distance : metric.length;
-
-        final segment = metric.extractPath(start, end);
-        canvas.drawPath(segment, selectionPaint);
-
-        distance += dashSpace;
-      }
-    }
-  }
 }

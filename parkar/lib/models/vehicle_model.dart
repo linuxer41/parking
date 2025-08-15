@@ -5,20 +5,51 @@ import 'parking_model.dart';
 part 'vehicle_model.g.dart';
 
 @JsonSerializable()
+class SpotCheckModel extends JsonConvertible<SpotCheckModel> {
+  final String id;
+  final String spotId;
+  final String spotName;
+  final String startDate;
+  final String? endDate;
+  final double amount;
+
+  SpotCheckModel({
+    required this.id,
+    required this.spotId,
+    required this.spotName,
+    required this.startDate,
+    this.endDate,
+    required this.amount,
+  });
+
+  factory SpotCheckModel.fromJson(Map<String, dynamic> json) =>
+      _$SpotCheckModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$SpotCheckModelToJson(this);
+}
+
+@JsonSerializable()
 class VehicleModel extends JsonConvertible<VehicleModel> {
   final String id;
   final String parkingId;
   final ParkingModel? parking;
-  final String? typeId;
+  final String? type;
   final String plate;
+  final String? color;
   final bool? isSubscriber;
+  final String? ownerName;
+  final String? ownerDocument;
+  final String? ownerPhone;
   final DateTime createdAt;
   final DateTime? updatedAt;
-  final String? type;
   final DateTime? entryTime;
   final DateTime? exitTime;
   final String? spotNumber;
   final double? fee;
+  final SpotCheckModel? subscription;
+  final SpotCheckModel? reservation;
+  final SpotCheckModel? access;
 
   // Getters adicionales
   String get licensePlate => plate;
@@ -28,16 +59,22 @@ class VehicleModel extends JsonConvertible<VehicleModel> {
     required this.id,
     required this.parkingId,
     this.parking,
-    this.typeId,
+    this.type,
+    this.color,
     required this.plate,
     this.isSubscriber,
+    this.ownerName,
+    this.ownerDocument,
+    this.ownerPhone,
     required this.createdAt,
     this.updatedAt,
-    this.type,
     this.entryTime,
     this.exitTime,
     this.spotNumber,
     this.fee,
+    this.subscription,
+    this.reservation,
+    this.access,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) =>
@@ -50,17 +87,23 @@ class VehicleModel extends JsonConvertible<VehicleModel> {
 @JsonSerializable()
 class VehicleCreateModel extends JsonConvertible<VehicleCreateModel> {
   final String parkingId;
-  final String typeId;
+  final String? type;
+  final String? color;
   final String plate;
-  final bool isSubscriber;
+  final String? ownerName;
+  final String? ownerDocument;
+  final String? ownerPhone; 
   final String? spotNumber;
   final double? fee;
 
   VehicleCreateModel({
     required this.parkingId,
-    required this.typeId,
+    this.type,
+    this.color,
     required this.plate,
-    required this.isSubscriber,
+    this.ownerName,
+    this.ownerDocument,
+    this.ownerPhone,
     this.spotNumber,
     this.fee,
   });
@@ -74,16 +117,22 @@ class VehicleCreateModel extends JsonConvertible<VehicleCreateModel> {
 
 @JsonSerializable()
 class VehicleUpdateModel extends JsonConvertible<VehicleUpdateModel> {
-  final String? typeId;
+  final String? type;
+  final String? color;
   final String? plate;
-  final bool? isSubscriber;
+  final String? ownerName;
+  final String? ownerDocument;
+  final String? ownerPhone;
   final DateTime? exitTime;
   final double? fee;
 
   VehicleUpdateModel({
-    this.typeId,
+    this.type,
+    this.color,
     this.plate,
-    this.isSubscriber,
+    this.ownerName,
+    this.ownerDocument,
+    this.ownerPhone,
     this.exitTime,
     this.fee,
   });
@@ -95,76 +144,54 @@ class VehicleUpdateModel extends JsonConvertible<VehicleUpdateModel> {
   Map<String, dynamic> toJson() => _$VehicleUpdateModelToJson(this);
 }
 
-class Vehicle {
+@JsonSerializable()
+class VehiclePreviewModel extends JsonConvertible<VehiclePreviewModel> {
   final String id;
-  final String licensePlate;
-  final DateTime entryTime;
-  final DateTime? exitTime;
-  final String spotId;
+  final String plate;
   final String type;
+  final String? color;
   final String? ownerName;
-  final double? cost;
+  final String? ownerDocument;
+  final String? ownerPhone;
 
-  Vehicle({
+  VehiclePreviewModel({
     required this.id,
-    required this.licensePlate,
-    required this.entryTime,
-    this.exitTime,
-    required this.spotId,
+    required this.plate,
     required this.type,
+    this.color,
     this.ownerName,
-    this.cost,
+    this.ownerDocument,
+    this.ownerPhone,
   });
 
-  // Constructor para crear un vehículo desde JSON
-  factory Vehicle.fromJson(Map<String, dynamic> json) {
-    return Vehicle(
-      id: json['id'],
-      licensePlate: json['licensePlate'],
-      entryTime: DateTime.parse(json['entryTime']),
-      exitTime:
-          json['exitTime'] != null ? DateTime.parse(json['exitTime']) : null,
-      spotId: json['spotId'],
-      type: json['type'],
-      ownerName: json['ownerName'],
-      cost: json['cost']?.toDouble(),
-    );
-  }
+  factory VehiclePreviewModel.fromJson(Map<String, dynamic> json) =>
+      _$VehiclePreviewModelFromJson(json);
 
-  // Método para convertir el vehículo a JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'licensePlate': licensePlate,
-      'entryTime': entryTime.toIso8601String(),
-      'exitTime': exitTime?.toIso8601String(),
-      'spotId': spotId,
-      'type': type,
-      'ownerName': ownerName,
-      'cost': cost,
-    };
-  }
+  @override
+  Map<String, dynamic> toJson() => _$VehiclePreviewModelToJson(this);
+}
 
-  // Método para crear una copia del vehículo con algunos campos modificados
-  Vehicle copyWith({
-    String? id,
-    String? licensePlate,
-    DateTime? entryTime,
-    DateTime? exitTime,
-    String? spotId,
-    String? type,
-    String? ownerName,
-    double? cost,
-  }) {
-    return Vehicle(
-      id: id ?? this.id,
-      licensePlate: licensePlate ?? this.licensePlate,
-      entryTime: entryTime ?? this.entryTime,
-      exitTime: exitTime ?? this.exitTime,
-      spotId: spotId ?? this.spotId,
-      type: type ?? this.type,
-      ownerName: ownerName ?? this.ownerName,
-      cost: cost ?? this.cost,
-    );
-  }
+@JsonSerializable()
+class VehicleDetailsRequestModel extends JsonConvertible<VehicleDetailsRequestModel> {
+  final String vehiclePlate;
+  final String? vehicleType;
+  final String? vehicleColor;
+  final String? ownerDocument;
+  final String? ownerName;
+  final String? ownerPhone;
+
+  VehicleDetailsRequestModel({
+    required this.vehiclePlate,
+    this.vehicleType,
+    this.vehicleColor,
+    this.ownerDocument,
+    this.ownerName,
+    this.ownerPhone,
+  });
+
+  factory VehicleDetailsRequestModel.fromJson(Map<String, dynamic> json) =>
+      _$VehicleDetailsRequestModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$VehicleDetailsRequestModelToJson(this);
 }
