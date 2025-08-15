@@ -20,17 +20,17 @@ class WelcomeScreen extends StatelessWidget {
         // Logo y descripción principal
         _buildMainHeroSection(colorScheme, textTheme),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
 
         // Botones de acción principales
         _buildActionButtons(context, colorScheme, textTheme),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Características principales (simplificadas)
         _buildFeaturesSection(colorScheme, textTheme),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Información de contacto (simplificada)
         _buildContactSection(context, colorScheme, textTheme),
@@ -40,7 +40,7 @@ class WelcomeScreen extends StatelessWidget {
 
   Widget _buildMainHeroSection(ColorScheme colorScheme, TextTheme textTheme) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -54,43 +54,36 @@ class WelcomeScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Logo principal
+          // Logo principal (sin sombra)
           Container(
-            width: 80,
-            height: 80,
+            width: 70,
+            height: 70,
             decoration: BoxDecoration(
               color: colorScheme.primary,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 30),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               Icons.local_parking_rounded,
-              size: 40,
+              size: 35,
               color: colorScheme.onPrimary,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           // Título y descripción
           Text(
             'Parkar',
-            style: textTheme.headlineMedium?.copyWith(
+            style: textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: colorScheme.onPrimaryContainer,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            'Controla tu estacionamiento desde cualquier lugar',
+            'Gestión inteligente de estacionamientos',
             textAlign: TextAlign.center,
-            style: textTheme.bodyLarge?.copyWith(
+            style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.onPrimaryContainer.withValues(alpha: 90),
-              height: 1.4,
+              height: 1.3,
             ),
           ),
         ],
