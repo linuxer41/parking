@@ -102,17 +102,17 @@ class WelcomeScreen extends StatelessWidget {
         FilledButton(
           onPressed: () => context.go('/login'),
           style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            minimumSize: const Size(double.infinity, 52),
+            minimumSize: const Size(double.infinity, 48),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.login_rounded, size: 20, color: colorScheme.onPrimary),
-              const SizedBox(width: 12),
+              Icon(Icons.login_rounded, size: 18, color: colorScheme.onPrimary),
+              const SizedBox(width: 10),
               Text(
                 'Ya tengo cuenta',
                 style: textTheme.labelLarge?.copyWith(
@@ -124,28 +124,28 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Botón "Registrar mi estacionamiento"
         OutlinedButton(
           onPressed: () => context.go('/register'),
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             side: BorderSide(color: colorScheme.primary, width: 2),
-            minimumSize: const Size(double.infinity, 52),
+            minimumSize: const Size(double.infinity, 48),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.add_business_rounded,
-                size: 20,
+                size: 18,
                 color: colorScheme.primary,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 'Registrar mi estacionamiento',
                 style: textTheme.labelLarge?.copyWith(
@@ -162,7 +162,7 @@ class WelcomeScreen extends StatelessWidget {
 
   Widget _buildFeaturesSection(ColorScheme colorScheme, TextTheme textTheme) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
@@ -172,12 +172,12 @@ class WelcomeScreen extends StatelessWidget {
         children: [
           Text(
             '¿Por qué elegir Parkar?',
-            style: textTheme.titleLarge?.copyWith(
+            style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           // Características en lista simple
           _buildFeatureItem(
             Icons.dashboard_rounded,
@@ -186,7 +186,7 @@ class WelcomeScreen extends StatelessWidget {
             colorScheme,
             textTheme,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildFeatureItem(
             Icons.access_time_rounded,
             '24/7 disponible',
@@ -194,7 +194,7 @@ class WelcomeScreen extends StatelessWidget {
             colorScheme,
             textTheme,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildFeatureItem(
             Icons.touch_app_rounded,
             'Fácil de usar',
@@ -217,15 +217,15 @@ class WelcomeScreen extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: colorScheme.primary, size: 20),
+          child: Icon(icon, color: colorScheme.primary, size: 18),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,6 +241,7 @@ class WelcomeScreen extends StatelessWidget {
                 description,
                 style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
+                  height: 1.2,
                 ),
               ),
             ],
@@ -256,7 +257,7 @@ class WelcomeScreen extends StatelessWidget {
     TextTheme textTheme,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.tertiaryContainer,
         borderRadius: BorderRadius.circular(16),
@@ -271,39 +272,39 @@ class WelcomeScreen extends StatelessWidget {
               Icon(
                 Icons.support_agent_rounded,
                 color: colorScheme.onTertiaryContainer,
-                size: 24,
+                size: 20,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 '¿Necesitas ayuda?',
-                style: textTheme.titleLarge?.copyWith(
+                style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onTertiaryContainer,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           // Información de contacto simplificada
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.phone_rounded,
-                size: 20,
+                size: 18,
                 color: colorScheme.onTertiaryContainer,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 '+591 7543450',
-                style: textTheme.titleMedium?.copyWith(
+                style: textTheme.titleSmall?.copyWith(
                   color: colorScheme.onTertiaryContainer,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           // Botón de WhatsApp simplificado
           SizedBox(
             width: double.infinity,
@@ -342,8 +343,8 @@ class WelcomeScreen extends StatelessWidget {
                 }
               },
               icon: Container(
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -353,7 +354,7 @@ class WelcomeScreen extends StatelessWidget {
                     'W',
                     style: TextStyle(
                       color: Color(0xFF25D366),
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -363,7 +364,7 @@ class WelcomeScreen extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF25D366),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
