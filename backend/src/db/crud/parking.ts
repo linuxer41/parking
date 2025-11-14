@@ -131,14 +131,13 @@ export async function deleteParking(id: string): Promise<Parking> {
 export async function findParkingsByOwnerId(ownerId: string): Promise<ParkingResponse[]> {
   const sql = `
   WITH parking_stats AS (
-    SELECT 
+    SELECT
       p.id as "parkingId",
       COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
       COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "availableSpots",
-      COUNT(a.id) as "areaCount"
+      (SELECT COUNT(*) FROM t_area WHERE "parkingId" = p.id AND "deletedAt" IS NULL) as "areaCount"
     FROM t_parking p
-    LEFT JOIN t_area a ON a."parkingId" = p.id AND a."deletedAt" IS NULL
-    LEFT JOIN t_element e ON (e."parkingId" = p.id OR e."areaId" = a.id) AND e."deletedAt" IS NULL
+    LEFT JOIN t_element e ON e."parkingId" = p.id AND e."deletedAt" IS NULL
     WHERE (p."ownerId" = $1 OR EXISTS (SELECT 1 FROM t_employee emp WHERE emp."parkingId" = p.id AND emp."userId" = $1))
     AND p."deletedAt" IS NULL
     GROUP BY p.id
@@ -180,7 +179,7 @@ export async function findParkingsByOwnerId(ownerId: string): Promise<ParkingRes
 export async function getDetailedParking(id: string, userId: string): Promise<ParkingDetailedResponse> {
   const sql = `
 WITH area_stats AS (
-  SELECT 
+  SELECT
     a.id as "areaId",
     COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
     COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "availableSpots"
@@ -190,14 +189,13 @@ WITH area_stats AS (
   GROUP BY a.id
 ),
 parking_stats AS (
-  SELECT 
+  SELECT
     p.id as "parkingId",
     COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
     COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "availableSpots",
-    COUNT(a.id) as "areaCount"
+    (SELECT COUNT(*) FROM t_area WHERE "parkingId" = p.id AND "deletedAt" IS NULL) as "areaCount"
   FROM t_parking p
-  LEFT JOIN t_area a ON a."parkingId" = p.id AND a."deletedAt" IS NULL
-  LEFT JOIN t_element e ON (e."parkingId" = p.id OR e."areaId" = a.id) AND e."deletedAt" IS NULL
+  LEFT JOIN t_element e ON e."parkingId" = p.id AND e."deletedAt" IS NULL
   WHERE p.id = $1
   GROUP BY p.id
 )

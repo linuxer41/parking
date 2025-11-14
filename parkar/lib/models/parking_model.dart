@@ -97,26 +97,22 @@ class ElementActivityModel extends JsonConvertible<ElementActivityModel> {
 /// Element Occupancy Info Model
 @JsonSerializable()
 class ElementOccupancyInfoModel extends JsonConvertible<ElementOccupancyInfoModel> {
-  final String? id;
-  final String? vehiclePlate;
-  final String? ownerName;
-  final String? ownerPhone;
-  final String? startDate;
+  final String id;
+  final String vehiclePlate;
+  final String ownerName;
+  final String ownerPhone;
+  final String startDate;
   final String? endDate;
   final double? amount;
-  final String? number;
-  final String? status;
 
   ElementOccupancyInfoModel({
-    this.id,
-    this.vehiclePlate,
-    this.ownerName,
-    this.ownerPhone,
-    this.startDate,
+    required this.id,
+    required this.vehiclePlate,
+    required this.ownerName,
+    required this.ownerPhone,
+    required this.startDate,
     this.endDate,
     this.amount,
-    this.number,
-    this.status,
   });
 
   factory ElementOccupancyInfoModel.fromJson(Map<String, dynamic> json) =>

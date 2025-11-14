@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/booking_service.dart';
+import '../../../services/entry_exit_service.dart';
 import '../../../state/app_state_container.dart';
 import '../../../models/booking_model.dart';
 import '../../../models/parking_model.dart';
@@ -121,11 +122,11 @@ class _ManageReservationState extends State<ManageReservation> {
         throw Exception('No hay información de reserva disponible');
       }
 
-      // Registrar entrada usando el nuevo endpoint para reservas
-      final bookingService = AppStateContainer.di(
+      // Registrar entrada usando el servicio de entradas y salidas
+      final entryExitService = AppStateContainer.di(
         context,
-      ).resolve<BookingService>();
-      final entry = await bookingService.registerEntry(reservation.id);
+      ).resolve<EntryExitService>();
+      final entry = await entryExitService.registerEntry(reservation.id);
 
       // Actualizar el spot con los datos del acceso
       _updateSpotWithAccessData(entry);
@@ -149,6 +150,9 @@ class _ManageReservationState extends State<ManageReservation> {
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
+      final bookingService = AppStateContainer.di(
+        context,
+      ).resolve<BookingService>();
       final booking = await bookingService.getBooking(reservation.id);
       if (booking == null) {
         throw Exception('No se encontró el booking');

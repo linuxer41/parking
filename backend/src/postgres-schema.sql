@@ -402,63 +402,69 @@ CREATE INDEX idx_notification_created_at ON t_notification ("createdAt");
 -- Vista para el estado de ocupación de los elementos
 CREATE OR REPLACE VIEW v_element_occupancy AS
 WITH entry_exit_cte AS (
-  SELECT 
+  SELECT
     e.id as "elementId",
-    json_build_object(
-      'id', ee.id,
-      'number', ee.number,
-      'vehiclePlate', v.plate,
-      'ownerName', v."ownerName",
-      'ownerPhone', v."ownerPhone",
-      'startDate', ee."entryTime",
-      'amount', ee.amount,
-      'status', ee.status
-    ) as entry_data
+    CASE WHEN ee.id IS NOT NULL THEN
+      json_build_object(
+        'id', ee.id,
+        'number', ee.number,
+        'vehiclePlate', v.plate,
+        'ownerName', v."ownerName",
+        'ownerPhone', v."ownerPhone",
+        'startDate', ee."entryTime",
+        'amount', ee.amount,
+        'status', ee.status
+      )
+    ELSE NULL END as entry_data
   FROM t_element e
   LEFT JOIN t_entry_exit ee ON e.id = ee."spotId" AND ee.status = 'entered'
   LEFT JOIN t_vehicle v ON ee."vehicleId" = v.id
   WHERE e.type = 'spot' AND e."deletedAt" IS NULL
 ),
 booking_cte AS (
-  SELECT 
+  SELECT
     e.id as "elementId",
-    json_build_object(
-      'id', b.id,
-      'number', b.number,
-      'vehiclePlate', v.plate,
-      'ownerName', v."ownerName",
-      'ownerPhone', v."ownerPhone",
-      'startDate', b."startDate",
-      'endDate', b."endDate",
-      'amount', b.amount,
-      'status', b.status
-    ) as booking_data
+    CASE WHEN b.id IS NOT NULL THEN
+      json_build_object(
+        'id', b.id,
+        'number', b.number,
+        'vehiclePlate', v.plate,
+        'ownerName', v."ownerName",
+        'ownerPhone', v."ownerPhone",
+        'startDate', b."startDate",
+        'endDate', b."endDate",
+        'amount', b.amount,
+        'status', b.status
+      )
+    ELSE NULL END as booking_data
   FROM t_element e
   LEFT JOIN t_booking b ON e.id = b."spotId" AND b.status IN ('pending', 'active')
   LEFT JOIN t_vehicle v ON b."vehicleId" = v.id
   WHERE e.type = 'spot' AND e."deletedAt" IS NULL
 ),
 subscription_cte AS (
-  SELECT 
+  SELECT
     e.id as "elementId",
-    json_build_object(
-      'id', s.id,
-      'number', s.number,
-      'vehiclePlate', v.plate,
-      'ownerName', v."ownerName",
-      'ownerPhone', v."ownerPhone",
-      'startDate', s."startDate",
-      'endDate', s."endDate",
-      'amount', s.amount,
-      'status', s.status,
-      'period', s.period
-    ) as subscription_data
+    CASE WHEN s.id IS NOT NULL THEN
+      json_build_object(
+        'id', s.id,
+        'number', s.number,
+        'vehiclePlate', v.plate,
+        'ownerName', v."ownerName",
+        'ownerPhone', v."ownerPhone",
+        'startDate', s."startDate",
+        'endDate', s."endDate",
+        'amount', s.amount,
+        'status', s.status,
+        'period', s.period
+      )
+    ELSE NULL END as subscription_data
   FROM t_element e
   LEFT JOIN t_subscription s ON e.id = s."spotId" AND s.status = 'active' AND s."isActive" = true
   LEFT JOIN t_vehicle v ON s."vehicleId" = v.id
   WHERE e.type = 'spot' AND e."deletedAt" IS NULL
 )
-SELECT 
+SELECT
   e.id as "elementId",
   (SELECT entry_data FROM entry_exit_cte WHERE "elementId" = e.id LIMIT 1) as entry,
   (SELECT subscription_data FROM subscription_cte WHERE "elementId" = e.id LIMIT 1) as subscription,
