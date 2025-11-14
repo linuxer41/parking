@@ -36,7 +36,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
 
   @override
   Widget build(BuildContext context) {
-    final subscription = widget.spot.occupancy?.subscription;
+    final subscription = widget.spot.subscription;
     if (subscription == null) {
       return const FullScreenErrorContainer(
         message: 'No hay información de suscripción disponible',
@@ -58,7 +58,17 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Información del vehículo
-          VehicleInfoCard(vehicle: subscription.vehicle),
+          VehicleInfoCard(
+            vehicle: VehiclePreviewModel(
+              id: subscription.id,
+              plate: subscription.vehiclePlate,
+              type: 'Vehículo', // Default type
+              color: null,
+              ownerName: subscription.ownerName,
+              ownerDocument: null,
+              ownerPhone: subscription.ownerPhone,
+            ),
+          ),
 
           const SizedBox(height: 16),
 
@@ -66,8 +76,8 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
           SubscriptionInfoCard(
             startDate: subscription.startDate,
             endDate: subscription.endDate,
-            amount: subscription.amount,
-            employeeName: subscription.employee.name,
+            amount: subscription.amount ?? 0.0,
+            employeeName: 'Empleado', // TODO: Add employee info if available
           ),
         ],
       ),
@@ -108,7 +118,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     });
 
     try {
-      final subscription = widget.spot.occupancy?.subscription;
+      final subscription = widget.spot.subscription;
       if (subscription == null) {
         throw Exception('No hay información de suscripción disponible');
       }
@@ -119,12 +129,12 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       ).resolve<EntryExitService>();
 
       final accessModel = AccessCreateModel(
-        vehiclePlate: subscription.vehicle.plate,
-        vehicleType: subscription.vehicle.type,
-        vehicleColor: subscription.vehicle.color,
-        ownerName: subscription.vehicle.ownerName,
-        ownerDocument: subscription.vehicle.ownerDocument,
-        ownerPhone: subscription.vehicle.ownerPhone,
+        vehiclePlate: subscription.vehiclePlate,
+        vehicleType: 'Vehículo', // Default type
+        vehicleColor: null,
+        ownerName: subscription.ownerName,
+        ownerDocument: null,
+        ownerPhone: subscription.ownerPhone,
         spotId: widget.spot.id,
         notes: 'Entrada de suscriptor',
       );
@@ -143,7 +153,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Entrada registrada para ${subscription.vehicle.plate}',
+            'Entrada registrada para ${subscription.vehiclePlate}',
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -181,7 +191,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     });
 
     try {
-      final subscription = widget.spot.occupancy?.subscription;
+      final subscription = widget.spot.subscription;
       if (subscription == null) {
         throw Exception('No hay información de suscripción disponible');
       }
@@ -194,7 +204,8 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
 
       // Actualizar el spot como disponible
       widget.spot.isOccupied = false;
-      widget.spot.occupancy = ElementOccupancyModel(status: 'available');
+      widget.spot.subscription = null;
+      widget.spot.status = 'available';
 
       if (!mounted) return;
 
@@ -205,7 +216,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Suscripción cancelada para ${subscription.vehicle.plate}',
+            'Suscripción cancelada para ${subscription.vehiclePlate}',
           ),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
@@ -221,12 +232,13 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
   }
 
   void _showCancelConfirmation() {
+    final subscription = widget.spot.subscription;
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancelar Suscripción'),
         content: Text(
-          '¿Estás seguro de que quieres cancelar la suscripción para el vehículo ${widget.spot.occupancy?.subscription?.vehicle.plate}?\n\nEsta acción no se puede deshacer.',
+          '¿Estás seguro de que quieres cancelar la suscripción para el vehículo ${subscription?.vehiclePlate ?? 'desconocido'}?\n\nEsta acción no se puede deshacer.',
         ),
         actions: [
           TextButton(
@@ -252,32 +264,19 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
 
   // Función para actualizar el spot con datos de acceso
   void _updateSpotWithAccessData(BookingModel access) {
-    final occupancy = ElementOccupancyModel(
-      access: ElementActivityModel(
-        id: access.id,
-        startDate: access.startDate.toIso8601String(),
-        endDate: access.endDate?.toIso8601String(),
-        vehicle: VehiclePreviewModel(
-          id: access.vehicle.id,
-          plate: access.vehicle.plate,
-          type: access.vehicle.type,
-          color: access.vehicle.color,
-          ownerName: access.vehicle.ownerName,
-          ownerDocument: access.vehicle.ownerDocument,
-          ownerPhone: access.vehicle.ownerPhone,
-        ),
-        employee: EmployeePreviewModel(
-          id: access.employee.id,
-          name: access.employee.name,
-          role: access.employee.role,
-        ),
-        amount: access.amount,
-      ),
-      status: 'occupied',
+    final entryInfo = ElementOccupancyInfoModel(
+      id: access.id,
+      vehiclePlate: access.vehicle.plate ?? '',
+      ownerName: access.vehicle.ownerName ?? '',
+      ownerPhone: access.vehicle.ownerPhone ?? '',
+      startDate: access.startDate?.toIso8601String() ?? '',
+      endDate: access.endDate?.toIso8601String(),
+      amount: access.amount,
     );
 
     widget.spot.isOccupied = true;
-    widget.spot.occupancy = occupancy;
+    widget.spot.entry = entryInfo;
+    widget.spot.status = 'occupied';
   }
 
   // Método para imprimir ticket
@@ -286,7 +285,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     final subscriptionService = AppStateContainer.di(
       context,
     ).resolve<SubscriptionService>();
-    final subscription = widget.spot.occupancy?.subscription;
+    final subscription = widget.spot.subscription;
 
     if (subscription == null) return;
 

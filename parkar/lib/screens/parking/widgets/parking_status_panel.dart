@@ -27,10 +27,10 @@ class ParkingStatusPanel extends StatelessWidget {
         totalSpots++;
         if (element.isOccupied) {
           occupiedSpots++;
-          if (element.occupancy != null && element.occupancy!.access != null) {
+          if (element.entry != null) {
             try {
               final stayDuration = DateTime.now().difference(
-                DateTime.parse(element.occupancy!.access!.startDate),
+                DateTime.parse(element.entry!.startDate),
               );
               averageStayMinutes += stayDuration.inMinutes;
               vehiclesWithStay++;

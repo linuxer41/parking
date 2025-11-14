@@ -672,20 +672,15 @@ class _ParkingCanvasState extends State<ParkingCanvas>
         element.isHighlighted = true;
         
         // Mostrar el modal apropiado según el estado del spot
-        if (element.occupancy != null) {
-          // Si está ocupado, verificar si tiene acceso (vehículo estacionado)
-          if (element.occupancy?.access != null) {
-            ManageAccess.show(context, element);
-          } else if (element.occupancy?.reservation != null) {
-            // Si tiene reserva, mostrar modal de reserva
-            ManageReservation.show(context, element);
-          } else if (element.occupancy?.subscription != null) {
-            // Si tiene suscripción, mostrar modal de suscripción
-            ManageSubscription.show(context, element);
-          } else {
-            // Estado ocupado pero sin información específica
-            RegisterOccupancy.show(context, element);
-          }
+        if (element.status == 'occupied') {
+          // Si está ocupado, mostrar modal de acceso
+          ManageAccess.show(context, element);
+        } else if (element.status == 'reserved') {
+          // Si tiene reserva, mostrar modal de reserva
+          ManageReservation.show(context, element);
+        } else if (element.status == 'subscribed') {
+          // Si tiene suscripción, mostrar modal de suscripción
+          ManageSubscription.show(context, element);
         } else {
           // Si está libre, mostrar modal de entrada
           RegisterOccupancy.show(context, element);
@@ -997,7 +992,10 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                         scale: spot.scale,
                         isVisible: isActive, // Use isActive for visibility
                         isLocked: spot.isLocked,
-                        occupancy: spot.occupancy,
+                        entry: spot.entry,
+                        booking: spot.booking,
+                        subscription: spot.subscription,
+                        status: spot.status,
                       );
 
                       // Actualizar el elemento en el estado

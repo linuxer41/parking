@@ -65,36 +65,34 @@ class SpotInfoPopup extends StatelessWidget {
     String? endDate;
     IconData? statusIcon;
     Color statusColor = Colors.grey;
-    
-    if (spot.occupancy != null) {
-      status = _getStatusText(spot.occupancy!.status);
-      statusIcon = _getStatusIcon(spot.occupancy!.status);
-      statusColor = _getStatusColor(spot.occupancy!.status);
-      
-      if (spot.occupancy!.status == 'occupied' && spot.occupancy!.access != null) {
-        vehiclePlate = spot.occupancy!.access!.vehicle.plate;
-        vehicleType = spot.occupancy!.access!.vehicle.type;
-        vehicleColor = spot.occupancy!.access!.vehicle.color;
-        ownerName = spot.occupancy!.access!.vehicle.ownerName;
-        time = spot.formattedParkingTime;
-        startDate = _formatDate(spot.occupancy!.access!.startDate);
-      } else if (spot.occupancy!.status == 'reserved' && spot.occupancy!.reservation != null) {
-        vehiclePlate = spot.occupancy!.reservation!.vehicle.plate;
-        vehicleType = spot.occupancy!.reservation!.vehicle.type;
-        vehicleColor = spot.occupancy!.reservation!.vehicle.color;
-        ownerName = spot.occupancy!.reservation!.vehicle.ownerName;
-        startDate = _formatDate(spot.occupancy!.reservation!.startDate);
-        endDate = spot.occupancy!.reservation!.endDate != null ? 
-                 _formatDate(spot.occupancy!.reservation!.endDate!) : 'Sin fin';
-      } else if (spot.occupancy!.status == 'subscribed' && spot.occupancy!.subscription != null) {
-        vehiclePlate = spot.occupancy!.subscription!.vehicle.plate;
-        vehicleType = spot.occupancy!.subscription!.vehicle.type;
-        vehicleColor = spot.occupancy!.subscription!.vehicle.color;
-        ownerName = spot.occupancy!.subscription!.vehicle.ownerName;
-        startDate = _formatDate(spot.occupancy!.subscription!.startDate);
-        endDate = spot.occupancy!.subscription!.endDate != null ? 
-                 _formatDate(spot.occupancy!.subscription!.endDate!) : 'Sin fin';
-      }
+
+    status = _getStatusText(spot.status);
+    statusIcon = _getStatusIcon(spot.status);
+    statusColor = _getStatusColor(spot.status);
+
+    if (spot.status == 'occupied' && spot.entry != null) {
+      vehiclePlate = spot.entry!.vehiclePlate;
+      vehicleType = 'Vehículo'; // Default type
+      vehicleColor = null;
+      ownerName = spot.entry!.ownerName;
+      time = spot.formattedParkingTime;
+      startDate = _formatDate(spot.entry!.startDate);
+    } else if (spot.status == 'reserved' && spot.booking != null) {
+      vehiclePlate = spot.booking!.vehiclePlate;
+      vehicleType = 'Vehículo'; // Default type
+      vehicleColor = null;
+      ownerName = spot.booking!.ownerName;
+      startDate = _formatDate(spot.booking!.startDate);
+      endDate = spot.booking!.endDate != null ?
+               _formatDate(spot.booking!.endDate!) : 'Sin fin';
+    } else if (spot.status == 'subscribed' && spot.subscription != null) {
+      vehiclePlate = spot.subscription!.vehiclePlate;
+      vehicleType = 'Vehículo'; // Default type
+      vehicleColor = null;
+      ownerName = spot.subscription!.ownerName;
+      startDate = _formatDate(spot.subscription!.startDate);
+      endDate = spot.subscription!.endDate != null ?
+               _formatDate(spot.subscription!.endDate!) : 'Sin fin';
     }
     
     return Padding(

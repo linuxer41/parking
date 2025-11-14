@@ -219,7 +219,7 @@ SELECT
                'id', e.id,
                'name', e.name,
                'type', e."type",
-               'status', 'free',
+               'status', 'available',
                'subType', e."subType",
                'description', 'e."description"',
                'rotation', e."rotation",

@@ -368,7 +368,7 @@ extension ParkingSignageElementConversion on ParkingSignage {
       rotation: rotation,
       scale: scale,
       isActive: true,
-      occupancy: ElementOccupancyModel(status: 'active'),
+      status: 'active',
     );
   }
 

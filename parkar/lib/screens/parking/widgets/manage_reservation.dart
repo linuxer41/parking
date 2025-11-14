@@ -34,7 +34,7 @@ class _ManageReservationState extends State<ManageReservation> {
 
   @override
   Widget build(BuildContext context) {
-    final reservation = widget.spot.occupancy?.reservation;
+    final reservation = widget.spot.booking;
     if (reservation == null) {
       return const FullScreenErrorContainer(
         message: 'No hay información de reserva disponible',
@@ -56,7 +56,17 @@ class _ManageReservationState extends State<ManageReservation> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Información del vehículo
-          VehicleInfoCard(vehicle: reservation.vehicle),
+          VehicleInfoCard(
+            vehicle: VehiclePreviewModel(
+              id: reservation.id,
+              plate: reservation.vehiclePlate,
+              type: 'Vehículo', // Default type
+              color: null,
+              ownerName: reservation.ownerName,
+              ownerDocument: null,
+              ownerPhone: reservation.ownerPhone,
+            ),
+          ),
 
           const SizedBox(height: 16),
 
@@ -64,8 +74,8 @@ class _ManageReservationState extends State<ManageReservation> {
           ReservationInfoCard(
             startDate: reservation.startDate,
             endDate: reservation.endDate,
-            amount: reservation.amount,
-            employeeName: reservation.employee.name,
+            amount: reservation.amount ?? 0.0,
+            employeeName: 'Empleado', // TODO: Add employee info if available
           ),
         ],
       ),
@@ -106,7 +116,7 @@ class _ManageReservationState extends State<ManageReservation> {
     });
 
     try {
-      final reservation = widget.spot.occupancy?.reservation;
+      final reservation = widget.spot.booking;
       if (reservation == null) {
         throw Exception('No hay información de reserva disponible');
       }
@@ -128,7 +138,7 @@ class _ManageReservationState extends State<ManageReservation> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Entrada registrada para ${reservation.vehicle.plate}'),
+          content: Text('Entrada registrada para ${reservation.vehiclePlate}'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -166,7 +176,7 @@ class _ManageReservationState extends State<ManageReservation> {
     });
 
     try {
-      final reservation = widget.spot.occupancy?.reservation;
+      final reservation = widget.spot.booking;
       if (reservation == null) {
         throw Exception('No hay información de reserva disponible');
       }
@@ -179,7 +189,8 @@ class _ManageReservationState extends State<ManageReservation> {
 
       // Actualizar el spot como disponible
       widget.spot.isOccupied = false;
-      widget.spot.occupancy = ElementOccupancyModel(status: 'available');
+      widget.spot.booking = null;
+      widget.spot.status = 'available';
 
       if (!mounted) return;
 
@@ -189,7 +200,7 @@ class _ManageReservationState extends State<ManageReservation> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Reserva cancelada para ${reservation.vehicle.plate}'),
+          content: Text('Reserva cancelada para ${reservation.vehiclePlate}'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -204,12 +215,13 @@ class _ManageReservationState extends State<ManageReservation> {
   }
 
   void _showCancelConfirmation() {
+    final reservation = widget.spot.booking;
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancelar Reserva'),
         content: Text(
-          '¿Estás seguro de que quieres cancelar la reserva para el vehículo ${widget.spot.occupancy?.reservation?.vehicle.plate}?',
+          '¿Estás seguro de que quieres cancelar la reserva para el vehículo ${reservation?.vehiclePlate ?? 'desconocido'}?',
         ),
         actions: [
           TextButton(
@@ -235,39 +247,26 @@ class _ManageReservationState extends State<ManageReservation> {
 
   // Función para actualizar el spot con datos de acceso
   void _updateSpotWithAccessData(BookingModel access) {
-    final occupancy = ElementOccupancyModel(
-      access: ElementActivityModel(
-        id: access.id,
-        startDate: access.startDate?.toIso8601String() ?? '',
-        endDate: access.endDate?.toIso8601String(),
-        vehicle: VehiclePreviewModel(
-          id: access.vehicle.id ?? '',
-          plate: access.vehicle.plate ?? '',
-          type: access.vehicle.type ?? '',
-          color: access.vehicle.color,
-          ownerName: access.vehicle.ownerName,
-          ownerDocument: access.vehicle.ownerDocument,
-          ownerPhone: access.vehicle.ownerPhone,
-        ),
-        employee: EmployeePreviewModel(
-          id: access.employee.id ?? '',
-          name: access.employee.name ?? '',
-          role: access.employee.role ?? '',
-        ),
-        amount: access.amount ?? 0.0,
-      ),
-      status: 'occupied',
+    final entryInfo = ElementOccupancyInfoModel(
+      id: access.id,
+      vehiclePlate: access.vehicle.plate ?? '',
+      ownerName: access.vehicle.ownerName ?? '',
+      ownerPhone: access.vehicle.ownerPhone ?? '',
+      startDate: access.startDate?.toIso8601String() ?? '',
+      endDate: access.endDate?.toIso8601String(),
+      amount: access.amount,
     );
 
     widget.spot.isOccupied = true;
-    widget.spot.occupancy = occupancy;
+    widget.spot.entry = entryInfo;
+    widget.spot.status = 'occupied';
   }
 
   // Método para imprimir ticket
   void _printTicket() {
     final printService = AppStateContainer.di(context).resolve<PrintService>();
     final appState = AppStateContainer.of(context);
-    final reservation = widget.spot.occupancy?.reservation;
+    final reservation = widget.spot.booking;
 
     if (reservation == null) return;
 

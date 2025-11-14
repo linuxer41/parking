@@ -46,10 +46,13 @@ class ElementFactory {
       position: vector_math.Vector2(model.posX, model.posY),
       type: spotType,
       label: model.name,
-      isOccupied: model.occupancy.status == 'occupied',
+      isOccupied: model.status == 'occupied',
       rotation: model.rotation,
       scale: model.scale,
-      occupancy: model.occupancy,
+      entry: model.entry,
+      booking: model.booking,
+      subscription: model.subscription,
+      status: model.status,
       isActive: model.isActive,
     );
   }
@@ -116,7 +119,7 @@ class ElementFactory {
       position: vector_math.Vector2(model.posX, model.posY),
       type: facilityType,
       name: model.name,
-      isAvailable: model.occupancy.status == 'available',
+      isAvailable: model.status == 'available',
       rotation: model.rotation,
       scale: model.scale,
     );

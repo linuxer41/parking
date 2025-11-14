@@ -313,8 +313,8 @@ class _ParkingScreenState extends State<ParkingScreen>
           _filteredSpots = List.from(_occupiedSpots);
         } else {
           _filteredSpots = _occupiedSpots.where((spot) {
-            final vehicle = spot.occupancy?.access?.vehicle;
-            return vehicle?.plate.toLowerCase().contains(query.toLowerCase()) ==
+            final vehiclePlate = spot.entry?.vehiclePlate;
+            return vehiclePlate?.toLowerCase().contains(query.toLowerCase()) ==
                 true;
           }).toList();
         }
@@ -336,8 +336,8 @@ class _ParkingScreenState extends State<ParkingScreen>
     ParkingSpot? foundSpot;
     for (final element in _parkingState.spots) {
       if (element is ParkingSpot && element.isOccupied) {
-        final vehicle = element.occupancy?.access?.vehicle;
-        if (vehicle?.plate.toLowerCase().contains(query.toLowerCase()) ==
+        final vehiclePlate = element.entry?.vehiclePlate;
+        if (vehiclePlate?.toLowerCase().contains(query.toLowerCase()) ==
             true) {
           foundSpot = element;
           break;
@@ -349,7 +349,7 @@ class _ParkingScreenState extends State<ParkingScreen>
       _parkingState.highlightElement(foundSpot.id);
       _parkingState.centerOnElement(foundSpot.position);
       _showInfoMessage(
-        'Vehículo encontrado: ${foundSpot.occupancy?.access?.vehicle?.plate}',
+        'Vehículo encontrado: ${foundSpot.entry?.vehiclePlate}',
       );
     } else {
       _parkingState.clearHighlight();
@@ -1204,7 +1204,7 @@ class _ParkingScreenState extends State<ParkingScreen>
       for (final element in _parkingState.spots) {
         if (element is ParkingSpot &&
             element.isOccupied &&
-            element.occupancy?.access?.vehicle?.plate == plate.toUpperCase()) {
+            element.entry?.vehiclePlate == plate.toUpperCase()) {
           targetSpot = element;
           break;
         }

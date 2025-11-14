@@ -2113,67 +2113,58 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
 
   // Función para actualizar el spot con datos de acceso
   void _updateSpotWithAccessData(BookingModel access) {
-    // Crear el modelo de ocupación con los datos del acceso
-    final occupancy = ElementOccupancyModel(
-      access: ElementActivityModel(
-        id: access.id,
-        startDate: access.startDate.toIso8601String(),
-        endDate: access.endDate?.toIso8601String(),
-        vehicle: access.vehicle,
-        employee: access.employee,
-        amount: access.amount,
-      ),
-      status: 'occupied',
+    // Crear el modelo de información de ocupación
+    final entryInfo = ElementOccupancyInfoModel(
+      id: access.id,
+      vehiclePlate: access.vehicle.plate,
+      ownerName: access.vehicle.ownerName ?? '',
+      ownerPhone: access.vehicle.ownerPhone ?? '',
+      startDate: access.startDate.toIso8601String(),
     );
 
     // Actualizar el spot
     if (widget.spot != null) {
       widget.spot!.isOccupied = true;
-      widget.spot!.occupancy = occupancy;
+      widget.spot!.entry = entryInfo;
+      widget.spot!.status = 'occupied';
     }
   }
 
   // Función para actualizar el spot con datos de reserva
   void _updateSpotWithReservationData(BookingModel reservation) {
-    // Crear el modelo de ocupación con los datos de la reserva
-    final occupancy = ElementOccupancyModel(
-      reservation: ElementActivityModel(
-        id: reservation.id,
-        startDate: reservation.startDate.toIso8601String(),
-        endDate: reservation.endDate?.toIso8601String() ?? '',
-        vehicle: reservation.vehicle,
-        employee: reservation.employee,
-        amount: reservation.amount,
-      ),
-      status: 'reserved',
+    // Crear el modelo de información de ocupación
+    final bookingInfo = ElementOccupancyInfoModel(
+      id: reservation.id,
+      vehiclePlate: reservation.vehicle.plate,
+      ownerName: reservation.vehicle.ownerName ?? '',
+      ownerPhone: reservation.vehicle.ownerPhone ?? '',
+      startDate: reservation.startDate.toIso8601String(),
     );
 
     // Actualizar el spot
     if (widget.spot != null) {
       widget.spot!.isOccupied = true;
-      widget.spot!.occupancy = occupancy;
+      widget.spot!.booking = bookingInfo;
+      widget.spot!.status = 'reserved';
     }
   }
 
   // Función para actualizar el spot con datos de suscripción
   void _updateSpotWithSubscriptionData(BookingModel subscription) {
-    // Crear el modelo de ocupación con los datos de la suscripción
-    final occupancy = ElementOccupancyModel(
-      subscription: ElementActivityModel(
-        id: subscription.id,
-        startDate: subscription.startDate.toIso8601String(),
-        endDate: subscription.endDate?.toIso8601String() ?? '',
-        vehicle: subscription.vehicle,
-        employee: subscription.employee,
-        amount: subscription.amount,
-      ),
-      status: 'subscribed',
+    // Crear el modelo de información de ocupación
+    final subscriptionInfo = ElementOccupancyInfoModel(
+      id: subscription.id,
+      vehiclePlate: subscription.vehicle.plate,
+      ownerName: subscription.vehicle.ownerName ?? '',
+      ownerPhone: subscription.vehicle.ownerPhone ?? '',
+      startDate: subscription.startDate.toIso8601String(),
     );
 
     // Actualizar el spot
     if (widget.spot != null) {
       widget.spot!.isOccupied = true;
-      widget.spot!.occupancy = occupancy;
+      widget.spot!.subscription = subscriptionInfo;
+      widget.spot!.status = 'subscribed';
     }
   }
 }

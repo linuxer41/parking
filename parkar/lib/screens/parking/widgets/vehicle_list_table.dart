@@ -249,8 +249,8 @@ class _VehicleListTableState extends State<VehicleListTable> {
       itemCount: widget.occupiedSpots.length,
       itemBuilder: (context, index) {
         final spot = widget.occupiedSpots[index];
-        final vehicle = spot.occupancy?.access?.vehicle;
-        final startDate = spot.occupancy?.access?.startDate;
+        final entry = spot.entry;
+        final startDate = entry?.startDate;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
@@ -271,7 +271,7 @@ class _VehicleListTableState extends State<VehicleListTable> {
               ),
             ),
             title: Text(
-              vehicle?.plate ?? '--',
+              entry?.vehiclePlate ?? '--',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -288,13 +288,7 @@ class _VehicleListTableState extends State<VehicleListTable> {
                     ),
                   ),
                 Text(
-                  'Tipo: ${_getVehicleTypeName(vehicle?.type ?? '')}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  'Propietario: ${vehicle?.ownerName ?? '--'}',
+                  'Propietario: ${entry?.ownerName ?? '--'}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -368,15 +362,15 @@ class _VehicleListTableState extends State<VehicleListTable> {
             const DataColumn(label: Text('Acción')),
           ],
           rows: widget.occupiedSpots.map((spot) {
-            final vehicle = spot.occupancy?.access?.vehicle;
-            final startDate = spot.occupancy?.access?.startDate;
+            final entry = spot.entry;
+            final startDate = entry?.startDate;
 
             return DataRow(
               cells: [
                 if (!widget.isSimpleMode) DataCell(Text(spot.label)),
-                DataCell(Text(vehicle?.plate ?? '--')),
-                DataCell(Text(_getVehicleTypeName(vehicle?.type ?? ''))),
-                DataCell(Text(vehicle?.ownerName ?? '--')),
+                DataCell(Text(entry?.vehiclePlate ?? '--')),
+                DataCell(Text('--')), // Type not available
+                DataCell(Text(entry?.ownerName ?? '--')),
                 DataCell(
                   Text(startDate != null ? _formatDateTime(startDate) : '--'),
                 ),
@@ -416,9 +410,7 @@ class _VehicleListTableState extends State<VehicleListTable> {
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
-    final occupancy = spot.occupancy;
-
-    if (occupancy?.access != null) {
+    if (spot.entry != null) {
       // Es un acceso - mostrar botón de "Registrar Salida"
       return Container(
         decoration: BoxDecoration(
@@ -434,7 +426,7 @@ class _VehicleListTableState extends State<VehicleListTable> {
           constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
         ),
       );
-    } else if (occupancy?.reservation != null) {
+    } else if (spot.booking != null) {
       // Es una reserva - mostrar botón de "Marcar Acceso"
       return Container(
         decoration: BoxDecoration(
@@ -450,7 +442,7 @@ class _VehicleListTableState extends State<VehicleListTable> {
           constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
         ),
       );
-    } else if (occupancy?.subscription != null) {
+    } else if (spot.subscription != null) {
       // Es una suscripción - mostrar botón de "Marcar Acceso"
       return Container(
         decoration: BoxDecoration(
@@ -473,13 +465,11 @@ class _VehicleListTableState extends State<VehicleListTable> {
   }
 
   String _getOccupancyTypeText(ParkingSpot spot) {
-    final occupancy = spot.occupancy;
-
-    if (occupancy?.access != null) {
+    if (spot.entry != null) {
       return 'Acceso';
-    } else if (occupancy?.reservation != null) {
+    } else if (spot.booking != null) {
       return 'Reserva';
-    } else if (occupancy?.subscription != null) {
+    } else if (spot.subscription != null) {
       return 'Suscripción';
     }
 

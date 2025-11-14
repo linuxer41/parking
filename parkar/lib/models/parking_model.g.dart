@@ -32,32 +32,28 @@ Map<String, dynamic> _$ElementActivityModelToJson(
   'amount': instance.amount,
 };
 
-ElementOccupancyModel _$ElementOccupancyModelFromJson(
+ElementOccupancyInfoModel _$ElementOccupancyInfoModelFromJson(
   Map<String, dynamic> json,
-) => ElementOccupancyModel(
-  access: json['access'] == null
-      ? null
-      : ElementActivityModel.fromJson(json['access'] as Map<String, dynamic>),
-  reservation: json['reservation'] == null
-      ? null
-      : ElementActivityModel.fromJson(
-          json['reservation'] as Map<String, dynamic>,
-        ),
-  subscription: json['subscription'] == null
-      ? null
-      : ElementActivityModel.fromJson(
-          json['subscription'] as Map<String, dynamic>,
-        ),
-  status: json['status'] as String,
+) => ElementOccupancyInfoModel(
+  id: json['id'] as String,
+  vehiclePlate: json['vehiclePlate'] as String,
+  ownerName: json['ownerName'] as String,
+  ownerPhone: json['ownerPhone'] as String,
+  startDate: json['startDate'] as String,
+  endDate: json['endDate'] as String?,
+  amount: (json['amount'] as num?)?.toDouble(),
 );
 
-Map<String, dynamic> _$ElementOccupancyModelToJson(
-  ElementOccupancyModel instance,
+Map<String, dynamic> _$ElementOccupancyInfoModelToJson(
+  ElementOccupancyInfoModel instance,
 ) => <String, dynamic>{
-  'access': instance.access,
-  'reservation': instance.reservation,
-  'subscription': instance.subscription,
-  'status': instance.status,
+  'id': instance.id,
+  'vehiclePlate': instance.vehiclePlate,
+  'ownerName': instance.ownerName,
+  'ownerPhone': instance.ownerPhone,
+  'startDate': instance.startDate,
+  'endDate': instance.endDate,
+  'amount': instance.amount,
 };
 
 ElementModel _$ElementModelFromJson(Map<String, dynamic> json) => ElementModel(
@@ -71,9 +67,22 @@ ElementModel _$ElementModelFromJson(Map<String, dynamic> json) => ElementModel(
   rotation: (json['rotation'] as num).toDouble(),
   scale: (json['scale'] as num).toDouble(),
   isActive: json['isActive'] as bool,
-  occupancy: ElementOccupancyModel.fromJson(
-    json['occupancy'] as Map<String, dynamic>,
-  ),
+  entry: json['entry'] == null
+      ? null
+      : ElementOccupancyInfoModel.fromJson(
+          json['entry'] as Map<String, dynamic>,
+        ),
+  booking: json['booking'] == null
+      ? null
+      : ElementOccupancyInfoModel.fromJson(
+          json['booking'] as Map<String, dynamic>,
+        ),
+  subscription: json['subscription'] == null
+      ? null
+      : ElementOccupancyInfoModel.fromJson(
+          json['subscription'] as Map<String, dynamic>,
+        ),
+  status: json['status'] as String,
 );
 
 Map<String, dynamic> _$ElementModelToJson(ElementModel instance) =>
@@ -88,7 +97,10 @@ Map<String, dynamic> _$ElementModelToJson(ElementModel instance) =>
       'rotation': instance.rotation,
       'scale': instance.scale,
       'isActive': instance.isActive,
-      'occupancy': instance.occupancy,
+      'entry': instance.entry,
+      'booking': instance.booking,
+      'subscription': instance.subscription,
+      'status': instance.status,
     };
 
 const _$ElementTypeEnumMap = {

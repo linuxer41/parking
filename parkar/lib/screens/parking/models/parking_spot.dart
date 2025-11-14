@@ -43,7 +43,10 @@ class ParkingSpot extends ParkingElement {
       scale: scale,
       isVisible: isVisible,
       isLocked: isLocked,
-      occupancy: _occupancy,
+      entry: _entry,
+      booking: _booking,
+      subscription: _subscription,
+      status: _status,
     );
 
     // Esta función debe ser llamada desde un contexto donde se tenga acceso a ParkingState
@@ -57,7 +60,10 @@ class ParkingSpot extends ParkingElement {
 
   // Estado de ocupación
   bool _isOccupied;
-  ElementOccupancyModel? _occupancy;
+  ElementOccupancyInfoModel? _entry;
+  ElementOccupancyInfoModel? _booking;
+  ElementOccupancyInfoModel? _subscription;
+  String _status;
 
   // Variables para el temporizador de actualización
   Timer? _updateTimer;
@@ -86,13 +92,19 @@ class ParkingSpot extends ParkingElement {
     super.isVisible,
     super.isLocked,
     super.isSelected,
-    ElementOccupancyModel? occupancy,
+    ElementOccupancyInfoModel? entry,
+    ElementOccupancyInfoModel? booking,
+    ElementOccupancyInfoModel? subscription,
+    String status = 'available',
     this.isActive = true,
   }) : _isOccupied = isOccupied,
-       _occupancy = occupancy {
+        _entry = entry,
+        _booking = booking,
+        _subscription = subscription,
+        _status = status {
     // Iniciar el temporizador si el spot está ocupado
     _updateElapsedTime();
-    if (_isOccupied && _occupancy != null) {
+    if (_isOccupied && _entry != null) {
       _startUpdateTimer();
     }
   }
@@ -178,7 +190,7 @@ class ParkingSpot extends ParkingElement {
       _isOccupied = value;
 
       // Iniciar o detener el temporizador según el estado de ocupación
-      if (_isOccupied && _occupancy != null) {
+      if (_isOccupied && _entry != null) {
         _startUpdateTimer();
       } else {
         _stopUpdateTimer();
@@ -188,27 +200,40 @@ class ParkingSpot extends ParkingElement {
     }
   }
 
-  // Setter para occupancy
-  set occupancy(ElementOccupancyModel? value) {
-    if (value != _occupancy) {
-      // Detener el temporizador existente si hay uno
-      _stopUpdateTimer();
+  // Getters for occupancy info
+  ElementOccupancyInfoModel? get entry => _entry;
+  ElementOccupancyInfoModel? get booking => _booking;
+  ElementOccupancyInfoModel? get subscription => _subscription;
+  String get status => _status;
 
-      // Asignar el nuevo valor
-      _occupancy = value;
-
-      // Si hay un acceso y el spot está ocupado, iniciar el temporizador
-      if (_occupancy != null && _isOccupied) {
-        _updateElapsedTime();
-        _startUpdateTimer();
-      }
-
+  // Setters for occupancy info
+  set entry(ElementOccupancyInfoModel? value) {
+    if (value != _entry) {
+      _entry = value;
       notifyListeners();
     }
   }
 
-  // Getter para occupancy
-  ElementOccupancyModel? get occupancy => _occupancy;
+  set booking(ElementOccupancyInfoModel? value) {
+    if (value != _booking) {
+      _booking = value;
+      notifyListeners();
+    }
+  }
+
+  set subscription(ElementOccupancyInfoModel? value) {
+    if (value != _subscription) {
+      _subscription = value;
+      notifyListeners();
+    }
+  }
+
+  set status(String value) {
+    if (value != _status) {
+      _status = value;
+      notifyListeners();
+    }
+  }
 
   // Iniciar temporizador para actualizar el tiempo transcurrido
   void _startUpdateTimer() {
@@ -224,13 +249,13 @@ class ParkingSpot extends ParkingElement {
 
   // Actualizar el tiempo transcurrido
   void _updateElapsedTime() {
-    if (!_isOccupied || _occupancy == null || _occupancy!.access == null) {
+    if (!_isOccupied || _entry == null) {
       _elapsedTime = Duration.zero;
       return;
     }
 
     try {
-      final entryTime = DateTime.parse(_occupancy!.access!.startDate);
+      final entryTime = DateTime.parse(_entry!.startDate);
       final now = DateTime.now();
       _elapsedTime = now.difference(entryTime);
     } catch (e) {
@@ -241,13 +266,13 @@ class ParkingSpot extends ParkingElement {
 
   // Obtener tiempo de estacionamiento en minutos
   int get parkingTimeMinutes {
-    if (!_isOccupied || _occupancy == null) return 0;
+    if (!_isOccupied || _entry == null) return 0;
     return _elapsedTime.inMinutes;
   }
 
   // Obtener tiempo de estacionamiento formateado
   String get formattedParkingTime {
-    if (!_isOccupied || _occupancy == null) return "";
+    if (!_isOccupied || _entry == null) return "";
 
     final hours = _elapsedTime.inHours;
     final minutes = _elapsedTime.inMinutes % 60;
@@ -290,14 +315,10 @@ class ParkingSpot extends ParkingElement {
       statusColor = ElementProperties.gray;
       statusText = "INACTIVO";
       statusIcon = Icons.do_not_disturb_on;
-    } else if (_occupancy != null) {
-      statusColor = _getStatusColor(_occupancy!.status);
-      statusText = _getStatusText(_occupancy!.status);
-      statusIcon = _getStatusIcon(_occupancy!.status);
     } else {
-      statusColor = ElementProperties.availableColor;
-      statusText = "DISPONIBLE";
-      statusIcon = Icons.check_circle;
+      statusColor = _getStatusColor(_status);
+      statusText = _getStatusText(_status);
+      statusIcon = _getStatusIcon(_status);
     }
 
     // Dibujar sombra
@@ -444,7 +465,7 @@ class ParkingSpot extends ParkingElement {
     );
 
     // Dibujar tiempo transcurrido si está ocupado
-    if (_isOccupied && _occupancy != null && _occupancy!.status == 'occupied') {
+    if (_isOccupied && _status == 'occupied') {
       final timeStyle = TextStyle(
         color: !isVisible ? Colors.white.withOpacity(0.5) : Colors.white,
         fontSize: min(width, height) * 0.11,
@@ -466,7 +487,7 @@ class ParkingSpot extends ParkingElement {
       );
 
       // Dibujar placa del vehículo si está disponible
-      if (_occupancy?.access?.vehicle != null) {
+      if (_entry != null) {
         final plateStyle = TextStyle(
           color: !isVisible ? Colors.white.withOpacity(0.5) : Colors.white,
           fontSize: min(width, height) * 0.11,
@@ -476,7 +497,7 @@ class ParkingSpot extends ParkingElement {
 
         final platePainter = TextPainter(
           text: TextSpan(
-            text: _occupancy!.access!.vehicle.plate,
+            text: _entry!.vehiclePlate,
             style: plateStyle,
           ),
           textDirection: TextDirection.ltr,
@@ -507,27 +528,13 @@ class ParkingSpot extends ParkingElement {
       }
     }
     // Mostrar placa de vehículo y fechas para spots reservados
-    else if (_occupancy != null &&
-        _occupancy!.status == 'reserved' &&
-        _occupancy?.reservation?.vehicle != null) {
+    else if (_status == 'reserved' && _booking != null) {
       // Formatear fecha y hora en el nuevo formato
-      final dateTimeStart = DateTime.parse(_occupancy!.reservation!.startDate);
+      final dateTimeStart = DateTime.parse(_booking!.startDate);
       final String formattedDate =
           '${dateTimeStart.day}/${dateTimeStart.month}/${dateTimeStart.year}';
 
-      String timeRange = '';
-      if (_occupancy!.reservation!.endDate != null) {
-        final dateTimeEnd = DateTime.parse(_occupancy!.reservation!.endDate!);
-        // Siempre mostrar el rango de horas
-        final startTime =
-            '${dateTimeStart.hour.toString().padLeft(2, '0')}:${dateTimeStart.minute.toString().padLeft(2, '0')}';
-        final endTime =
-            '${dateTimeEnd.hour.toString().padLeft(2, '0')}:${dateTimeEnd.minute.toString().padLeft(2, '0')}';
-        timeRange = '$startTime - $endTime';
-      }
-
-      final dateText =
-          formattedDate + (timeRange.isNotEmpty ? '\n$timeRange' : '');
+      final dateText = formattedDate;
       final timeStyle = TextStyle(
         color: !isVisible ? Colors.white.withOpacity(0.5) : Colors.white,
         fontSize: min(width, height) * 0.08,
@@ -559,7 +566,7 @@ class ParkingSpot extends ParkingElement {
 
       final platePainter = TextPainter(
         text: TextSpan(
-          text: _occupancy!.reservation!.vehicle.plate,
+          text: _booking!.vehiclePlate,
           style: plateStyle,
         ),
         textDirection: TextDirection.ltr,
@@ -589,16 +596,11 @@ class ParkingSpot extends ParkingElement {
       );
     }
     // Mostrar placa de vehículo y fechas para spots con suscripción
-    else if (_occupancy != null &&
-        _occupancy!.status == 'subscribed' &&
-        _occupancy?.subscription?.vehicle != null) {
-      // Mostrar fechas de inicio y fin
-      final startDate = _formatDate(_occupancy!.subscription!.startDate);
-      final endDate = _occupancy!.subscription!.endDate != null
-          ? _formatDate(_occupancy!.subscription!.endDate!)
-          : 'Sin fin';
+    else if (_status == 'subscribed' && _subscription != null) {
+      // Mostrar fechas de inicio
+      final startDate = _formatDate(_subscription!.startDate);
 
-      final dateText = "Inicio: $startDate\nFin: $endDate";
+      final dateText = "Inicio: $startDate";
       final timeStyle = TextStyle(
         color: !isVisible ? Colors.white.withOpacity(0.5) : Colors.white,
         fontSize: min(width, height) * 0.08,
@@ -630,7 +632,7 @@ class ParkingSpot extends ParkingElement {
 
       final platePainter = TextPainter(
         text: TextSpan(
-          text: _occupancy!.subscription!.vehicle.plate,
+          text: _subscription!.vehiclePlate,
           style: plateStyle,
         ),
         textDirection: TextDirection.ltr,
@@ -876,7 +878,10 @@ class ParkingSpot extends ParkingElement {
       scale: scale,
       isVisible: isVisible,
       isLocked: isLocked,
-      occupancy: _occupancy,
+      entry: _entry,
+      booking: _booking,
+      subscription: _subscription,
+      status: _status,
     )..isHighlighted = _isHighlighted;
   }
 
@@ -888,7 +893,10 @@ class ParkingSpot extends ParkingElement {
       'spotType': type.toString().split('.').last,
       'label': label,
       'isOccupied': _isOccupied,
-      'occupancy': _occupancy?.toJson(),
+      'entry': _entry?.toJson(),
+      'booking': _booking?.toJson(),
+      'subscription': _subscription?.toJson(),
+      'status': _status,
       'position': {'x': position.x, 'y': position.y},
       'rotation': rotation,
       'scale': scale,
@@ -913,11 +921,22 @@ class ParkingSpot extends ParkingElement {
       ),
       label: json['label'] as String,
       isOccupied: json['isOccupied'] as bool,
-      occupancy: json['occupancy'] != null
-          ? ElementOccupancyModel.fromJson(
-              json['occupancy'] as Map<String, dynamic>,
+      entry: json['entry'] != null
+          ? ElementOccupancyInfoModel.fromJson(
+              json['entry'] as Map<String, dynamic>,
             )
           : null,
+      booking: json['booking'] != null
+          ? ElementOccupancyInfoModel.fromJson(
+              json['booking'] as Map<String, dynamic>,
+            )
+          : null,
+      subscription: json['subscription'] != null
+          ? ElementOccupancyInfoModel.fromJson(
+              json['subscription'] as Map<String, dynamic>,
+            )
+          : null,
+      status: json['status'] as String? ?? 'available',
       rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
       scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
       isVisible: json['isVisible'] as bool? ?? true,
@@ -942,9 +961,10 @@ extension ParkingSpotElementConversion on ParkingSpot {
       scale: scale,
       rotation: rotation,
       isActive: isActive,
-      occupancy:
-          _occupancy ??
-          ElementOccupancyModel(status: _isOccupied ? 'occupied' : 'available'),
+      entry: _entry,
+      booking: _booking,
+      subscription: _subscription,
+      status: _status,
     );
   }
 
@@ -959,8 +979,11 @@ extension ParkingSpotElementConversion on ParkingSpot {
             SpotType.values.length - 1,
           )], // Subtract 1 to match enum
       label: element.name,
-      isOccupied: element.occupancy.status == 'occupied',
-      occupancy: element.occupancy,
+      isOccupied: element.status == 'occupied',
+      entry: element.entry,
+      booking: element.booking,
+      subscription: element.subscription,
+      status: element.status,
       rotation: element.rotation,
       scale: element.scale,
       isVisible: true,

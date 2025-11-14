@@ -391,9 +391,7 @@ extension ParkingFacilityElementConversion on ParkingFacility {
       rotation: rotation,
       scale: scale,
       isActive: _isAvailable,
-      occupancy: ElementOccupancyModel(
-        status: _isAvailable ? 'available' : 'unavailable',
-      ),
+      status: _isAvailable ? 'available' : 'maintenance',
     );
   }
 
@@ -408,7 +406,7 @@ extension ParkingFacilityElementConversion on ParkingFacility {
             FacilityType.values.length - 1,
           )], // Subtract 1 to match enum
       name: element.name,
-      isAvailable: element.occupancy.status == 'available',
+      isAvailable: element.status == 'available',
       rotation: element.rotation,
       scale: element.scale,
       isVisible: true,
