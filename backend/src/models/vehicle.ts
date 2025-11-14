@@ -117,6 +117,7 @@ export const VehiclePreviewSchema = t.Object({
   ownerName: t.Union([t.String(), t.Null()]),
   ownerDocument: t.Union([t.String(), t.Null()]),
   ownerPhone: t.Union([t.String(), t.Null()]),
+  isSubscribed: t.Boolean(),
 });
 
 

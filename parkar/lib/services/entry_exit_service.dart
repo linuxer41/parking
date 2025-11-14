@@ -6,10 +6,18 @@ class EntryExitService extends BaseService {
   EntryExitService()
     : super(path: AppConfig.apiEndpoints['entryExit'] ?? '/entry-exit');
 
-  Future<BookingModel> createEntry(AccessCreateModel access) async {
+  Future<BookingModel> createEntry(
+    AccessCreateModel access, {
+    required String parkingId,
+    required String employeeId,
+  }) async {
     return post<BookingModel>(
       endpoint: '',
       body: access.toJson(),
+      additionalHeaders: {
+        'parking-id': parkingId,
+        'employee-id': employeeId,
+      },
       parser: (json) => parseModel(json, BookingModel.fromJson),
     );
   }

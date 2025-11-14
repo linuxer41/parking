@@ -16,8 +16,8 @@ export const subscriptionCrud = {
       const { vehiclePlate, vehicleType, vehicleColor, ownerName, ownerDocument, ownerPhone, spotId, startDate, period, amount, notes } = data;
       
       // Buscar vehículo existente o crear uno nuevo
-      const vehicleResult = await client.query<{ id: string, name: string }>(`
-        SELECT id, name FROM t_vehicle WHERE plate = $1 AND deletedAt IS NULL LIMIT 1
+      const vehicleResult = await client.query<{ id: string, plate: string }>(`
+        SELECT id, plate FROM t_vehicle WHERE plate = $1 AND "deletedAt" IS NULL LIMIT 1
       `, [vehiclePlate]);
 
       let vehicle = vehicleResult.rows[0];
@@ -32,15 +32,16 @@ export const subscriptionCrud = {
           ownerDocument: ownerDocument,
           ownerPhone: ownerPhone,
           parkingId: parkingId,
+          isSubscribed: false,
           id: randomUUID(),
           createdAt: new Date().toISOString(),
         });
         
-        const newVehicle = await client.query<{ id: string, name: string }>(`
-          INSERT INTO t_vehicle (id, plate, type, color, ownerName, ownerDocument, ownerPhone, parkingId, createdAt)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        const newVehicle = await client.query<{ id: string, plate: string }>(`
+          INSERT INTO t_vehicle (id, plate, type, color, "ownerName", "ownerDocument", "ownerPhone", "parkingId", "isSubscribed", "createdAt")
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING *
-        `, [vehicleData.id, vehicleData.plate, vehicleData.type, vehicleData.color, vehicleData.ownerName, vehicleData.ownerDocument, vehicleData.ownerPhone, vehicleData.parkingId, vehicleData.createdAt]);
+        `, [vehicleData.id, vehicleData.plate, vehicleData.type, vehicleData.color, vehicleData.ownerName, vehicleData.ownerDocument, vehicleData.ownerPhone, vehicleData.parkingId, vehicleData.isSubscribed, vehicleData.createdAt]);
         vehicle = newVehicle.rows[0];
       }
 
@@ -255,7 +256,8 @@ export const subscriptionCrud = {
           'color', v."color",
           'ownerName', v."ownerName",
           'ownerDocument', v."ownerDocument",
-          'ownerPhone', v."ownerPhone"
+          'ownerPhone', v."ownerPhone",
+          'isSubscribed', v."isSubscribed"
         ) as vehicle
       FROM t_subscription s
       LEFT JOIN t_vehicle v ON s.vehicleId = v.id

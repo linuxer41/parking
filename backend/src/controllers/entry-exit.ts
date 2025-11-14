@@ -82,11 +82,17 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   .post("/", async ({ body, headers }) => {
     const parkingId = headers["parking-id"];
     const employeeId = headers["employee-id"];
-    
+
     if (!parkingId || !employeeId) {
       throw new BadRequestError("Se requiere parking-id y employee-id en headers");
     }
-    
+
+    // Verificar que el empleado existe
+    const employee = await db.employee.findById(employeeId);
+    if (!employee) {
+      throw new BadRequestError("Empleado no encontrado");
+    }
+
     const entryExit = await db.entryExit.create(body, parkingId, employeeId);
     return entryExit;
   }, {
@@ -105,16 +111,22 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   // Registrar salida de un vehículo
   .post("/:id/exit", async ({ params, body, headers }) => {
     const exitEmployeeId = headers["employee-id"];
-    
+
     if (!exitEmployeeId) {
       throw new BadRequestError("Se requiere employee-id en headers");
     }
-    
+
+    // Verificar que el empleado existe
+    const employee = await db.employee.findById(exitEmployeeId);
+    if (!employee) {
+      throw new BadRequestError("Empleado no encontrado");
+    }
+
     const exitData = {
       ...body,
       exitEmployeeId
     };
-    
+
     const entryExit = await db.entryExit.registerExit(params.id, exitData);
     return entryExit;
   }, {

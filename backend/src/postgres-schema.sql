@@ -133,7 +133,7 @@ CREATE TABLE t_vehicle (
   "parkingId" uuid not null references t_parking(id) on delete cascade,
   "type" text not null, -- 'motorcycle', 'car', 'truck', 'bus', 'van'
   "plate" text not null,
-  "color" text not null,
+  "color" text,
   "ownerName" text,
   "ownerDocument" text,
   "ownerPhone" text,

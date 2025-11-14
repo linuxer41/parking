@@ -127,6 +127,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       final entryExitService = AppStateContainer.di(
         context,
       ).resolve<EntryExitService>();
+      final appState = AppStateContainer.of(context);
 
       final accessModel = AccessCreateModel(
         vehiclePlate: subscription.vehiclePlate,
@@ -139,7 +140,11 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         notes: 'Entrada de suscriptor',
       );
 
-      final entry = await entryExitService.createEntry(accessModel);
+      final entry = await entryExitService.createEntry(
+        accessModel,
+        parkingId: appState.currentParking?.id ?? '',
+        employeeId: appState.employee?.id ?? '',
+      );
 
       // Actualizar el spot con los datos del acceso
       _updateSpotWithAccessData(entry);
@@ -165,10 +170,6 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
-
-      if (!mounted) return;
-
-      final appState = AppStateContainer.of(context);
       await printService.printEntryTicket(
         booking: entry,
         context: context,

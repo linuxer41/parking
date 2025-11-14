@@ -417,6 +417,8 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
             vehicleType: vehicle.type,
             vehicleColor: vehicle.color,
           ),
+          parkingId: parkingId,
+          employeeId: appState.employee?.id ?? '',
         );
       } else if (vehicle.reservation != null) {
         // Registrar entrada con reserva
@@ -485,7 +487,11 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       final accessCreateModel = _createAccessModel(spotId: spotId);
 
       // Registrar entrada en el sistema
-      final entry = await entryExitService.createEntry(accessCreateModel);
+      final entry = await entryExitService.createEntry(
+        accessCreateModel,
+        parkingId: parkingId,
+        employeeId: appState.employee?.id ?? '',
+      );
 
       // Actualizar estado local del spot
       _updateSpotWithAccessData(entry);

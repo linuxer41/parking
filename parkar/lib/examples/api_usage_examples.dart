@@ -50,7 +50,11 @@ class ApiUsageExamples {
       notes: 'Cliente frecuente',
     );
 
-    return await _entryExitService.createEntry(accessModel);
+    return await _entryExitService.createEntry(
+      accessModel,
+      parkingId: '550e8400-e29b-41d4-a716-446655440000', // Example parking ID
+      employeeId: '550e8400-e29b-41d4-a716-446655440002', // Example employee ID
+    );
   }
 
   /// Ejemplo 3: Registrar salida de un vehículo
