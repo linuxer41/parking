@@ -1,6 +1,6 @@
 import { t } from "elysia";
-import { UserCreateSchema } from "./user";
-import { ParkingCreateSchema } from "./parking";
+import { UserCreateRequestSchema, UserResponseSchema } from "./user";
+import { ParkingCreateRequestSchema, ParkingResponseSchema } from "./parking";
 
 const loginBodySchema = t.Object({
   email: t.String({ format: "email" }),
@@ -16,43 +16,25 @@ const signupBodySchema = t.Object({
 });
 
 // Esquema para el registro completo (usuario + parking)
-export const CompleteRegistrationSchema = t.Object({
-  user: UserCreateSchema,
-  parking: t.Object({
-    name: t.String({
-      description: "Nombre del estacionamiento",
-      required: true,
-    }),
-    capacity: t.Number({
-      description: "Capacidad máxima del parqueo",
-      required: true,
-      minimum: 1,
-    }),
-    operationMode: t.Optional(t.Union([t.Literal("visual"), t.Literal("simple")], {
-      description: "Modo de operación del parqueo: visual o simple",
-      required: false,
-      default: "visual",
-    })),
-    location: t.Optional(t.Union([
-      t.Tuple([t.Number(), t.Number()], {
-        description: "Ubicación del estacionamiento [latitud, longitud]",
-      }),
-      t.Array(t.Number(), { minItems: 0, maxItems: 0 })
-    ], {
-      description: "Ubicación del estacionamiento [latitud, longitud] o array vacío",
-      required: false,
-    })),
-    address: t.Optional(t.String({
-      description: "Dirección del estacionamiento",
-      required: false,
-    })),
-  }, {
-    description: "Datos mínimos del estacionamiento para el registro completo",
-  }),
+export const RegistrationSchema = t.Object({
+  user: UserCreateRequestSchema,
+  parking: ParkingCreateRequestSchema,
 }, {
   description: "Esquema para el registro completo de usuario y estacionamiento",
 });
 
-export type CompleteRegistration = typeof CompleteRegistrationSchema.static;
+export const AuthResponseSchema = t.Object({
+  auth: t.Object({
+    token: t.String(),
+    refreshToken: t.String(),
+  }),
+  user: UserResponseSchema,
+  parkings: t.Array(ParkingResponseSchema),
+}, {
+  description: "Esquema para la respuesta de autenticación",
+});
+
+export type CompleteRegistration = typeof RegistrationSchema.static;
+export type AuthResponse = typeof AuthResponseSchema.static;
 
 export { loginBodySchema, signupBodySchema };

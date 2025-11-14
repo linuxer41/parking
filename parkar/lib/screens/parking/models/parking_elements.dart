@@ -9,17 +9,13 @@ class Size3D {
   double height;
   double depth;
 
-  Size3D({
-    required this.width,
-    required this.height,
-    this.depth = 0.0,
-  });
+  Size3D({required this.width, required this.height, this.depth = 0.0});
 
   // Constructor de copia
   Size3D.copy(Size3D other)
-      : width = other.width,
-        height = other.height,
-        depth = other.depth;
+    : width = other.width,
+      height = other.height,
+      depth = other.depth;
 
   // Método para escalar las dimensiones
   Size3D scaled(double factor) {
@@ -58,22 +54,24 @@ class ElementVisuals {
 /// Propiedades visuales de los elementos
 class ElementProperties {
   // Colores principales - Más vivos y saturados
-  static const Color blue = Color(0xFF1976D2);         // Azul más vivo
-  static const Color green = Color(0xFF2E7D32);        // Verde más vivo
-  static const Color red = Color(0xFFD32F2F);          // Rojo más vivo
-  static const Color orange = Color(0xFFE65100);       // Naranja más vivo
-  static const Color purple = Color(0xFF7B1FA2);       // Púrpura más vivo
-  static const Color gold = Color(0xFFFFC107);         // Dorado más vivo
-  static const Color gray = Color(0xFF616161);         // Gris más oscuro
+  static const Color blue = Color(0xFF1976D2); // Azul más vivo
+  static const Color green = Color(0xFF2E7D32); // Verde más vivo
+  static const Color red = Color(0xFFD32F2F); // Rojo más vivo
+  static const Color orange = Color(0xFFE65100); // Naranja más vivo
+  static const Color purple = Color(0xFF7B1FA2); // Púrpura más vivo
+  static const Color gold = Color(0xFFFFC107); // Dorado más vivo
+  static const Color gray = Color(0xFF616161); // Gris más oscuro
   static const Color white = Color(0xFFFFFFFF);
-  static const Color darkText = Color(0xFF212121);     // Texto más oscuro
+  static const Color darkText = Color(0xFF212121); // Texto más oscuro
 
   // Estado de espacios (colores más vivos)
-  static const Color availableColor = Color(0xFF00C853);    // Verde brillante
-  static const Color occupiedColor = Color(0xFFD50000);     // Rojo brillante
-  static const Color reservedColor = Color(0xFFFF6D00);     // Naranja brillante
-  static const Color subscribedColor = Color(0xFFAA00FF);   // Púrpura brillante
-  static const Color maintenanceColor = Color(0xFF455A64);  // Gris azulado más oscuro
+  static const Color availableColor = Color(0xFF00C853); // Verde brillante
+  static const Color occupiedColor = Color(0xFFD50000); // Rojo brillante
+  static const Color reservedColor = Color(0xFFFF6D00); // Naranja brillante
+  static const Color subscribedColor = Color(0xFFAA00FF); // Púrpura brillante
+  static const Color maintenanceColor = Color(
+    0xFF455A64,
+  ); // Gris azulado más oscuro
 
   // Colores para los tabs de categorías
   static const Color spacesTabColor = blue;
@@ -270,10 +268,10 @@ abstract class ParkingElement with ChangeNotifier {
     this.isVisible = true,
     this.isLocked = false,
     bool isSelected = false,
-  })  : _position = position,
-        _rotation = rotation,
-        _scale = scale,
-        _isSelected = isSelected;
+  }) : _position = position,
+       _rotation = rotation,
+       _scale = scale,
+       _isSelected = isSelected;
 
   // Getters y setters
   vector_math.Vector2 get position => _position;
@@ -324,7 +322,9 @@ abstract class ParkingElement with ChangeNotifier {
 
       // Almacenar el valor de escala para la animación
       ElementAnimation.setSelectionScale(
-          id, 1.0 + (_selectionAnimationValue * 0.05));
+        id,
+        1.0 + (_selectionAnimationValue * 0.05),
+      );
 
       notifyListeners();
     }
@@ -433,7 +433,7 @@ abstract class ParkingElement with ChangeNotifier {
     final otherWidth = otherSize.width * other.scale;
     final otherHeight = otherSize.height * other.scale;
 
-    // Si no hay rotación en ninguno de los elementos, usar detección de colisión simple con rectángulos
+    // Si no hay rotación en ninguno de los elementos, usar detección de colisión list con rectángulos
     if (rotation == 0 && other.rotation == 0) {
       final thisRect = Rect.fromCenter(
         center: Offset(position.x, position.y),
@@ -460,25 +460,65 @@ abstract class ParkingElement with ChangeNotifier {
     // Vertices del primer elemento
     final thisVertices = [
       _rotatePoint(
-          -thisHalfWidth, -thisHalfHeight, rotation, position.x, position.y),
+        -thisHalfWidth,
+        -thisHalfHeight,
+        rotation,
+        position.x,
+        position.y,
+      ),
       _rotatePoint(
-          thisHalfWidth, -thisHalfHeight, rotation, position.x, position.y),
+        thisHalfWidth,
+        -thisHalfHeight,
+        rotation,
+        position.x,
+        position.y,
+      ),
       _rotatePoint(
-          thisHalfWidth, thisHalfHeight, rotation, position.x, position.y),
+        thisHalfWidth,
+        thisHalfHeight,
+        rotation,
+        position.x,
+        position.y,
+      ),
       _rotatePoint(
-          -thisHalfWidth, thisHalfHeight, rotation, position.x, position.y),
+        -thisHalfWidth,
+        thisHalfHeight,
+        rotation,
+        position.x,
+        position.y,
+      ),
     ];
 
     // Vertices del segundo elemento
     final otherVertices = [
-      _rotatePoint(-otherHalfWidth, -otherHalfHeight, other.rotation,
-          other.position.x, other.position.y),
-      _rotatePoint(otherHalfWidth, -otherHalfHeight, other.rotation,
-          other.position.x, other.position.y),
-      _rotatePoint(otherHalfWidth, otherHalfHeight, other.rotation,
-          other.position.x, other.position.y),
-      _rotatePoint(-otherHalfWidth, otherHalfHeight, other.rotation,
-          other.position.x, other.position.y),
+      _rotatePoint(
+        -otherHalfWidth,
+        -otherHalfHeight,
+        other.rotation,
+        other.position.x,
+        other.position.y,
+      ),
+      _rotatePoint(
+        otherHalfWidth,
+        -otherHalfHeight,
+        other.rotation,
+        other.position.x,
+        other.position.y,
+      ),
+      _rotatePoint(
+        otherHalfWidth,
+        otherHalfHeight,
+        other.rotation,
+        other.position.x,
+        other.position.y,
+      ),
+      _rotatePoint(
+        -otherHalfWidth,
+        otherHalfHeight,
+        other.rotation,
+        other.position.x,
+        other.position.y,
+      ),
     ];
 
     // Verificar si los polígonos se intersecan usando el Teorema de Separación de Ejes
@@ -487,7 +527,12 @@ abstract class ParkingElement with ChangeNotifier {
 
   /// Rota un punto alrededor del origen y luego lo traslada
   Offset _rotatePoint(
-      double x, double y, double angle, double centerX, double centerY) {
+    double x,
+    double y,
+    double angle,
+    double centerX,
+    double centerY,
+  ) {
     final s = math.sin(angle);
     final c = math.cos(angle);
 
@@ -592,7 +637,9 @@ abstract class ParkingElement with ChangeNotifier {
 
   /// Convierte la posición del mundo a posición de pantalla
   vector_math.Vector2 getScreenPosition(
-      double zoom, vector_math.Vector2 cameraPosition) {
+    double zoom,
+    vector_math.Vector2 cameraPosition,
+  ) {
     final screenX = (_position.x * zoom) - cameraPosition.x;
     final screenY = (_position.y * zoom) - cameraPosition.y;
     return vector_math.Vector2(screenX, screenY);
@@ -662,8 +709,13 @@ abstract class ParkingElement with ChangeNotifier {
   }
 
   /// Método auxiliar para dibujar iconos
-  void drawIcon(Canvas canvas, IconData iconData, Size size, Color color,
-      [double scale = 1.0]) {
+  void drawIcon(
+    Canvas canvas,
+    IconData iconData,
+    Size size,
+    Color color, [
+    double scale = 1.0,
+  ]) {
     TextPainter textPainter = TextPainter(
       text: TextSpan(
         text: String.fromCharCode(iconData.codePoint),
@@ -680,10 +732,7 @@ abstract class ParkingElement with ChangeNotifier {
     textPainter.layout();
     textPainter.paint(
       canvas,
-      Offset(
-        -textPainter.width / 2,
-        -textPainter.height / 2,
-      ),
+      Offset(-textPainter.width / 2, -textPainter.height / 2),
     );
   }
 }

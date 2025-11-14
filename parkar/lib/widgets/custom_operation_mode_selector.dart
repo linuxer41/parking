@@ -39,7 +39,7 @@ class CustomOperationModeSelector extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildOperationModeCard(
-                  ParkingOperationMode.visual,
+                  ParkingOperationMode.list,
                   colorScheme,
                   textTheme,
                 ),
@@ -47,7 +47,7 @@ class CustomOperationModeSelector extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildOperationModeCard(
-                  ParkingOperationMode.simple,
+                  ParkingOperationMode.map,
                   colorScheme,
                   textTheme,
                 ),
@@ -110,12 +110,38 @@ class CustomOperationModeSelector extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      mode.displayName,
-                      style: textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mode.displayName,
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        if (mode == ParkingOperationMode.list) ...[
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Recomendado',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onPrimary,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],

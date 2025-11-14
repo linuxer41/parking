@@ -2,7 +2,7 @@
 
 ## Descripción General
 
-Parkar es un sistema avanzado de gestión de estacionamientos desarrollado en Flutter. Permite la creación, edición y administración de espacios de estacionamiento mediante una interfaz visual intuitiva. El sistema incluye herramientas para diseñar la distribución de estacionamientos, administrar la ocupación de espacios, y gestionar la entrada y salida de vehículos.
+Parkar es un sistema avanzado de gestión de estacionamientos desarrollado en Flutter. Permite la creación, edición y administración de espacios de estacionamiento mediante una interfaz map intuitiva. El sistema incluye herramientas para diseñar la distribución de estacionamientos, administrar la ocupación de espacios, y gestionar la entrada y salida de vehículos.
 
 ## Características Principales
 
@@ -111,7 +111,7 @@ parkingState.setEditorMode(EditorMode.select);
 
 ### Personalización del Renderizado
 
-El sistema utiliza la clase `ParkingRenderer` para dibujar los elementos. Puede personalizarse para adaptar el aspecto visual:
+El sistema utiliza la clase `ParkingRenderer` para dibujar los elementos. Puede personalizarse para adaptar el aspecto map:
 
 ```dart
 final renderer = ParkingRenderer(

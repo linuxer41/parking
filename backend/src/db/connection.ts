@@ -1,4 +1,4 @@
-import { Pool, types } from "pg";
+import { Pool, types, PoolClient } from "pg";
 import Big from "big.js";
 
 function parseDate(value: string): string {
@@ -31,19 +31,39 @@ async function getConnection() {
   }
 }
 
-// Función para ejecutar una consulta
-async function query(sql: string, params: any[] = []) {
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Helper function para manejo automático del cliente
+ * Maneja automáticamente la conexión y liberación del cliente
+ */
+async function withClient<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await getConnection();
   try {
-    const result = await client.query(sql, params);
-    return result.rows;
+    return await operation(client);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Helper function para manejo automático de transacciones
+ * Maneja automáticamente el inicio, commit y rollback de transacciones
+ */
+async function withTransaction<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await getConnection();
+  try {
+    await client.query('BEGIN');
+    const result = await operation(client);
+    await client.query('COMMIT');
+    return result;
   } catch (error) {
-    console.error("Error al ejecutar la consulta:", error);
+    await client.query('ROLLBACK');
     throw error;
   } finally {
-    client.release(); // Liberar la conexión al pool
+    client.release();
   }
 }
 
 // Exportar el pool y las funciones
-export { pool, getConnection, query };
+export { pool, getConnection, withClient, withTransaction };

@@ -1,4 +1,5 @@
-import { BaseCrud } from "./base-crud";
+import { PoolClient } from "pg";
+import { getConnection, withClient } from "../connection";
 import {
   OccupancyReport,
   RevenueReport,
@@ -6,28 +7,29 @@ import {
   ReportFilter,
 } from "../../models/report";
 
-class ReportCrud extends BaseCrud<any, any, any> {
-  constructor() {
-    super("");
+// ===== REPORT METHODS =====
+
+/**
+ * Obtener reporte de ocupación
+ */
+export async function getOccupancyReport(filter: ReportFilter): Promise<OccupancyReport> {
+  const groupBy = filter.groupBy || "day";
+  let groupFormat = "";
+
+  switch (groupBy) {
+    case "day":
+      groupFormat = "YYYY-MM-DD";
+      break;
+    case "week":
+      groupFormat = "IYYY-IW";
+      break;
+    case "month":
+      groupFormat = "YYYY-MM";
+      break;
   }
 
-  async getOccupancyReport(filter: ReportFilter): Promise<OccupancyReport> {
-    const groupBy = filter.groupBy || "day";
-    let groupFormat = "";
-
-    switch (groupBy) {
-      case "day":
-        groupFormat = "YYYY-MM-DD";
-        break;
-      case "week":
-        groupFormat = "IYYY-IW";
-        break;
-      case "month":
-        groupFormat = "YYYY-MM";
-        break;
-    }
-
-    const sql = `
+  const query = {
+    text: `
       WITH spot_counts AS (
         SELECT 
           l.id as area_id,
@@ -94,33 +96,37 @@ class ReportCrud extends BaseCrud<any, any, any> {
       JOIN total_spots ts ON ts."parkingId" = $1
       JOIN t_parking p ON p.id = $1
       GROUP BY p.name, ts.total_spots
-    `;
+    `,
+    values: [filter.parkingId, filter.startDate, filter.endDate],
+  };
 
-    const res = await this.query<OccupancyReport>({
-      sql,
-      params: [filter.parkingId, filter.startDate, filter.endDate],
-    });
+  return withClient(async (client) => {
+    const res = await client.query<OccupancyReport>(query);
+    return res.rows[0];
+  });
+}
 
-    return res[0];
+/**
+ * Obtener reporte de ingresos
+ */
+export async function getRevenueReport(filter: ReportFilter): Promise<RevenueReport> {
+  const groupBy = filter.groupBy || "day";
+  let groupFormat = "";
+
+  switch (groupBy) {
+    case "day":
+      groupFormat = "YYYY-MM-DD";
+      break;
+    case "week":
+      groupFormat = "IYYY-IW";
+      break;
+    case "month":
+      groupFormat = "YYYY-MM";
+      break;
   }
 
-  async getRevenueReport(filter: ReportFilter): Promise<RevenueReport> {
-    const groupBy = filter.groupBy || "day";
-    let groupFormat = "";
-
-    switch (groupBy) {
-      case "day":
-        groupFormat = "YYYY-MM-DD";
-        break;
-      case "week":
-        groupFormat = "IYYY-IW";
-        break;
-      case "month":
-        groupFormat = "YYYY-MM";
-        break;
-    }
-
-    const sql = `
+  const query = {
+    text: `
       WITH regular_revenue AS (
         SELECT 
           TO_CHAR(a."exitTime", '${groupFormat}') as date_group,
@@ -183,18 +189,22 @@ class ReportCrud extends BaseCrud<any, any, any> {
       FROM combined_revenue cr
       JOIN t_parking p ON p.id = $1
       GROUP BY p.name
-    `;
+    `,
+    values: [filter.parkingId, filter.startDate, filter.endDate],
+  };
 
-    const res = await this.query<RevenueReport>({
-      sql,
-      params: [filter.parkingId, filter.startDate, filter.endDate],
-    });
+  return withClient(async (client) => {
+    const res = await client.query<RevenueReport>(query);
+    return res.rows[0];
+  });
+}
 
-    return res[0];
-  }
-
-  async getVehicleReport(filter: ReportFilter): Promise<VehicleReport> {
-    const sql = `
+/**
+ * Obtener reporte de vehículos
+ */
+export async function getVehicleReport(filter: ReportFilter): Promise<VehicleReport> {
+  const query = {
+    text: `
       WITH vehicle_counts AS (
         SELECT 
           v."type",
@@ -227,15 +237,12 @@ class ReportCrud extends BaseCrud<any, any, any> {
       FROM vehicle_counts vc, total_count tc
       JOIN t_parking p ON p.id = $1
       GROUP BY p.name, tc.total
-    `;
+    `,
+    values: [filter.parkingId, filter.startDate, filter.endDate],
+  };
 
-    const res = await this.query<VehicleReport>({
-      sql,
-      params: [filter.parkingId, filter.startDate, filter.endDate],
-    });
-
-    return res[0];
-  }
+  return withClient(async (client) => {
+    const res = await client.query<VehicleReport>(query);
+    return res.rows[0];
+  });
 }
-
-export const reportCrud = new ReportCrud();

@@ -5,7 +5,7 @@ import 'package:vector_math/vector_math.dart' as vector_math;
 
 import 'enums.dart';
 import 'parking_elements.dart';
-import '../../../models/element_model.dart';
+import '../../../models/parking_model.dart';
 
 /// Clase que representa un espacio de estacionamiento
 class ParkingSpot extends ParkingElement {
@@ -50,6 +50,7 @@ class ParkingSpot extends ParkingElement {
     // El ParkingState debe actualizar este elemento usando updateElement(this, newSpot)
     notifyListeners();
   }
+
   // Etiqueta para mostrar en el UI
   @override
   final String label;
@@ -87,8 +88,8 @@ class ParkingSpot extends ParkingElement {
     super.isSelected,
     ElementOccupancyModel? occupancy,
     this.isActive = true,
-  })  : _isOccupied = isOccupied,
-        _occupancy = occupancy {
+  }) : _isOccupied = isOccupied,
+       _occupancy = occupancy {
     // Iniciar el temporizador si el spot está ocupado
     _updateElapsedTime();
     if (_isOccupied && _occupancy != null) {
@@ -103,7 +104,7 @@ class ParkingSpot extends ParkingElement {
   set isSelected(bool value) {
     if (value == _isSelected) return;
     _isSelected = value;
-    
+
     // Iniciar o detener la animación de pulso
     if (_isSelected) {
       _startPulseAnimation();
@@ -117,7 +118,7 @@ class ParkingSpot extends ParkingElement {
   set isHighlighted(bool value) {
     if (value == _isHighlighted) return;
     _isHighlighted = value;
-    
+
     // Iniciar o detener la animación de destacado
     if (_isHighlighted) {
       _startHighlightAnimation();
@@ -147,7 +148,9 @@ class ParkingSpot extends ParkingElement {
   void _startHighlightAnimation() {
     _highlightPulseValue = 0.0;
     _highlightPulseTimer?.cancel();
-    _highlightPulseTimer = Timer.periodic(const Duration(milliseconds: 60), (timer) {
+    _highlightPulseTimer = Timer.periodic(const Duration(milliseconds: 60), (
+      timer,
+    ) {
       _highlightPulseValue = (_highlightPulseValue + 0.05) % 1.0;
       notifyListeners();
     });
@@ -282,7 +285,7 @@ class ParkingSpot extends ParkingElement {
     Color statusColor;
     String statusText;
     IconData statusIcon;
-    
+
     if (!isActive) {
       statusColor = ElementProperties.gray;
       statusText = "INACTIVO";
@@ -302,10 +305,7 @@ class ParkingSpot extends ParkingElement {
       ..color = Colors.black.withOpacity(0.15)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        rect.translate(2, 2),
-        const Radius.circular(8),
-      ),
+      RRect.fromRectAndRadius(rect.translate(2, 2), const Radius.circular(8)),
       shadowPaint,
     );
 
@@ -315,11 +315,18 @@ class ParkingSpot extends ParkingElement {
       radius: 0.8,
       colors: [
         HSLColor.fromColor(statusColor)
-            .withLightness((HSLColor.fromColor(statusColor).lightness + 0.15).clamp(0.0, 1.0))
+            .withLightness(
+              (HSLColor.fromColor(statusColor).lightness + 0.15).clamp(
+                0.0,
+                1.0,
+              ),
+            )
             .toColor(),
         statusColor,
         HSLColor.fromColor(statusColor)
-            .withLightness((HSLColor.fromColor(statusColor).lightness - 0.1).clamp(0.0, 1.0))
+            .withLightness(
+              (HSLColor.fromColor(statusColor).lightness - 0.1).clamp(0.0, 1.0),
+            )
             .toColor(),
       ],
       stops: const [0.0, 0.5, 1.0],
@@ -361,7 +368,7 @@ class ParkingSpot extends ParkingElement {
       ),
       textDirection: TextDirection.ltr,
     );
-    
+
     iconPainter.layout();
     iconPainter.paint(
       canvas,
@@ -377,12 +384,12 @@ class ParkingSpot extends ParkingElement {
       fontSize: min(width, height) * 0.16,
       fontWeight: FontWeight.bold,
     );
-    
+
     final labelPainter = TextPainter(
       text: TextSpan(text: label, style: labelStyle),
       textDirection: TextDirection.ltr,
     );
-    
+
     labelPainter.layout();
     labelPainter.paint(
       canvas,
@@ -398,12 +405,12 @@ class ParkingSpot extends ParkingElement {
       fontSize: min(width, height) * 0.12,
       fontWeight: FontWeight.bold,
     );
-    
+
     final statusPainter = TextPainter(
       text: TextSpan(text: statusText, style: statusStyle),
       textDirection: TextDirection.ltr,
     );
-    
+
     statusPainter.layout();
     statusPainter.paint(
       canvas,
@@ -426,7 +433,7 @@ class ParkingSpot extends ParkingElement {
       ),
       textDirection: TextDirection.ltr,
     );
-    
+
     statusIconPainter.layout();
     statusIconPainter.paint(
       canvas,
@@ -443,12 +450,12 @@ class ParkingSpot extends ParkingElement {
         fontSize: min(width, height) * 0.11,
         fontWeight: FontWeight.w500,
       );
-      
+
       final timePainter = TextPainter(
         text: TextSpan(text: formattedParkingTime, style: timeStyle),
         textDirection: TextDirection.ltr,
       );
-      
+
       timePainter.layout();
       timePainter.paint(
         canvas,
@@ -466,7 +473,7 @@ class ParkingSpot extends ParkingElement {
           fontWeight: FontWeight.w600,
           backgroundColor: Colors.black.withOpacity(0.3),
         );
-        
+
         final platePainter = TextPainter(
           text: TextSpan(
             text: _occupancy!.access!.vehicle.plate,
@@ -475,21 +482,21 @@ class ParkingSpot extends ParkingElement {
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.center,
         );
-        
+
         platePainter.layout();
-        
+
         // Dibujar fondo para la placa
         final plateRect = Rect.fromCenter(
           center: Offset(0, height * 0.38),
           width: platePainter.width + 10,
           height: platePainter.height + 4,
         );
-        
+
         canvas.drawRRect(
           RRect.fromRectAndRadius(plateRect, const Radius.circular(4)),
           Paint()..color = Colors.black.withOpacity(0.5),
         );
-        
+
         platePainter.paint(
           canvas,
           Offset(
@@ -500,33 +507,39 @@ class ParkingSpot extends ParkingElement {
       }
     }
     // Mostrar placa de vehículo y fechas para spots reservados
-    else if (_occupancy != null && _occupancy!.status == 'reserved' && _occupancy?.reservation?.vehicle != null) {
+    else if (_occupancy != null &&
+        _occupancy!.status == 'reserved' &&
+        _occupancy?.reservation?.vehicle != null) {
       // Formatear fecha y hora en el nuevo formato
       final dateTimeStart = DateTime.parse(_occupancy!.reservation!.startDate);
-      final String formattedDate = '${dateTimeStart.day}/${dateTimeStart.month}/${dateTimeStart.year}';
-      
+      final String formattedDate =
+          '${dateTimeStart.day}/${dateTimeStart.month}/${dateTimeStart.year}';
+
       String timeRange = '';
       if (_occupancy!.reservation!.endDate != null) {
         final dateTimeEnd = DateTime.parse(_occupancy!.reservation!.endDate!);
         // Siempre mostrar el rango de horas
-        final startTime = '${dateTimeStart.hour.toString().padLeft(2, '0')}:${dateTimeStart.minute.toString().padLeft(2, '0')}';
-        final endTime = '${dateTimeEnd.hour.toString().padLeft(2, '0')}:${dateTimeEnd.minute.toString().padLeft(2, '0')}';
+        final startTime =
+            '${dateTimeStart.hour.toString().padLeft(2, '0')}:${dateTimeStart.minute.toString().padLeft(2, '0')}';
+        final endTime =
+            '${dateTimeEnd.hour.toString().padLeft(2, '0')}:${dateTimeEnd.minute.toString().padLeft(2, '0')}';
         timeRange = '$startTime - $endTime';
       }
-      
-      final dateText = formattedDate + (timeRange.isNotEmpty ? '\n$timeRange' : '');
+
+      final dateText =
+          formattedDate + (timeRange.isNotEmpty ? '\n$timeRange' : '');
       final timeStyle = TextStyle(
         color: !isVisible ? Colors.white.withOpacity(0.5) : Colors.white,
         fontSize: min(width, height) * 0.08,
         fontWeight: FontWeight.w500,
       );
-      
+
       final timePainter = TextPainter(
         text: TextSpan(text: dateText, style: timeStyle),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       );
-      
+
       timePainter.layout();
       timePainter.paint(
         canvas,
@@ -543,7 +556,7 @@ class ParkingSpot extends ParkingElement {
         fontWeight: FontWeight.w600,
         backgroundColor: Colors.black.withOpacity(0.3),
       );
-      
+
       final platePainter = TextPainter(
         text: TextSpan(
           text: _occupancy!.reservation!.vehicle.plate,
@@ -552,21 +565,21 @@ class ParkingSpot extends ParkingElement {
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       );
-      
+
       platePainter.layout();
-      
+
       // Dibujar fondo para la placa - misma posición que occupied
       final plateRect = Rect.fromCenter(
         center: Offset(0, height * 0.38),
         width: platePainter.width + 10,
         height: platePainter.height + 4,
       );
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(plateRect, const Radius.circular(4)),
         Paint()..color = Colors.black.withOpacity(0.5),
       );
-      
+
       platePainter.paint(
         canvas,
         Offset(
@@ -576,24 +589,28 @@ class ParkingSpot extends ParkingElement {
       );
     }
     // Mostrar placa de vehículo y fechas para spots con suscripción
-    else if (_occupancy != null && _occupancy!.status == 'subscribed' && _occupancy?.subscription?.vehicle != null) {
+    else if (_occupancy != null &&
+        _occupancy!.status == 'subscribed' &&
+        _occupancy?.subscription?.vehicle != null) {
       // Mostrar fechas de inicio y fin
       final startDate = _formatDate(_occupancy!.subscription!.startDate);
-      final endDate = _occupancy!.subscription!.endDate != null ? _formatDate(_occupancy!.subscription!.endDate!) : 'Sin fin';
-      
+      final endDate = _occupancy!.subscription!.endDate != null
+          ? _formatDate(_occupancy!.subscription!.endDate!)
+          : 'Sin fin';
+
       final dateText = "Inicio: $startDate\nFin: $endDate";
       final timeStyle = TextStyle(
         color: !isVisible ? Colors.white.withOpacity(0.5) : Colors.white,
         fontSize: min(width, height) * 0.08,
         fontWeight: FontWeight.w500,
       );
-      
+
       final timePainter = TextPainter(
         text: TextSpan(text: dateText, style: timeStyle),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       );
-      
+
       timePainter.layout();
       timePainter.paint(
         canvas,
@@ -610,7 +627,7 @@ class ParkingSpot extends ParkingElement {
         fontWeight: FontWeight.w600,
         backgroundColor: Colors.black.withOpacity(0.3),
       );
-      
+
       final platePainter = TextPainter(
         text: TextSpan(
           text: _occupancy!.subscription!.vehicle.plate,
@@ -619,21 +636,21 @@ class ParkingSpot extends ParkingElement {
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       );
-      
+
       platePainter.layout();
-      
+
       // Dibujar fondo para la placa - misma posición que occupied
       final plateRect = Rect.fromCenter(
         center: Offset(0, height * 0.38),
         width: platePainter.width + 10,
         height: platePainter.height + 4,
       );
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(plateRect, const Radius.circular(4)),
         Paint()..color = Colors.black.withOpacity(0.5),
       );
-      
+
       platePainter.paint(
         canvas,
         Offset(
@@ -649,7 +666,7 @@ class ParkingSpot extends ParkingElement {
         ..color = Colors.white.withOpacity(0.5 + _pulseValue * 0.5)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           rect.inflate(4 + _pulseValue * 3),
@@ -658,7 +675,7 @@ class ParkingSpot extends ParkingElement {
         selectionPaint,
       );
     }
-    
+
     // Dibujar indicador de destacado si está destacado
     if (_isHighlighted) {
       // Usar un color dorado/amarillo para el destacado
@@ -666,7 +683,7 @@ class ParkingSpot extends ParkingElement {
         ..color = Colors.amber.withOpacity(0.3 + _highlightPulseValue * 0.7)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0;
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           rect.inflate(5 + _highlightPulseValue * 4),
@@ -674,13 +691,13 @@ class ParkingSpot extends ParkingElement {
         ),
         highlightPaint,
       );
-      
+
       // Añadir un segundo borde más fino para un efecto de brillo
       final glowPaint = Paint()
         ..color = Colors.white.withOpacity(0.2 + _highlightPulseValue * 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0;
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           rect.inflate(8 + _highlightPulseValue * 5),
@@ -872,10 +889,7 @@ class ParkingSpot extends ParkingElement {
       'label': label,
       'isOccupied': _isOccupied,
       'occupancy': _occupancy?.toJson(),
-      'position': {
-        'x': position.x,
-        'y': position.y,
-      },
+      'position': {'x': position.x, 'y': position.y},
       'rotation': rotation,
       'scale': scale,
       'isVisible': isVisible,
@@ -899,8 +913,10 @@ class ParkingSpot extends ParkingElement {
       ),
       label: json['label'] as String,
       isOccupied: json['isOccupied'] as bool,
-      occupancy: json['occupancy'] != null 
-          ? ElementOccupancyModel.fromJson(json['occupancy'] as Map<String, dynamic>)
+      occupancy: json['occupancy'] != null
+          ? ElementOccupancyModel.fromJson(
+              json['occupancy'] as Map<String, dynamic>,
+            )
           : null,
       rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
       scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
@@ -914,11 +930,9 @@ class ParkingSpot extends ParkingElement {
 
 extension ParkingSpotElementConversion on ParkingSpot {
   // Convertir ParkingSpot a ElementModel
-  ElementModel toElementModel(String areaId, String parkingId) {
+  ElementModel toElementModel() {
     return ElementModel(
       id: id,
-      areaId: areaId,
-      parkingId: parkingId,
       name: label,
       type: ElementType.spot,
       subType: type.index + 1, // Add 1 to match backend schema
@@ -927,13 +941,10 @@ extension ParkingSpotElementConversion on ParkingSpot {
       posZ: 0.0,
       scale: scale,
       rotation: rotation,
-      accessId: isOccupied && _occupancy?.access != null ? _occupancy!.access!.id : null,
-      occupancy: _occupancy ?? ElementOccupancyModel(
-        status: isOccupied ? 'occupied' : 'available',
-      ),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      deletedAt: null,
+      isActive: isActive,
+      occupancy:
+          _occupancy ??
+          ElementOccupancyModel(status: _isOccupied ? 'occupied' : 'available'),
     );
   }
 
@@ -942,7 +953,11 @@ extension ParkingSpotElementConversion on ParkingSpot {
     return ParkingSpot(
       id: element.id,
       position: vector_math.Vector2(element.posX, element.posY),
-      type: SpotType.values[element.subType - 1], // Subtract 1 to match enum
+      type:
+          SpotType.values[(element.subType - 1).clamp(
+            0,
+            SpotType.values.length - 1,
+          )], // Subtract 1 to match enum
       label: element.name,
       isOccupied: element.occupancy.status == 'occupied',
       occupancy: element.occupancy,
@@ -950,16 +965,17 @@ extension ParkingSpotElementConversion on ParkingSpot {
       scale: element.scale,
       isVisible: true,
       isLocked: false,
+      isActive: element.isActive,
     );
   }
 }
 
-  /// Helper method to format a date string to a more user-friendly format
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateStr;
-    }
+/// Helper method to format a date string to a more user-friendly format
+String _formatDate(String dateStr) {
+  try {
+    final date = DateTime.parse(dateStr);
+    return '${date.day}/${date.month}/${date.year}';
+  } catch (e) {
+    return dateStr;
   }
+}

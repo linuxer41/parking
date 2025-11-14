@@ -1,6 +1,7 @@
 import { t } from "elysia";
 import { BaseSchema } from "./base-model";
 
+// ===== ESQUEMAS ADICIONALES =====
 export const SpotCheckSchema = t.Object({
   id: t.String({
     description: "ID de la suscripción",
@@ -28,21 +29,21 @@ export const SpotCheckSchema = t.Object({
   }),
 });
 
-// Modelo Principal
-export const VehicleSchema = t.Object(
-  {
-    // Campos base
-    ...BaseSchema.properties,
+// ===== ESQUEMA PRINCIPAL =====
+export const VehicleSchema = t.Composite([
+  BaseSchema,
+  t.Object({
     // Campos específicos
     parkingId: t.String({
       description: "ID del estacionamiento asociado",
       required: true,
+      format: "uuid",
     }),
-    type: t.Optional(t.String({
+    type: t.String({
       description: "ID del tipo de vehículo",
       required: false,
-    })),
-    color: t.Optional(t.String({
+    }),
+    color: t.Optional(t.Union([t.String(), t.Null()], {
       description: "ID del color del vehículo",
       required: false,
     })),
@@ -50,74 +51,83 @@ export const VehicleSchema = t.Object(
       description: "Placa del vehículo",
       required: true,
     }),
-    ownerName: t.Nullable(t.String({
+    ownerName: t.Optional(t.Union([t.String(), t.Null()], {
       description: "Nombre del propietario del vehículo",
       required: false,
     })),
-    ownerDocument: t.Nullable(t.String({
+    ownerDocument: t.Optional(t.Union([t.String(), t.Null()], {
       description: "Documento de identidad del propietario del vehículo",
       required: false,
     })),
-    ownerPhone: t.Nullable(t.String({
+    ownerPhone: t.Optional(t.Union([t.String(), t.Null()], {
       description: "Teléfono del propietario del vehículo",
       required: false,
     })),
-    subscription: t.Nullable(SpotCheckSchema),
-    reservation: t.Nullable(SpotCheckSchema),
-    access: t.Nullable(SpotCheckSchema),
-  },
+    isSubscribed: t.Boolean({
+      description: "Indica si el vehículo tiene una suscripción activa",
+      required: true,
+    }),
+    // Campo para el booking activo (solo reservas)
+    activeBooking: t.Nullable(t.Object({
+      id: t.String(),
+      number: t.Number(),
+      startDate: t.Union([t.String(), t.Date()]),
+      endDate: t.Union([t.String(), t.Date(), t.Null()]),
+      status: t.String(),
+      amount: t.Number(),
+    })),
+  }),
+  ],
   {
     description: "Esquema principal para la entidad Vehicle",
-  },
+  }
 );
 
-export type Vehicle = typeof VehicleSchema.static;
+// ===== ESQUEMA DE RESPUESTA =====
+export const VehicleResponseSchema = t.Pick(VehicleSchema, ["id", "parkingId", "type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone", "isSubscribed", "activeBooking"], {
+  description: "Esquema de respuesta para operaciones de Vehicle",
+});
 
-// Modelo de Creación
-export const VehicleCreateSchema = t.Pick(VehicleSchema, ["parkingId", "type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone"], {
+// ===== ESQUEMA DE CREACIÓN =====
+export const VehicleCreateSchema = t.Pick(VehicleSchema, ["id", "createdAt", "parkingId", "type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone", "isSubscribed"], {
   description: "Esquema para la creación de un Vehicle",
 });
 
-export type VehicleCreate = typeof VehicleCreateSchema.static;
+// ===== ESQUEMA DE REQUEST DE CREACIÓN =====
+export const VehicleCreateRequestSchema = t.Pick(VehicleSchema, ["parkingId", "type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone", "isSubscribed"], {
+  description: "Esquema de request para crear un Vehicle",
+});
 
-// Modelo de Actualización
-export const VehicleUpdateSchema = t.Partial(t.Pick(VehicleSchema, ["type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone"]), {
+// ===== ESQUEMA DE ACTUALIZACIÓN =====
+export const VehicleUpdateSchema = t.Partial(t.Pick(VehicleSchema, ["updatedAt", "type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone"]), {
   description: "Esquema para la actualización de un Vehicle",
 });
 
-export type VehicleUpdate = typeof VehicleUpdateSchema.static;
-
-// pick vehicle schema properties
-export const VehiclePreviewSchema = t.Pick(VehicleSchema, ["id", "plate", "color", "type", "ownerName", "ownerDocument", "ownerPhone"]);
-
-export type VehiclePreview = typeof VehiclePreviewSchema.static;
-
-export const VehicleDetailsRequestSchema = t.Object({
-  vehiclePlate: t.String({
-    description: "Placa del vehículo",
-    required: true,
-  }),
-  vehicleType: t.Optional(t.String({
-    description: "Tipo de vehículo",
-    required: true,
-  })),
-  vehicleColor: t.Optional(t.String({
-    description: "Color del vehículo",
-    required: true,
-  })),
-  ownerDocument:  t.Optional(t.String({
-    description: "Documento del propietario del vehículo",
-    required: true,
-  })),
-  ownerName: t.Optional(t.String({
-    description: "Nombre del propietario del vehículo",
-    required: true,
-  })),
-  ownerPhone: t.Optional(t.String({
-    description: "Teléfono del propietario del vehículo",
-    required: true,
-  })),
+// ===== ESQUEMA DE REQUEST DE ACTUALIZACIÓN =====
+export const VehicleUpdateRequestSchema = t.Partial(t.Pick(VehicleSchema, ["type", "color", "plate", "ownerName", "ownerDocument", "ownerPhone"]), {
+  description: "Esquema de request para actualizar un Vehicle",
 });
 
-export type VehicleDetailsRequest = typeof VehicleDetailsRequestSchema.static;
+// ===== ESQUEMAS ADICIONALES =====
+export const VehiclePreviewSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  plate: t.String(),
+  color: t.Union([t.String(), t.Null()]),
+  type: t.String(),
+  ownerName: t.Union([t.String(), t.Null()]),
+  ownerDocument: t.Union([t.String(), t.Null()]),
+  ownerPhone: t.Union([t.String(), t.Null()]),
+});
+
+
+
+// ===== EXPORT TYPES =====
+export type SpotCheck = typeof SpotCheckSchema.static;
+export type Vehicle = typeof VehicleSchema.static;
+export type VehicleResponse = typeof VehicleResponseSchema.static;
+export type VehicleCreate = typeof VehicleCreateSchema.static;
+export type VehicleCreateRequest = typeof VehicleCreateRequestSchema.static;
+export type VehicleUpdate = typeof VehicleUpdateSchema.static;
+export type VehicleUpdateRequest = typeof VehicleUpdateRequestSchema.static;
+export type VehiclePreview = typeof VehiclePreviewSchema.static;
 

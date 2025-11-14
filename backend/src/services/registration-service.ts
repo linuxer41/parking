@@ -1,17 +1,20 @@
+import { getSchemaValidator } from "elysia";
+import { PoolClient } from "pg";
+import { withTransaction } from "../db/connection";
+import { db } from "../db";
 import { CompleteRegistration } from "../models/auth";
-import { userCrud } from "../db/crud/user";
-import { parkingCrud } from "../db/crud/parking";
-import { areaCrud } from "../db/crud/area";
-import { elementCrud } from "../db/crud/element";
-import { employeeCrud } from "../db/crud/employee";
-import { ELEMENT_TYPES, SPOT_SUBTYPES, ELEMENT_STATUS } from "../models/element";
+import { Area, AreaCreateSchema, Element, ELEMENT_TYPES, SPOT_SUBTYPES } from "../models/parking";
+import { Employee, EmployeeCreateSchema } from "../models/employee";
+import { Parking, ParkingCreateSchema } from "../models/parking";
+import { User, UserCreateSchema } from "../models/user";
+import { ConflictError } from "../utils/error";
 
 export interface RegistrationResult {
-  user: any;
-  parking: any;
-  area: any;
-  spots: any[];
-  employee: any;
+  user: User;
+  parking: Parking;
+  area: Area;
+  spots: Element[];
+  employee: Employee;
 }
 
 export class RegistrationService {
@@ -21,82 +24,125 @@ export class RegistrationService {
    * @returns Resultado del registro con todos los elementos creados
    */
   async registerComplete(data: CompleteRegistration): Promise<RegistrationResult> {
-    return await userCrud.withTransaction(async (client) => {
-      // 1. Crear el usuario
-      const userData = {
+    // Verificar si el usuario ya existe
+    const existingUsers = await db.user.find({ email: data.user.email });
+    
+    if (existingUsers.length > 0) {
+      throw new ConflictError(`Ya existe un usuario con el email ${data.user.email}`);
+    }
+
+    return await withTransaction(async (client) => {
+      const { password, ...restUserData } = data.user;
+      const validator = getSchemaValidator(UserCreateSchema);
+      const userData = validator.parse({
+        ...restUserData,
+        passwordHash: await Bun.password.hash(password),
         id: crypto.randomUUID(),
-        ...data.user,
-        password: await Bun.password.hash(data.user.password),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      });
       
-      const user = await this.createUserWithClient(client, userData);
+      const userQueryRes = await client.query<User>(`
+        INSERT INTO t_user ("id", "createdAt", "name", "email", "passwordHash", "phone")
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT ("email") DO NOTHING
+        RETURNING *
+      `, [userData.id, userData.createdAt, userData.name, userData.email, userData.passwordHash, userData.phone]);
+
+      const user = userQueryRes.rows[0];
+      // console.log("user", user);
       
       // 2. Generar datos por defecto del parking
-      let location: any = null;
+      // let location: any = null;
       let address = data.parking.address || "Dirección por defecto";
       
-      if (data.parking.location && Array.isArray(data.parking.location) && data.parking.location.length === 2) {
-        const [lat, lon] = data.parking.location;
-        location = await this.getLocationFromCoordinates(lat, lon);
-        // Si no se proporcionó dirección pero sí coordenadas, usar la dirección obtenida
-        if (!data.parking.address && location?.address) {
-          address = location.address;
-        }
-      }
+      // TODO: Implementar geocoding para obtener la dirección
+      // if (data.parking.location && data.parking.location.lat && data.parking.location.lng) {
+      //   location = await this.getLocationFromCoordinates(data.parking.location.lat, data.parking.location.lng);
+      //   // Si no se proporcionó dirección pero sí coordenadas, usar la dirección obtenida
+      //   if (!data.parking.address && location?.address) {
+      //     address = location.address;
+      //   }
+      // }
       
       // 3. Crear el parking con datos por defecto
-      const parkingData = {
-        id: crypto.randomUUID(),
+      const parkingValidator = getSchemaValidator(ParkingCreateSchema);
+      const parkingData = parkingValidator.parse({
         name: data.parking.name,
-        email: `${data.user.email.split('@')[0]}_parking@${data.user.email.split('@')[1]}`,
+        email: data.user.email,
         phone: data.user.phone,
         address: address,
-        logoUrl: null,
+        operationMode: data.parking.operationMode || "map",
+        logoUrl: undefined,
         ownerId: user.id,
         status: "active",
-        operationMode: data.parking.operationMode || "visual",
-        capacity: data.parking.capacity,
         params: this.generateDefaultParams(),
         rates: this.generateDefaultRates(),
+        id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      });
+
+      const parkingColumns = Object.keys(parkingData)
+        .map((key) => `"${key}"`)
+        .join(", ");
+      const parkingValues = Object.values(parkingData).map((value) => {
+        if (typeof value === "object") {
+          return JSON.stringify(value);
+        }
+        return value;
+      });
+      const parkingPlaceholders = parkingValues.map((_, i) => `$${i + 1}`).join(", ");
       
-      const parking = await this.createParkingWithClient(client, parkingData);
+      const parkingQueryRes = await client.query<Parking>(`
+        INSERT INTO t_parking (${parkingColumns}) VALUES (${parkingPlaceholders}) RETURNING *
+      `, parkingValues);
+
+      const parking = parkingQueryRes.rows[0];
+      // console.log("parking", parking);
       
       // 3. Crear el empleado (el usuario como empleado del parking)
-      const employeeData = {
-        id: crypto.randomUUID(),
+      const employeeValidator = getSchemaValidator(EmployeeCreateSchema);
+      const employeeData = employeeValidator.parse({
         userId: user.id,
         parkingId: parking.id,
         role: "owner",
+        id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      });
       
-      const employee = await this.createEmployeeWithClient(client, employeeData);
+      const employeeQueryRes = await client.query<Employee>(`
+        INSERT INTO t_employee ("id", "createdAt", "parkingId", "role", "userId")
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `, [employeeData.id, employeeData.createdAt, employeeData.parkingId, employeeData.role, employeeData.userId]);
+
+      const employee = employeeQueryRes.rows[0];
+      // console.log("employee", employee);
       
       // 4. Crear un área por defecto
-      const areaData = {
-        id: crypto.randomUUID(),
+      const areaValidator = getSchemaValidator(AreaCreateSchema);
+      const areaData = areaValidator.parse({
         name: "Área Principal",
         parkingId: parking.id,
+        id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      });
       
-      const area = await this.createAreaWithClient(client, areaData);
-      
-      // 5. Crear spots basados en la capacidad
+      const areaQueryRes = await client.query<Area>(`
+        INSERT INTO t_area ("id", "createdAt", "name", "parkingId")
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `, [areaData.id, areaData.createdAt, areaData.name, areaData.parkingId]);
+
+      const area = areaQueryRes.rows[0];
+      // console.log("area", area);
+      // 5. Crear spots - 20 spots por defecto siempre
       const spots = await this.createSpotsWithClient(
         client, 
         area.id, 
         parking.id, 
-        data.parking.capacity
+        20
       );
-      
+      // console.log("spots", spots);
       return {
         user,
         parking,
@@ -107,57 +153,7 @@ export class RegistrationService {
     });
   }
 
-  private async createUserWithClient(client: any, userData: any) {
-    const columns = Object.keys(userData)
-      .map((key) => `"${key}"`)
-      .join(", ");
-    const values = Object.values(userData);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
-    const sql = `INSERT INTO t_user (${columns}) VALUES (${placeholders}) RETURNING *`;
-    
-    const result = await client.query(sql, values);
-    return result.rows[0];
-  }
-
-  private async createParkingWithClient(client: any, parkingData: any) {
-    const columns = Object.keys(parkingData)
-      .map((key) => `"${key}"`)
-      .join(", ");
-    const values = Object.values(parkingData).map((value) =>
-      typeof value === "object" ? JSON.stringify(value) : value
-    );
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
-    const sql = `INSERT INTO t_parking (${columns}) VALUES (${placeholders}) RETURNING *`;
-    
-    const result = await client.query(sql, values);
-    return result.rows[0];
-  }
-
-  private async createEmployeeWithClient(client: any, employeeData: any) {
-    const columns = Object.keys(employeeData)
-      .map((key) => `"${key}"`)
-      .join(", ");
-    const values = Object.values(employeeData);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
-    const sql = `INSERT INTO t_employee (${columns}) VALUES (${placeholders}) RETURNING *`;
-    
-    const result = await client.query(sql, values);
-    return result.rows[0];
-  }
-
-  private async createAreaWithClient(client: any, areaData: any) {
-    const columns = Object.keys(areaData)
-      .map((key) => `"${key}"`)
-      .join(", ");
-    const values = Object.values(areaData);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
-    const sql = `INSERT INTO t_area (${columns}) VALUES (${placeholders}) RETURNING *`;
-    
-    const result = await client.query(sql, values);
-    return result.rows[0];
-  }
-
-  private async createSpotsWithClient(client: any, areaId: string, parkingId: string, capacity: number) {
+  private async createSpotsWithClient(client: PoolClient, areaId: string, parkingId: string, capacity: number) {
     const spots = [];
     
     // Configuración de dimensiones basada en el seed
@@ -181,7 +177,6 @@ export class RegistrationService {
         const posY = row * (ELEMENT_CONFIG.spotHeight + ELEMENT_CONFIG.rowSpacing);
         
         const spotData = {
-          id: crypto.randomUUID(),
           areaId,
           parkingId,
           name: `Spot ${spotIndex.toString().padStart(3, '0')}`,
@@ -193,8 +188,6 @@ export class RegistrationService {
           rotation: 0,
           scale: 1,
           isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
         };
         
         const columns = Object.keys(spotData)
@@ -219,10 +212,10 @@ export class RegistrationService {
    */
   private generateDefaultParams() {
     return {
-      currency: "USD",
-      timeZone: "America/New_York",
+      currency: "BOB",
+      timeZone: "America/La_Paz",
       decimalPlaces: 2,
-      countryCode: "US",
+      countryCode: "BO",
       theme: "default",
       slogan: "Tu estacionamiento de confianza"
     };
@@ -264,13 +257,8 @@ export class RegistrationService {
    * Obtiene la ubicación desde coordenadas usando el servicio de geocodificación
    */
   private async getLocationFromCoordinates(lat: number, lon: number) {
-    try {
-      const { reverseGeocodingAPI } = await import("../utils/geoapify");
-      return await reverseGeocodingAPI(lat, lon);
-    } catch (error) {
-      console.error("Error obteniendo ubicación:", error);
-      return null;
-    }
+    const { reverseGeocodingAPI } = await import("../utils/geoapify");
+    return await reverseGeocodingAPI(lat, lon);
   }
 }
 

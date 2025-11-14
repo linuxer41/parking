@@ -37,7 +37,6 @@ async function debugRegistration() {
       parking: {
         name: "Test Parking",
         email: "parking@test.com",
-        capacity: 10,
         params: {
           currency: "USD",
           timeZone: "America/New_York",
@@ -89,7 +88,6 @@ async function debugRegistration() {
         email: "info@estacionamiento.com",
         phone: "+1234567890",
         address: "Calle Principal 123",
-        capacity: 50,
         params: {
           currency: "USD",
           timeZone: "America/New_York",

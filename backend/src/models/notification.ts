@@ -1,6 +1,7 @@
 import { t } from "elysia";
 import { BaseSchema } from "./base-model";
 
+// ===== CONSTANTES =====
 // Tipos de notificaciones
 export enum NotificationType {
   ACCESS = "access",
@@ -30,11 +31,10 @@ const enumToRecord = <T extends Record<string, string>>(enumObj: T) => {
   );
 };
 
-// Esquema para notificaciones
-export const NotificationSchema = t.Object(
-  {
-    // Campos base
-    ...BaseSchema.properties,
+// ===== ESQUEMA PRINCIPAL =====
+export const NotificationSchema = t.Composite([
+  BaseSchema,
+  t.Object({
     // Campos específicos
     type: t.Enum(enumToRecord(NotificationType), {
       description: "Tipo de notificación",
@@ -51,6 +51,7 @@ export const NotificationSchema = t.Object(
     recipientId: t.String({
       description: "ID del destinatario (usuario, empleado, etc.)",
       required: true,
+      format: "uuid",
     }),
     recipientType: t.String({
       description: "Tipo de destinatario (user, employee, subscription, etc.)",
@@ -63,12 +64,14 @@ export const NotificationSchema = t.Object(
     parkingId: t.String({
       description: "ID del estacionamiento relacionado",
       required: true,
+      format: "uuid",
     }),
     relatedEntityId: t.Optional(
       t.String({
         description:
           "ID de la entidad relacionada (access, reservation, etc.)",
         required: false,
+        format: "uuid",
       }),
     ),
     relatedEntityType: t.Optional(
@@ -120,41 +123,38 @@ export const NotificationSchema = t.Object(
         }),
       ]),
     ),
-  },
+  }),
+  ],
   {
     description: "Esquema principal para la entidad Notification",
-  },
+  }
 );
 
-export type Notification = typeof NotificationSchema.static;
-
-// Esquema para crear notificaciones
-export const NotificationCreateSchema = t.Pick(NotificationSchema, ["type", "title", "message", "recipientId", "recipientType", "channel", "parkingId", "relatedEntityId", "relatedEntityType", "status", "metadata", "scheduledFor", "sentAt"], {
+// ===== ESQUEMA DE CREACIÓN =====
+export const NotificationCreateSchema = t.Pick(NotificationSchema, ["id", "createdAt", "type", "title", "message", "recipientId", "recipientType", "channel", "parkingId", "relatedEntityId", "relatedEntityType", "status", "metadata", "scheduledFor", "sentAt"], {
   description: "Esquema para la creación de una Notification",
 });
 
-export type NotificationCreate = typeof NotificationCreateSchema.static;
-
-// Esquema para actualizar notificaciones
-export const NotificationUpdateSchema = t.Pick(NotificationSchema, ["status"], {
+// ===== ESQUEMA DE ACTUALIZACIÓN =====
+export const NotificationUpdateSchema = t.Pick(NotificationSchema, ["updatedAt", "status"], {
   description: "Esquema para la actualización de una Notification",
 });
 
-export type NotificationUpdate = typeof NotificationUpdateSchema.static;
-
-// Esquema para filtrar notificaciones
+// ===== ESQUEMA DE FILTRO =====
 export const NotificationFilterSchema = t.Object(
   {
     recipientId: t.Optional(
       t.String({
         description: "Filtrar por ID del destinatario",
         required: false,
+        format: "uuid",
       }),
     ),
     parkingId: t.Optional(
       t.String({
         description: "Filtrar por ID del estacionamiento",
         required: false,
+        format: "uuid",
       }),
     ),
     type: t.Optional(
@@ -184,4 +184,8 @@ export const NotificationFilterSchema = t.Object(
   },
 );
 
+// ===== EXPORT TYPES =====
+export type Notification = typeof NotificationSchema.static;
+export type NotificationCreate = typeof NotificationCreateSchema.static;
+export type NotificationUpdate = typeof NotificationUpdateSchema.static;
 export type NotificationFilter = typeof NotificationFilterSchema.static;

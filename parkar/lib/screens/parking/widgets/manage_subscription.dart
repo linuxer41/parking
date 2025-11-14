@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../services/access_service.dart';
+import '../../../services/booking_service.dart';
+import '../../../services/entry_exit_service.dart';
 import '../../../services/subscription_service.dart';
 import '../../../state/app_state_container.dart';
-import '../../../models/access_model.dart';
-import '../../../models/element_model.dart';
+import '../../../models/booking_model.dart';
+import '../../../models/parking_model.dart';
 import '../../../models/employee_model.dart';
 import '../../../models/vehicle_model.dart';
+import '../../../models/parking_model.dart';
 import '../models/parking_spot.dart';
 import '../../../services/print_service.dart';
 import 'components/index.dart';
@@ -14,14 +16,11 @@ import 'components/index.dart';
 class ManageSubscription extends StatefulWidget {
   final ParkingSpot spot;
 
-  const ManageSubscription({
-    super.key,
-    required this.spot,
-  });
+  const ManageSubscription({super.key, required this.spot});
 
   @override
   State<ManageSubscription> createState() => _ManageSubscriptionState();
-  
+
   /// Mostrar el modal como un bottom sheet
   static Future<void> show(BuildContext context, ParkingSpot spot) async {
     ManageLayout.show(
@@ -60,9 +59,9 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         children: [
           // Información del vehículo
           VehicleInfoCard(vehicle: subscription.vehicle),
-          
+
           const SizedBox(height: 16),
-          
+
           // Información de la suscripción
           SubscriptionInfoCard(
             startDate: subscription.startDate,
@@ -114,9 +113,23 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         throw Exception('No hay información de suscripción disponible');
       }
 
-      // Registrar entrada usando el nuevo endpoint para suscripciones
-      final accessService = AppStateContainer.di(context).resolve<AccessService>();
-      final entry = await accessService.registerSubscribedEntry(subscription.id);
+      // Crear acceso usando el EntryExitService con los datos de la suscripción
+      final entryExitService = AppStateContainer.di(
+        context,
+      ).resolve<EntryExitService>();
+
+      final accessModel = AccessCreateModel(
+        vehiclePlate: subscription.vehicle.plate,
+        vehicleType: subscription.vehicle.type,
+        vehicleColor: subscription.vehicle.color,
+        ownerName: subscription.vehicle.ownerName,
+        ownerDocument: subscription.vehicle.ownerDocument,
+        ownerPhone: subscription.vehicle.ownerPhone,
+        spotId: widget.spot.id,
+        notes: 'Entrada de suscriptor',
+      );
+
+      final entry = await entryExitService.createEntry(accessModel);
 
       // Actualizar el spot con los datos del acceso
       _updateSpotWithAccessData(entry);
@@ -129,7 +142,9 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Entrada registrada para ${subscription.vehicle.plate}'),
+          content: Text(
+            'Entrada registrada para ${subscription.vehicle.plate}',
+          ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -137,20 +152,19 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       );
 
       // Imprimir ticket de entrada
-      final printService = AppStateContainer.di(context).resolve<PrintService>();
+      final printService = AppStateContainer.di(
+        context,
+      ).resolve<PrintService>();
+
+      if (!mounted) return;
+
       final appState = AppStateContainer.of(context);
       await printService.printEntryTicket(
-        plate: subscription.vehicle.plate,
-        spotLabel: widget.spot.label,
-        entryTime: DateTime.now(),
-        vehicleType: subscription.vehicle.type ?? 'car',
-        color: subscription.vehicle.color ?? 'blanco',
-        parkingName: appState.currentParking?.name ?? 'Estacionamiento',
-        ownerName: subscription.vehicle.ownerName,
-        ownerDocument: subscription.vehicle.ownerDocument,
+        booking: entry,
         context: context,
+        isSimpleMode:
+            appState.currentParking?.operationMode == ParkingOperationMode.list,
       );
-
     } catch (e) {
       setState(() {
         errorMessage = 'Error al registrar entrada: $e';
@@ -173,8 +187,10 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       }
 
       // Llamar al servicio para cancelar la suscripción
-      final subscriptionService = AppStateContainer.di(context).resolve<SubscriptionService>();
-      await subscriptionService.cancelSubscription(subscription.id);
+      final subscriptionService = AppStateContainer.di(
+        context,
+      ).resolve<SubscriptionService>();
+      await subscriptionService.deleteSubscription(subscription.id);
 
       // Actualizar el spot como disponible
       widget.spot.isOccupied = false;
@@ -188,13 +204,14 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Suscripción cancelada para ${subscription.vehicle.plate}'),
+          content: Text(
+            'Suscripción cancelada para ${subscription.vehicle.plate}',
+          ),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
-
     } catch (e) {
       setState(() {
         errorMessage = 'Error al cancelar suscripción: $e';
@@ -234,12 +251,12 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
   }
 
   // Función para actualizar el spot con datos de acceso
-  void _updateSpotWithAccessData(AccessModel access) {
+  void _updateSpotWithAccessData(BookingModel access) {
     final occupancy = ElementOccupancyModel(
       access: ElementActivityModel(
         id: access.id,
-        startDate: access.entryTime.toIso8601String(),
-        endDate: access.exitTime?.toIso8601String(),
+        startDate: access.startDate.toIso8601String(),
+        endDate: access.endDate?.toIso8601String(),
         vehicle: VehiclePreviewModel(
           id: access.vehicle.id,
           plate: access.vehicle.plate,
@@ -254,7 +271,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
           name: access.employee.name,
           role: access.employee.role,
         ),
-        amount: access.amount ?? 0.0,
+        amount: access.amount,
       ),
       status: 'occupied',
     );
@@ -264,52 +281,18 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
   }
 
   // Método para imprimir ticket
-  void _printTicket() {
+  Future<void> _printTicket() async {
     final printService = AppStateContainer.di(context).resolve<PrintService>();
-    final appState = AppStateContainer.of(context);
+    final subscriptionService = AppStateContainer.di(
+      context,
+    ).resolve<SubscriptionService>();
     final subscription = widget.spot.occupancy?.subscription;
-    
+
     if (subscription == null) return;
-    
-    // Obtener fecha de inicio
-    DateTime startDate;
-    try {
-      startDate = DateTime.parse(subscription.startDate);
-    } catch (e) {
-      startDate = DateTime.now();
-    }
-    
-    // Obtener fecha de fin
-    DateTime endDate;
-    try {
-      endDate = subscription.endDate != null 
-        ? DateTime.parse(subscription.endDate!)
-        : startDate.add(const Duration(days: 30)); // 30 días por defecto
-    } catch (e) {
-      endDate = startDate.add(const Duration(days: 30));
-    }
-    
-    // Determinar tipo de suscripción
-    String subscriptionType = 'Mensual'; // Por defecto
-    if (endDate.difference(startDate).inDays >= 90) {
-      subscriptionType = 'Trimestral';
-    } else if (endDate.difference(startDate).inDays >= 180) {
-      subscriptionType = 'Semestral';
-    } else if (endDate.difference(startDate).inDays >= 365) {
-      subscriptionType = 'Anual';
-    }
-    
+
+    final booking = await subscriptionService.getSubscription(subscription.id);
+
     // Imprimir recibo de suscripción
-    printService.printSubscriptionReceipt(
-      plate: subscription.vehicle.plate,
-      subscriptionType: subscriptionType,
-      startDate: startDate,
-      endDate: endDate,
-      amount: subscription.amount,
-      parkingName: appState.currentParking?.name ?? 'Estacionamiento',
-      ownerName: subscription.vehicle.ownerName,
-      ownerDocument: subscription.vehicle.ownerDocument,
-      context: context,
-    );
+    printService.printSubscriptionReceipt(booking: booking, context: context);
   }
-} 
+}

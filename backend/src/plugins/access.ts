@@ -24,11 +24,8 @@ const accessPlugin = new Elysia()
     }
 
     const userId = jwtPayload.sub;
-    const user = await db.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
+    const users = await db.user.find({ id: userId });
+    const user = users[0];
 
     if (!user) {
       // handle error for user not found from the provided access token
@@ -42,11 +39,8 @@ const accessPlugin = new Elysia()
       throw new Error("Requiere un parking");
     }
 
-    const parking = await db.parking.findUnique({
-      where: {
-        id: parkingId,
-      },
-    });
+    const parkings = await db.parking.findParkings({ id: parkingId });
+    const parking = parkings[0];
 
     if (!parking) {
       // handle error for parking not found
@@ -59,12 +53,11 @@ const accessPlugin = new Elysia()
 
     if (!isOwner) {
       // Si no es propietario, verificar si es empleado de este parking
-      const employee = await db.employee.findFirst({
-        where: {
-          userId: user.id,
-          parkingId: parking.id,
-        },
+      const employees = await db.employee.find({ 
+        userId: user.id,
+        parkingId: parking.id,
       });
+      const employee = employees[0];
 
       if (!employee) {
         // handle error for employee not found

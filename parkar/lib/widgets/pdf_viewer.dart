@@ -39,13 +39,11 @@ class PdfViewer extends StatelessWidget {
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
           ),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8),
+          ],
         ),
-        child: PdfViewer(
-          pdfData: pdfData,
-          title: title,
-          filename: filename,
-        ),
+        child: PdfViewer(pdfData: pdfData, title: title, filename: filename),
       ),
     );
   }
@@ -53,19 +51,20 @@ class PdfViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Column(
       children: [
         // Handle indicator
         Container(
           margin: const EdgeInsets.only(top: 8, bottom: 8),
-          width: 36, height: 4,
+          width: 36,
+          height: 4,
           decoration: BoxDecoration(
             color: colorScheme.onSurface.withOpacity(0.2),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        
+
         // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -108,7 +107,8 @@ class PdfViewer extends StatelessWidget {
               IconButton(
                 icon: Icon(Icons.close, size: 20, color: colorScheme.onSurface),
                 style: IconButton.styleFrom(
-                  backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  backgroundColor: colorScheme.surfaceContainerHighest
+                      .withOpacity(0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -118,10 +118,14 @@ class PdfViewer extends StatelessWidget {
             ],
           ),
         ),
-        
+
         // Divider
-        Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant.withOpacity(0.5)),
-        
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: colorScheme.outlineVariant.withOpacity(0.5),
+        ),
+
         // PDF Preview
         Expanded(
           child: Container(
@@ -150,9 +154,7 @@ class PdfViewer extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                scrollViewDecoration: const BoxDecoration(
-                  color: Colors.white,
-                ),
+                scrollViewDecoration: const BoxDecoration(color: Colors.white),
                 previewPageMargin: const EdgeInsets.all(8),
                 useActions: false,
                 initialPageFormat: PdfPageFormat.a4,
@@ -161,7 +163,7 @@ class PdfViewer extends StatelessWidget {
             ),
           ),
         ),
-        
+
         // Action buttons
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -231,23 +233,31 @@ class PdfViewer extends StatelessWidget {
     required bool isPrimary,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
-        backgroundColor: isPrimary ? colorScheme.primary : colorScheme.surfaceContainerHighest,
-        foregroundColor: isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+        backgroundColor: isPrimary
+            ? colorScheme.primary
+            : colorScheme.surfaceContainerHighest,
+        foregroundColor: isPrimary
+            ? colorScheme.onPrimary
+            : colorScheme.onSurfaceVariant,
         elevation: isPrimary ? 1 : 0,
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         minimumSize: const Size(10, 36),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: isPrimary 
-              ? BorderSide.none 
+          side: isPrimary
+              ? BorderSide.none
               : BorderSide(color: colorScheme.outline.withOpacity(0.3)),
         ),
       ),
       onPressed: onPressed,
-      icon: Icon(icon, size: 16, color: isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant),
+      icon: Icon(
+        icon,
+        size: 16,
+        color: isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+      ),
       label: Text(
         label,
         style: TextStyle(
@@ -261,15 +271,9 @@ class PdfViewer extends StatelessWidget {
   // Imprimir el PDF
   Future<void> _printPdf(BuildContext context) async {
     try {
-      await Printing.layoutPdf(
-        onLayout: (format) => pdfData,
-        name: filename,
-      );
+      await Printing.layoutPdf(onLayout: (format) => pdfData, name: filename);
     } catch (e) {
-      CustomSnackbar.showError(
-        context: context,
-        message: 'Error al imprimir: $e',
-      );
+      _showErrorMessage(context, 'Error al imprimir: $e');
     }
   }
 
@@ -279,16 +283,10 @@ class PdfViewer extends StatelessWidget {
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/$filename.pdf');
       await file.writeAsBytes(pdfData);
-      
-      await Share.shareFiles(
-        [file.path],
-        text: 'Compartir $title',
-      );
+
+      await Share.shareXFiles([XFile(file.path)], text: 'Compartir $title');
     } catch (e) {
-      CustomSnackbar.showError(
-        context: context,
-        message: 'Error al compartir: $e',
-      );
+      _showErrorMessage(context, 'Error al compartir: $e');
     }
   }
 
@@ -301,17 +299,13 @@ class PdfViewer extends StatelessWidget {
         if (directory == null) {
           throw Exception('No se pudo acceder al almacenamiento');
         }
-        
+
         final downloadPath = directory.path;
         final file = File('$downloadPath/$filename.pdf');
         await file.writeAsBytes(pdfData);
-        
-        CustomSnackbar.showSuccess(
-          context: context,
-          message: 'PDF guardado en: ${file.path}',
-          icon: Icons.file_download_done_rounded,
-        );
-      } 
+
+        _showSuccessMessage(context, 'PDF guardado en: ${file.path}');
+      }
       // En escritorio, usar el diálogo de impresión para guardar como PDF
       else {
         await Printing.layoutPdf(
@@ -319,33 +313,59 @@ class PdfViewer extends StatelessWidget {
           name: filename,
           usePrinterSettings: true,
         );
-        
-        CustomSnackbar.showSuccess(
-          context: context,
-          message: 'PDF listo para guardar',
-          icon: Icons.file_download_done_rounded,
-        );
+
+        _showSuccessMessage(context, 'PDF listo para guardar');
       }
     } catch (e) {
-      CustomSnackbar.showError(
-        context: context,
-        message: 'Error al descargar: $e',
-      );
+      _showErrorMessage(context, 'Error al descargar: $e');
     }
   }
 
-  // Mostrar mensaje en snackbar
-  void _showSnackbar(BuildContext context, String message, {bool isError = false}) {
-    if (isError) {
-      CustomSnackbar.showError(
-        context: context,
-        message: message,
-      );
-    } else {
-      CustomSnackbar.showSuccess(
-        context: context,
-        message: message,
-      );
-    }
+  // Método para mostrar mensajes de error con botón de cerrar
+  void _showErrorMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Cerrar',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
   }
-} 
+
+  // Método para mostrar mensajes de éxito con botón de cerrar
+  void _showSuccessMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'Cerrar',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+}

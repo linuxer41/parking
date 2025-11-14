@@ -5,15 +5,45 @@ import 'user_model.dart';
 
 part 'auth_model.g.dart';
 
+/// Modelo para errores de validación (422)
+@JsonSerializable()
+class ValidationErrorModel extends JsonConvertible<ValidationErrorModel> {
+  final String type;
+  final String on;
+  final String summary;
+  final String property;
+  final String message;
+  final Map<String, dynamic>? expected;
+  final Map<String, dynamic>? found;
+  final List<Map<String, dynamic>> errors;
+
+  ValidationErrorModel({
+    required this.type,
+    required this.on,
+    required this.summary,
+    required this.property,
+    required this.message,
+    this.expected,
+    this.found,
+    required this.errors,
+  });
+
+  factory ValidationErrorModel.fromJson(Map<String, dynamic> json) =>
+      _$ValidationErrorModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ValidationErrorModelToJson(this);
+}
+
 /// Modelo para la respuesta de autenticación
 @JsonSerializable()
 class AuthResponseModel extends JsonConvertible<AuthResponseModel> {
-  final String token;
+  final AuthDataModel auth;
   final UserModel user;
   final List<ParkingSimpleModel> parkings;
 
   AuthResponseModel({
-    required this.token,
+    required this.auth,
     required this.user,
     required this.parkings,
   });
@@ -23,6 +53,21 @@ class AuthResponseModel extends JsonConvertible<AuthResponseModel> {
 
   @override
   Map<String, dynamic> toJson() => _$AuthResponseModelToJson(this);
+}
+
+/// Modelo para los datos de autenticación
+@JsonSerializable()
+class AuthDataModel extends JsonConvertible<AuthDataModel> {
+  final String token;
+  final String refreshToken;
+
+  AuthDataModel({required this.token, required this.refreshToken});
+
+  factory AuthDataModel.fromJson(Map<String, dynamic> json) =>
+      _$AuthDataModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$AuthDataModelToJson(this);
 }
 
 /// Modelo para el registro completo (usuario + estacionamiento)
@@ -66,15 +111,15 @@ class RegisterUserModel extends JsonConvertible<RegisterUserModel> {
 @JsonSerializable()
 class RegisterParkingModel extends JsonConvertible<RegisterParkingModel> {
   final String name;
-  final int capacity;
+  final int? capacity;
   final String operationMode;
-  final List<double> location;
+  final ParkingLocationModel? location;
 
   RegisterParkingModel({
     required this.name,
-    required this.capacity,
+    this.capacity,
     required this.operationMode,
-    required this.location,
+    this.location,
   });
 
   factory RegisterParkingModel.fromJson(Map<String, dynamic> json) =>

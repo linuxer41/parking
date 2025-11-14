@@ -1,7 +1,7 @@
 /// Class to manage application configuration
 class AppConfig {
   /// API base URL
-  static String apiBaseUrl = '';
+  static String apiBaseUrl = 'http://localhost:3000';
 
   /// WebSocket endpoint
   static String wsEndpoint = '';
@@ -10,7 +10,17 @@ class AppConfig {
   static int apiTimeout = 30;
 
   /// API endpoints
-  static Map<String, String> apiEndpoints = {};
+  static Map<String, String> apiEndpoints = {
+    'booking': '/booking',
+    'entryExit': '/entry-exit',
+    'subscription': '/subscription',
+    'parking': '/parking',
+    'vehicle': '/vehicle',
+    'employee': '/employee',
+    'user': '/user',
+    'auth': '/auth',
+    'cashRegister': '/cash-register',
+  };
 
   /// Debug mode
   static bool debugMode = false;
@@ -23,14 +33,14 @@ class AppConfig {
     required String apiBaseUrl,
     String? wsEndpoint,
     required int apiTimeout,
-    required Map<String, String> apiEndpoints,
+    Map<String, String>? apiEndpoints,
     bool debugMode = false,
     String appVersion = '1.0.0',
   }) {
     AppConfig.apiBaseUrl = apiBaseUrl;
     AppConfig.wsEndpoint = wsEndpoint ?? apiBaseUrl.replaceAll('http', 'ws');
     AppConfig.apiTimeout = apiTimeout;
-    AppConfig.apiEndpoints = apiEndpoints;
+    AppConfig.apiEndpoints = apiEndpoints ?? AppConfig.apiEndpoints;
     AppConfig.debugMode = debugMode;
     AppConfig.appVersion = appVersion;
   }

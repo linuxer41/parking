@@ -147,23 +147,23 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                         ContextToolbar(
                           parkingState: parkingState,
                           onRotateClockwise: () {
-                            print("Callback onRotateClockwise llamado");
+                            debugPrint("Callback onRotateClockwise llamado");
                             _rotateSelectedElement(parkingState, 30);
                           },
                           onRotateCounterClockwise: () {
-                            print("Callback onRotateCounterClockwise llamado");
+                            debugPrint("Callback onRotateCounterClockwise llamado");
                             _rotateSelectedElement(parkingState, -30);
                           },
                           onCopy: () {
-                            print("Callback onCopy llamado");
+                            debugPrint("Callback onCopy llamado");
                             _copySelectedElements(parkingState);
                           },
                           onDelete: () {
-                            print("Callback onDelete llamado");
+                            debugPrint("Callback onDelete llamado");
                             _deleteSelectedElements(parkingState);
                           },
                           onEditLabel: () {
-                            print("Botón de editar etiqueta presionado");
+                            debugPrint("Botón de editar etiqueta presionado");
                             _editElementLabel(parkingState);
                           },
                           onAlignTop: () =>
@@ -648,7 +648,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
           );
 
           if (toolbarArea.contains(Offset(clickX, clickY))) {
-            print(
+            debugPrint(
                 "Clic detectado en la barra de herramientas, no deseleccionar");
             return; // No deseleccionar si el clic está en la barra de herramientas
           }
@@ -733,23 +733,23 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
   /// Rota el elemento seleccionado en X grados
   void _rotateSelectedElement(ParkingState parkingState, double degrees) {
-    print("_rotateSelectedElement llamado con $degrees grados");
+    debugPrint("_rotateSelectedElement llamado con $degrees grados");
     if (parkingState.selectedElements.length != 1) {
-      print(
+      debugPrint(
           "No hay exactamente un elemento seleccionado: ${parkingState.selectedElements.length}");
       return;
     }
 
     final element = parkingState.selectedElements.first;
-    print("Elemento a rotar: ${element.runtimeType} con ID: ${element.id}");
+    debugPrint("Elemento a rotar: ${element.runtimeType} con ID: ${element.id}");
 
     if (element.isLocked) {
-      print("El elemento está bloqueado, no se puede rotar");
+      debugPrint("El elemento está bloqueado, no se puede rotar");
       return;
     }
 
     final newRotation = element.rotation + degrees;
-    print("Rotación actual: ${element.rotation}, nueva rotación: $newRotation");
+    debugPrint("Rotación actual: ${element.rotation}, nueva rotación: $newRotation");
 
     setState(() {
       element.rotation = newRotation;
@@ -800,18 +800,18 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
   /// Elimina los elementos seleccionados
   void _deleteSelectedElements(ParkingState parkingState) {
-    print("_deleteSelectedElements llamado");
+    debugPrint("_deleteSelectedElements llamado");
     if (parkingState.selectedElements.isEmpty) {
-      print("No hay elementos seleccionados para eliminar");
+      debugPrint("No hay elementos seleccionados para eliminar");
       return;
     }
 
     final count = parkingState.selectedElements.length;
-    print("Eliminando $count elementos");
+    debugPrint("Eliminando $count elementos");
 
     // Eliminar elementos seleccionados
     for (final element in List.from(parkingState.selectedElements)) {
-      print(
+      debugPrint(
           "Eliminando elemento: ${element.runtimeType} con ID: ${element.id}");
       parkingState.removeElement(element);
     }
@@ -831,20 +831,20 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
   /// Muestra un diálogo para editar la etiqueta del elemento
   void _editElementLabel(ParkingState parkingState) {
-    print("_editElementLabel llamado");
+    debugPrint("_editElementLabel llamado");
     if (parkingState.selectedElements.length != 1) {
-      print(
+      debugPrint(
           "No hay exactamente un elemento seleccionado: ${parkingState.selectedElements.length}");
       return;
     }
 
     final element = parkingState.selectedElements.first;
-    print(
+    debugPrint(
         "Elemento seleccionado: ${element.runtimeType} con ID: ${element.id}");
 
     // No permitir editar señales
     if (element is ParkingSignage) {
-      print("Es una señal, no se permite editar");
+      debugPrint("Es una señal, no se permite editar");
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -858,11 +858,11 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
     // Obtener la etiqueta actual
     String currentLabel = element.label ?? '';
-    print("Etiqueta actual: $currentLabel");
+    debugPrint("Etiqueta actual: $currentLabel");
 
     // Si es un ParkingSpot, mostrar opciones adicionales
     if (element is ParkingSpot) {
-      print("Es un ParkingSpot, mostrando diálogo con opciones adicionales");
+      debugPrint("Es un ParkingSpot, mostrando diálogo con opciones adicionales");
       final spot = element;
 
       // Variables para almacenar los valores seleccionados

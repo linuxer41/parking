@@ -47,7 +47,7 @@ export const notificationController = new Elysia({
     "/",
     async ({ body }) => {
       try {
-        const notification = await db.notification.create(body);
+        const notification = await db.notification.createNotificationWithUUID(body);
         return notification;
       } catch (error) {
         console.error("Error creating notification:", error);
@@ -112,10 +112,7 @@ export const notificationController = new Elysia({
       },
       response: {
         200: t.Object({
-          count: t.Integer({
-            description: "Cantidad de notificaciones no leídas",
-            required: true,
-          }),
+          count: t.Number(),
         }),
         400: t.String(),
         500: t.String(),
@@ -135,7 +132,7 @@ export const notificationController = new Elysia({
     },
     {
       detail: {
-        summary: "Marcar como leída",
+        summary: "Marcar notificación como leída",
         description: "Marca una notificación específica como leída.",
       },
       response: {
@@ -145,23 +142,73 @@ export const notificationController = new Elysia({
       },
     },
   )
-  .delete(
-    "/:id",
+  .patch(
+    "/:id/mark-as-sent",
     async ({ params }) => {
       try {
-        const notification = await db.notification.delete({
-          where: { id: params.id },
-        });
+        const notification = await db.notification.markAsSent(params.id);
         return notification;
       } catch (error) {
-        console.error("Error deleting notification:", error);
-        throw new Error("Error al eliminar la notificación");
+        console.error("Error marking notification as sent:", error);
+        throw new Error("Error al marcar la notificación como enviada");
       }
     },
     {
       detail: {
-        summary: "Eliminar notificación",
-        description: "Elimina una notificación específica.",
+        summary: "Marcar notificación como enviada",
+        description: "Marca una notificación específica como enviada.",
+      },
+      response: {
+        200: NotificationSchema,
+        400: t.String(),
+        500: t.String(),
+      },
+    },
+  )
+  .patch(
+    "/:id/mark-as-delivered",
+    async ({ params }) => {
+      try {
+        const notification = await db.notification.markAsDelivered(params.id);
+        return notification;
+      } catch (error) {
+        console.error("Error marking notification as delivered:", error);
+        throw new Error("Error al marcar la notificación como entregada");
+      }
+    },
+    {
+      detail: {
+        summary: "Marcar notificación como entregada",
+        description: "Marca una notificación específica como entregada.",
+      },
+      response: {
+        200: NotificationSchema,
+        400: t.String(),
+        500: t.String(),
+      },
+    },
+  )
+  .patch(
+    "/:id/mark-as-failed",
+    async ({ params, body }) => {
+      try {
+        const notification = await db.notification.markAsFailed(
+          params.id,
+          body.error,
+        );
+        return notification;
+      } catch (error) {
+        console.error("Error marking notification as failed:", error);
+        throw new Error("Error al marcar la notificación como fallida");
+      }
+    },
+    {
+      body: t.Object({
+        error: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "Marcar notificación como fallida",
+        description: "Marca una notificación específica como fallida.",
       },
       response: {
         200: NotificationSchema,

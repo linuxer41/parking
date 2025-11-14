@@ -8,34 +8,25 @@ export const BaseSchema = t.Object(
     id: t.String({
       description: "Identificador único del registro",
       required: true,
+      format: "uuid",
     }),
-    createdAt: t.Union([
-      t.String({
+    createdAt: t.String({
         description: "Fecha de creación del registro",
         required: true,
       }),
-      t.Date({
-        description: "Fecha de creación del registro",
-        required: true,
-      }),
-    ]),
+  
     updatedAt: t.Union([
       t.String({
         description: "Fecha de última actualización del registro",
         required: true,
       }),
-      t.Date({
-        description: "Fecha de última actualización del registro",
-        required: true,
+      t.Null({
+        description: "Valor nulo para registros no actualizados",
       }),
     ]),
     deletedAt: t.Optional(
       t.Union([
         t.String({
-          description: "Fecha de eliminación del registro",
-          required: false,
-        }),
-        t.Date({
           description: "Fecha de eliminación del registro",
           required: false,
         }),

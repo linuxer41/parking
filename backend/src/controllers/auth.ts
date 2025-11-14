@@ -1,16 +1,17 @@
-import { Elysia } from "elysia";
-import { loginBodySchema, signupBodySchema, CompleteRegistrationSchema } from "../models/auth";
-import { db } from "../db";
-import { reverseGeocodingAPI } from "../utils/geoapify";
 import { jwt } from "@elysiajs/jwt";
+import { Elysia } from "elysia";
 import {
   ACCESS_TOKEN_EXP,
   JWT_NAME,
   REFRESH_TOKEN_EXP,
 } from "../config/constants";
-import { getExpTimestamp } from "../utils/common";
+import { db } from "../db";
+import { AuthResponseSchema, loginBodySchema, RegistrationSchema, signupBodySchema } from "../models/auth";
 import { authPlugin } from "../plugins/auth";
 import { registrationService } from "../services/registration-service";
+import { getExpTimestamp } from "../utils/common";
+import { ConflictError, UnauthorizedError } from "../utils/error";
+import { reverseGeocodingAPI } from "../utils/geoapify";
 
 export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
   .use(
@@ -22,17 +23,13 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
   .post(
     "/sign-in",
     async ({ body, jwt, cookie: { authToken, refreshToken }, set }) => {
-      console.log(body);
-
       // match user email
-      const user = await db.user.findUnique({
-        where: { email: body.email },
-      });
+      const users = await db.user.find({ email: body.email });
+      const user = users[0];
 
       if (!user) {
-        set.status = "Bad Request";
-        throw new Error(
-          "The email address or password you entered is incorrect",
+        throw new UnauthorizedError(
+          "El correo electrónico o la contraseña que ingresaste son incorrectos",
         );
       }
       console.log(user);
@@ -40,12 +37,11 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       // match password
       const matchPassword = await Bun.password.verify(
         body.password,
-        user.password,
+        user.passwordHash,
       );
       if (!matchPassword) {
-        set.status = "Bad Request";
-        throw new Error(
-          "The email address or password you entered is incorrect",
+        throw new UnauthorizedError(
+          "El correo electrónico o la contraseña que ingresaste son incorrectos",
         );
       }
 
@@ -74,21 +70,33 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Get user parkings
-      const userParkings = await db.user.getUserParkings(user.id);
+      const userParkings = await db.parking.findParkingsByOwnerId(user.id);
 
       return {
-        token: accessJWTToken,
+        auth: {
+          token: accessJWTToken,
+          refreshToken: refreshJWTToken,
+        },
         user: user,
         parkings: userParkings || [],
       };
     },
     {
       body: loginBodySchema,
+      response: AuthResponseSchema,
     },
   )
   .post(
     "/sign-up",
     async ({ body }) => {
+      // Verificar si el usuario ya existe
+      const existingUsers = await db.user.find({ email: body.email });
+      const existingUser = existingUsers[0];
+      
+      if (existingUser) {
+        throw new ConflictError(`Ya existe un usuario con el email ${body.email}`);
+      }
+
       // hash password
       const password = await Bun.password.hash(body.password);
 
@@ -100,14 +108,12 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       }
       console.log(location);
       const user = await db.user.create({
-        data: {
-          ...body,
-          password,
-          //   location,
-        },
+        ...body,
+        password,
+        //   location,
       });
       return {
-        message: "Account created successfully",
+        message: "Cuenta creada exitosamente",
         data: {
           user,
         },
@@ -115,49 +121,29 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     },
     {
       body: signupBodySchema,
-      error({ code, set, body }) {
-        // handle duplicate email error throw by db
-        // P2002 duplicate field erro code
-        if ((code as unknown) === "P2002") {
-          set.status = "Conflict";
-          return {
-            name: "Error",
-            message: `The email address provided ${body.email} already exists`,
-          };
-        }
-      },
     },
   )
   .post(
     "/refresh",
-    async ({ cookie: { authToken, refreshToken }, jwt, set }) => {
+    async ({ cookie: { authToken, refreshToken }, jwt }) => {
       if (!refreshToken.value) {
-        // handle error for refresh token is not available
-        set.status = "Unauthorized";
-        throw new Error("Refresh token is missing");
+        throw new UnauthorizedError("Token de actualización faltante");
       }
       // get refresh token from cookie
       const jwtPayload = await jwt.verify(refreshToken.value);
       if (!jwtPayload) {
-        // handle error for refresh token is tempted or incorrect
-        set.status = "Forbidden";
-        throw new Error("Refresh token is invalid");
+        throw new UnauthorizedError("Token de actualización inválido");
       }
 
       // get user from refresh token
       const userId = jwtPayload.sub;
 
       // verify user exists or not
-      const user = await db.user.findUnique({
-        where: {
-          id: userId,
-        },
-      });
+      const users = await db.user.find({ id: userId });
+      const user = users[0];
 
       if (!user) {
-        // handle error for user not found from the provided refresh token
-        set.status = "Forbidden";
-        throw new Error("Refresh token is invalid");
+        throw new UnauthorizedError("Token de actualización inválido");
       }
       // create new access token
       const accessJWTToken = await jwt.sign({
@@ -184,10 +170,13 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Get user parkings
-      const userParkings = await db.user.getUserParkings(user.id);
+      const userParkings = await db.parking.findParkingsByOwnerId(user.id);
 
       return {
-        token: accessJWTToken,
+        auth: {
+          token: accessJWTToken,
+          refreshToken: refreshJWTToken,
+        },
         user: user,
         parkings: userParkings || [],
       };
@@ -196,53 +185,55 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
   .post(
     "/register-complete",
     async ({ body, jwt, cookie: { authToken, refreshToken }, set }) => {
-      try {
-        console.log(body);
-        // Realizar el registro completo
-        const result = await registrationService.registerComplete(body);
+      console.log(body);
+      // Realizar el registro completo
+      const result = await registrationService.registerComplete(body);
 
-        // Crear tokens de autenticación
-        const accessJWTToken = await jwt.sign({
-          sub: result.user.id,
-          exp: getExpTimestamp(ACCESS_TOKEN_EXP),
-        });
-        
-        const refreshJWTToken = await jwt.sign({
-          sub: result.user.id,
-          exp: getExpTimestamp(REFRESH_TOKEN_EXP),
-        });
+      // Crear tokens de autenticación
+      const accessJWTToken = await jwt.sign({
+        sub: result.user.id,
+        exp: getExpTimestamp(ACCESS_TOKEN_EXP),
+      });
+      
+      const refreshJWTToken = await jwt.sign({
+        sub: result.user.id,
+        exp: getExpTimestamp(REFRESH_TOKEN_EXP),
+      });
 
-        // Configurar cookies
-        authToken.set({
-          value: accessJWTToken,
-          httpOnly: true,
-          maxAge: ACCESS_TOKEN_EXP,
-          path: "/",
-        });
+      
 
-        refreshToken.set({
-          value: refreshJWTToken,
-          httpOnly: true,
-          maxAge: REFRESH_TOKEN_EXP,
-          path: "/",
-        });
+      // Configurar cookies
+      authToken.set({
+        value: accessJWTToken,
+        httpOnly: true,
+        maxAge: ACCESS_TOKEN_EXP,
+        path: "/",
+      });
 
-        // Obtener los parkings del usuario
-        const userParkings = await db.user.getUserParkings(result.user.id);
+      refreshToken.set({
+        value: refreshJWTToken,
+        httpOnly: true,
+        maxAge: REFRESH_TOKEN_EXP,
+        path: "/",
+      });
 
-        return {
+      console.log({accessJWTToken, refreshJWTToken, result});
+
+      // Obtener los parkings del usuario
+      const userParkings = await db.parking.findParkingsByOwnerId(result.user.id);
+
+      return {
+        auth: {
           token: accessJWTToken,
-          user: result.user,
-          parkings: userParkings || [],
-        };
-      } catch (error) {
-        console.error("Error en registro completo:", error);
-        set.status = "Internal Server Error";
-        throw new Error("Error al realizar el registro completo");
-      }
+          refreshToken: refreshJWTToken,
+        },
+        user: result.user,
+        parkings: userParkings || [],
+      };
     },
     {
-      body: CompleteRegistrationSchema,
+      body: RegistrationSchema,
+      response: AuthResponseSchema,
     },
   )
   .use(authPlugin)
@@ -262,16 +253,16 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     //   },
     // });
     return {
-      message: "Logout successfully",
+      message: "Sesión cerrada exitosamente",
     };
   })
   .get("/me", async ({ user, jwt }) => {
     if (!user) {
-      throw new Error("User not authenticated");
+      throw new UnauthorizedError("Usuario no autenticado");
     }
 
     // Get user parkings
-    const userParkings = await db.user.getUserParkings(user.id);
+    const userParkings = await db.parking.findParkingsByOwnerId(user.id);
 
     // Generate a fresh token
     const accessJWTToken = await jwt.sign({
@@ -280,7 +271,6 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     });
 
     return {
-      token: accessJWTToken,
       user: user,
       parkings: userParkings || [],
     };

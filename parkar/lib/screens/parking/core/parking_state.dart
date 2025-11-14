@@ -194,6 +194,40 @@ class ParkingState with ChangeNotifier {
     }
   }
 
+  // Método para limpiar el resaltado (alias para compatibilidad)
+  void clearHighlight() {
+    clearAllHighlights();
+  }
+
+  // Método para resaltar un elemento específico
+  void highlightElement(String elementId) {
+    // Primero limpiar todos los resaltados
+    clearAllHighlights();
+    
+    // Buscar y resaltar el elemento específico
+    for (final element in allElements) {
+      if (element.id == elementId && element is ParkingSpot) {
+        element.isHighlighted = true;
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
+  // Método para centrar la vista en un elemento
+  void centerOnElement(vector_math.Vector2 position) {
+    // Calcular la posición centrada en el canvas
+    final centerX = _canvasSize.width / 2;
+    final centerY = _canvasSize.height / 2;
+    
+    // Calcular el offset necesario para centrar el elemento
+    final offsetX = centerX - position.x;
+    final offsetY = centerY - position.y;
+    
+    // Mover la cámara a la nueva posición
+    _camera.position = vector_math.Vector2(offsetX, offsetY);
+  }
+
   // Métodos para alternar estados
   void toggleEditMode() {
     _isEditMode = !_isEditMode;
@@ -856,13 +890,13 @@ class ParkingState with ChangeNotifier {
   void updateElement(ParkingElement oldElement, ParkingElement newElement) {
     // Verificar que el elemento existe
     if (!allElements.contains(oldElement)) {
-      print("Error: No se puede actualizar un elemento que no existe");
+      debugPrint("Error: No se puede actualizar un elemento que no existe");
       return;
     }
 
     // Verificar que los IDs coinciden
     if (oldElement.id != newElement.id) {
-      print("Error: Los IDs de los elementos deben coincidir para actualizar");
+      debugPrint("Error: Los IDs de los elementos deben coincidir para actualizar");
       return;
     }
 
@@ -883,7 +917,7 @@ class ParkingState with ChangeNotifier {
     // Notificar cambios
     notifyListeners();
 
-    print("Elemento actualizado con éxito: ${newElement.id}");
+    debugPrint("Elemento actualizado con éxito: ${newElement.id}");
   }
 
   /// Método auxiliar para aplicar propiedades a un elemento

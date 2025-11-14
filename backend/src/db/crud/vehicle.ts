@@ -1,75 +1,126 @@
-import { BaseCrud } from "./base-crud";
-import { Vehicle, VehicleCreate, VehicleUpdate } from "../../models/vehicle";
+import { PoolClient } from "pg";
+import { getConnection, withClient } from "../connection";
+import { Vehicle, VehicleCreate, VehicleUpdate, VehicleCreateSchema, VehicleUpdateSchema, VehicleCreateRequest, VehicleUpdateRequest } from "../../models/vehicle";
+import { getSchemaValidator } from "elysia";
 
-class VehicleCrud extends BaseCrud<Vehicle, VehicleCreate, VehicleUpdate> {
-  constructor() {
-    super("t_vehicle", "v");
-  }
+const TABLE_NAME = "t_vehicle";
 
-  baseQuery() {
-    return `
-select 
-    v.*,
+// ===== CRUD OPERATIONS =====
 
-    -- Subscription data como subquery
-    (
-        select json_build_object(
-            'id', s.id,
-            'spotId', s."spotId",
-            'spotName', sp.name,
-            'startDate', s."startDate",
-            'endDate', s."endDate",
-            'amount', s.amount
-        )
-        from t_subscription s
-        join t_element sp on sp.id = s."spotId"
-        where s."vehicleId" = v.id
-          and s.status = 'active'
-          and now() between s."startDate" and s."endDate"
-          and s."parkingId" = v."parkingId"
-        limit 1
-    ) as "subscription",
+/**
+ * Crear un nuevo vehículo
+ */
+export async function createVehicle(input: VehicleCreateRequest): Promise<Vehicle> {
+  const validator = getSchemaValidator(VehicleCreateSchema);
+  const data = validator.parse({
+    ...input,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    // updatedAt: new Date().toISOString(),
+  });
 
-    -- Reservation data como subquery
-    (
-        select json_build_object(
-            'id', r.id,
-            'spotId', r."spotId",
-            'spotName', sp.name,
-            'startDate', r."startDate",
-            'endDate', r."endDate",
-            'amount', r.amount
-        )
-        from t_reservation r
-        join t_element sp on sp.id = r."spotId"
-        where r."vehicleId" = v.id
-          and r.status = 'active'
-          and now() between r."startDate" and r."endDate"
-          and r."parkingId" = v."parkingId"
-        limit 1
-    ) as "reservation",
+  const columns = Object.keys(data)
+    .map((key) => `"${key}"`)
+    .join(", ");
 
-    -- Access data como subquery
-    (
-        select json_build_object(
-            'id', a.id,
-            'spotId', a."spotId",
-            'spotName', sp.name,
-            'entryTime', a."entryTime",
-            'exitTime', a."exitTime",
-            'amount', a.amount
-        )
-        from t_access a
-        join t_element sp on sp.id = a."spotId"
-        where a."vehicleId" = v.id
-          and a.status = 'active'
-          and a."exitTime" is null
-          and a."parkingId" = v."parkingId"
-        limit 1
-    ) as "access"
-from t_vehicle v
-`;
-  }
+  const values = Object.values(data).map((value) =>
+    typeof value === "object" ? JSON.stringify(value) : value,
+  );
+
+  const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+  
+  const query = {
+    text: `INSERT INTO ${TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
+    values: values,
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<Vehicle>(query);
+    return res.rows[0];
+  });
 }
 
-export const vehicleCrud = new VehicleCrud();
+/**
+ * Buscar un vehículo por ID
+ */
+export async function findVehicleById(id: string): Promise<Vehicle | undefined> {
+  const query = {
+    text: `SELECT * FROM ${TABLE_NAME} WHERE id = $1 LIMIT 1`,
+    values: [id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<Vehicle>(query);
+    return res.rows[0];
+  });
+}
+
+/**
+ * Buscar vehículos por criterios
+ */
+export async function findVehicles(where: Partial<Vehicle> = {}): Promise<Vehicle[]> {
+  const conditions = Object.entries(where)
+    .map(([key, value], i) => `"${key}" = $${i + 1}`)
+    .join(" AND ");
+  
+  const query = {
+    text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+    values: Object.values(where),
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<Vehicle>(query);
+    return res.rows;
+  });
+}
+
+/**
+ * Actualizar un vehículo
+ */
+export async function updateVehicle(id: string, input: VehicleUpdateRequest): Promise<Vehicle> {
+  const validator = getSchemaValidator(VehicleUpdateSchema);
+  const data = validator.parse(input);
+  
+  const setClause = Object.keys(data)
+    .map((key, i) => `"${key}" = $${i + 1}`)
+    .join(", ");
+
+  const values = Object.values(data).map((value) =>
+    typeof value === "object" ? JSON.stringify(value) : value,
+  );
+  
+  const query = {
+    text: `UPDATE ${TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
+    values: [...values, id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<Vehicle>(query);
+    
+    if (!res.rows || res.rows.length === 0) {
+      throw new Error(`No se encontró el vehículo con ID ${id} para actualizar`);
+    }
+    
+    return res.rows[0];
+  });
+}
+
+/**
+ * Eliminar un vehículo
+ */
+export async function deleteVehicle(id: string): Promise<Vehicle> {
+  const query = {
+    text: `DELETE FROM ${TABLE_NAME} WHERE id = $1 RETURNING *`,
+    values: [id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<Vehicle>(query);
+    
+    if (!res.rows || res.rows.length === 0) {
+      throw new Error(`No se encontró el vehículo con ID ${id} para eliminar`);
+    }
+    
+    return res.rows[0];
+  });
+}

@@ -1,103 +1,587 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:flutter/material.dart';
 import '_base_model.dart';
-import 'area_model.dart';
 import 'employee_model.dart';
 import 'user_model.dart';
+import 'vehicle_model.dart';
 
 part 'parking_model.g.dart';
 
 /// Enum para los modos de operación del parking
 enum ParkingOperationMode {
-  @JsonValue('visual')
-  visual,
-  @JsonValue('simple')
-  simple,
+  @JsonValue('map')
+  map,
+  @JsonValue('list')
+  list,
+}
+
+/// Enum for element types
+enum ElementType {
+  @JsonValue('spot')
+  spot,
+  @JsonValue('signage')
+  signage,
+  @JsonValue('facility')
+  facility,
+}
+
+/// Enum for element status
+enum ElementStatus {
+  @JsonValue('available')
+  available,
+  @JsonValue('occupied')
+  occupied,
+  @JsonValue('maintenance')
+  maintenance,
+  @JsonValue('reserved')
+  reserved,
+  @JsonValue('subscribed')
+  subscribed,
 }
 
 extension ParkingOperationModeExtension on ParkingOperationMode {
   String get value {
     switch (this) {
-      case ParkingOperationMode.visual:
-        return 'visual';
-      case ParkingOperationMode.simple:
-        return 'simple';
+      case ParkingOperationMode.map:
+        return 'map';
+      case ParkingOperationMode.list:
+        return 'list';
     }
   }
 
   String get displayName {
     switch (this) {
-      case ParkingOperationMode.visual:
-        return 'Visual';
-      case ParkingOperationMode.simple:
-        return 'Simple';
+      case ParkingOperationMode.map:
+        return 'Mapa';
+      case ParkingOperationMode.list:
+        return 'Listas';
     }
   }
 
   String get description {
     switch (this) {
-      case ParkingOperationMode.visual:
-        return 'Canvas interactivo con herramientas completas';
-      case ParkingOperationMode.simple:
-        return 'Indicadores básicos y controles esenciales';
+      case ParkingOperationMode.map:
+        return 'Mapa interactivo con spots visuales';
+      case ParkingOperationMode.list:
+        return 'Gestión con tablas y listas';
     }
   }
+}
+
+/// Element Activity Model
+@JsonSerializable()
+class ElementActivityModel extends JsonConvertible<ElementActivityModel> {
+  final String id;
+  final String startDate;
+  final String? endDate;
+  final VehiclePreviewModel vehicle;
+  final EmployeePreviewModel employee;
+  final double amount;
+
+  ElementActivityModel({
+    required this.id,
+    required this.startDate,
+    this.endDate,
+    required this.vehicle,
+    required this.employee,
+    required this.amount,
+  });
+
+  factory ElementActivityModel.fromJson(Map<String, dynamic> json) =>
+      _$ElementActivityModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ElementActivityModelToJson(this);
+}
+
+/// Element Occupancy Info Model
+@JsonSerializable()
+class ElementOccupancyInfoModel extends JsonConvertible<ElementOccupancyInfoModel> {
+  final String vehiclePlate;
+  final String ownerName;
+  final String ownerPhone;
+  final String startDate;
+
+  ElementOccupancyInfoModel({
+    required this.vehiclePlate,
+    required this.ownerName,
+    required this.ownerPhone,
+    required this.startDate,
+  });
+
+  factory ElementOccupancyInfoModel.fromJson(Map<String, dynamic> json) =>
+      _$ElementOccupancyInfoModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ElementOccupancyInfoModelToJson(this);
+}
+
+@JsonSerializable()
+class ElementModel extends JsonConvertible<ElementModel> {
+  final String id;
+  final String name;
+  final ElementType type;
+  final int subType;
+  final double posX;
+  final double posY;
+  final double posZ;
+  final double rotation;
+  final double scale;
+  final bool isActive;
+  final ElementOccupancyInfoModel? entry;
+  final ElementOccupancyInfoModel? booking;
+  final ElementOccupancyInfoModel? subscription;
+  final String status;
+
+  ElementModel({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.subType,
+    required this.posX,
+    required this.posY,
+    required this.posZ,
+    required this.rotation,
+    required this.scale,
+    required this.isActive,
+    this.entry,
+    this.booking,
+    this.subscription,
+    required this.status,
+  });
+
+  factory ElementModel.fromJson(Map<String, dynamic> json) =>
+      _$ElementModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ElementModelToJson(this);
+
+  /// Create a copy of this ElementModel but with the given fields replaced with the new values
+  ElementModel copyWith({
+    String? id,
+    String? name,
+    ElementType? type,
+    int? subType,
+    double? posX,
+    double? posY,
+    double? posZ,
+    double? rotation,
+    double? scale,
+    bool? isActive,
+    ElementOccupancyInfoModel? entry,
+    ElementOccupancyInfoModel? booking,
+    ElementOccupancyInfoModel? subscription,
+    String? status,
+  }) {
+    return ElementModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      subType: subType ?? this.subType,
+      posX: posX ?? this.posX,
+      posY: posY ?? this.posY,
+      posZ: posZ ?? this.posZ,
+      rotation: rotation ?? this.rotation,
+      scale: scale ?? this.scale,
+      isActive: isActive ?? this.isActive,
+      entry: entry ?? this.entry,
+      booking: booking ?? this.booking,
+      subscription: subscription ?? this.subscription,
+      status: status ?? this.status,
+    );
+  }
+
+  // Convenience getters for type checking
+  bool get isSpot => type == ElementType.spot;
+  bool get isSignage => type == ElementType.signage;
+  bool get isFacility => type == ElementType.facility;
+
+  // Convenience getters for status checking
+  bool get isOccupied => status == ElementStatus.occupied.toString();
+  bool get isAvailable => status == ElementStatus.available.toString();
+  bool get isReserved => status == ElementStatus.reserved.toString();
+  bool get isSubscribed => status == ElementStatus.subscribed.toString();
+  bool get isMaintenance => status == ElementStatus.maintenance.toString();
+
+  // Helper methods for UI display
+  String getDisplayTypeName() {
+    if (isSpot) {
+      return _getSpotTypeName(subType);
+    } else if (isSignage) {
+      return _getSignageTypeName(subType);
+    } else if (isFacility) {
+      return _getFacilityTypeName(subType);
+    }
+    return 'Elemento';
+  }
+
+  // Get appropriate icon for this element
+  IconData getIcon() {
+    if (isSpot) {
+      return _getSpotTypeIcon(subType);
+    } else if (isSignage) {
+      return _getSignageTypeIcon(subType);
+    } else if (isFacility) {
+      return _getFacilityTypeIcon(subType);
+    }
+    return Icons.category;
+  }
+
+  // Private helper methods for type names
+  String _getSpotTypeName(int type) {
+    switch (type) {
+      case 1:
+        return 'Bicicleta';
+      case 2:
+        return 'Moto';
+      case 3:
+        return 'Vehículo';
+      case 4:
+        return 'Camión';
+      default:
+        return 'Espacio';
+    }
+  }
+
+  String _getSignageTypeName(int type) {
+    switch (type) {
+      case 1:
+        return 'Entrada';
+      case 2:
+        return 'Salida';
+      case 3:
+        return 'Dirección';
+      case 4:
+        return 'Bidireccional';
+      case 5:
+        return 'Pare';
+      default:
+        return 'Señal';
+    }
+  }
+
+  String _getFacilityTypeName(int type) {
+    switch (type) {
+      case 1:
+        return 'Oficina';
+      case 2:
+        return 'Baño';
+      case 3:
+        return 'Cafetería';
+      case 4:
+        return 'Ascensor';
+      case 5:
+        return 'Escaleras';
+      case 6:
+        return 'Información';
+      default:
+        return 'Instalación';
+    }
+  }
+
+  // Private helper methods for icons
+  IconData _getSpotTypeIcon(int type) {
+    switch (type) {
+      case 1:
+        return Icons.pedal_bike;
+      case 2:
+        return Icons.motorcycle;
+      case 3:
+        return Icons.directions_car;
+      case 4:
+        return Icons.local_shipping;
+      default:
+        return Icons.directions_car;
+    }
+  }
+
+  IconData _getSignageTypeIcon(int type) {
+    switch (type) {
+      case 1:
+        return Icons.login;
+      case 2:
+        return Icons.logout;
+      case 3:
+        return Icons.trending_flat;
+      case 4:
+        return Icons.sync_alt;
+      case 5:
+        return Icons.do_not_disturb;
+      default:
+        return Icons.sign_language;
+    }
+  }
+
+  IconData _getFacilityTypeIcon(int type) {
+    switch (type) {
+      case 1:
+        return Icons.business;
+      case 2:
+        return Icons.wc;
+      case 3:
+        return Icons.local_cafe;
+      case 4:
+        return Icons.elevator;
+      case 5:
+        return Icons.stairs;
+      case 6:
+        return Icons.info_outline;
+      default:
+        return Icons.business;
+    }
+  }
+}
+
+@JsonSerializable()
+class ElementCreateModel extends JsonConvertible<ElementCreateModel> {
+  final String areaId;
+  final String parkingId;
+  final String name;
+  final ElementType type;
+  final int subType;
+  final double posX;
+  final double posY;
+  final double posZ;
+  final double rotation;
+  final double scale;
+  final String status;
+  final Map<String, dynamic>? metadata;
+
+  ElementCreateModel({
+    required this.areaId,
+    required this.parkingId,
+    required this.name,
+    required this.type,
+    required this.subType,
+    required this.posX,
+    required this.posY,
+    required this.posZ,
+    required this.rotation,
+    required this.scale,
+    required this.status,
+    this.metadata,
+  });
+
+  factory ElementCreateModel.fromJson(Map<String, dynamic> json) =>
+      _$ElementCreateModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ElementCreateModelToJson(this);
+}
+
+@JsonSerializable()
+class ElementUpdateModel extends JsonConvertible<ElementUpdateModel> {
+  final String? name;
+  final ElementType? type;
+  final int? subType;
+  final double? posX;
+  final double? posY;
+  final double? posZ;
+  final double? rotation;
+  final double? scale;
+  final String? status;
+  final Map<String, dynamic>? metadata;
+
+  ElementUpdateModel({
+    this.name,
+    this.type,
+    this.subType,
+    this.posX,
+    this.posY,
+    this.posZ,
+    this.rotation,
+    this.scale,
+    this.status,
+    this.metadata,
+  });
+
+  factory ElementUpdateModel.fromJson(Map<String, dynamic> json) =>
+      _$ElementUpdateModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ElementUpdateModelToJson(this);
+}
+
+@JsonSerializable()
+class SpotPreviewModel extends JsonConvertible<SpotPreviewModel> {
+  final String id;
+  final String name;
+  final ElementType type;
+  final int subType;
+
+  SpotPreviewModel({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.subType,
+  });
+
+  factory SpotPreviewModel.fromJson(Map<String, dynamic> json) =>
+      _$SpotPreviewModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$SpotPreviewModelToJson(this);
+}
+
+@JsonSerializable()
+class AreaModel implements JsonConvertible<AreaModel> {
+  final String id;
+  final String name;
+  final int totalSpots;
+  final int availableSpots;
+  final int occupiedSpots;
+  final List<ElementModel> elements;
+
+  AreaModel({
+    required this.id,
+    required this.name,
+    required this.totalSpots,
+    required this.availableSpots,
+    required this.occupiedSpots,
+    required this.elements,
+  });
+
+  factory AreaModel.fromJson(Map<String, dynamic> json) =>
+      _$AreaModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$AreaModelToJson(this);
+
+  // Convenience getters for filtered elements
+  List<ElementModel> get spots => elements.where((e) => e.isSpot).toList();
+  List<ElementModel> get signages =>
+      elements.where((e) => e.isSignage).toList();
+  List<ElementModel> get facilities =>
+      elements.where((e) => e.isFacility).toList();
+
+  // Convenience getters for available/occupied spots
+  List<ElementModel> get availableSpotsList =>
+      spots.where((s) => s.isAvailable).toList();
+  List<ElementModel> get occupiedSpotsList =>
+      spots.where((s) => s.isOccupied).toList();
+}
+
+@JsonSerializable()
+class AreaCreateModel implements JsonConvertible<AreaCreateModel> {
+  final String name;
+  final String? description;
+  final String parkingId;
+
+  AreaCreateModel({
+    required this.name,
+    this.description,
+    required this.parkingId,
+  });
+
+  factory AreaCreateModel.fromJson(Map<String, dynamic> json) =>
+      _$AreaCreateModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$AreaCreateModelToJson(this);
+}
+
+@JsonSerializable()
+class AreaUpdateModel implements JsonConvertible<AreaUpdateModel> {
+  final String? name;
+  final String? description;
+  final List<ElementModel>? elements;
+
+  AreaUpdateModel({this.name, this.description, this.elements});
+
+  factory AreaUpdateModel.fromJson(Map<String, dynamic> json) =>
+      _$AreaUpdateModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$AreaUpdateModelToJson(this);
+}
+
+@JsonSerializable()
+class AreaDetailModel implements JsonConvertible<AreaDetailModel> {
+  final String id;
+  final String name;
+  final String? description;
+  final int capacity;
+  final int occupiedSpots;
+  final String parkingId;
+  final List<ElementModel> elements;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  AreaDetailModel({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.capacity,
+    required this.occupiedSpots,
+    required this.parkingId,
+    required this.elements,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory AreaDetailModel.fromJson(Map<String, dynamic> json) =>
+      _$AreaDetailModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$AreaDetailModelToJson(this);
 }
 
 @JsonSerializable()
 class ParkingSimpleModel extends JsonConvertible<ParkingSimpleModel> {
   final String id;
   final String name;
-  final String email;
-  final String phone;
+  final String? email;
+  final String? phone;
   final String? address;
-  final String status;
-  final bool isOwner;
-  final bool isActive;
-  final List<RateModel> rates;
-  final ParkingParamsModel params;
+  final ParkingLocationModel? location;
   final String? logoUrl;
-  final int? areaCount;
-  final int? totalSpots;
-  final int? occupiedSpots;
-  final int? availableSpots;
-  final ParkingOperationMode? operationMode;
-  final double? capacity;
+  final String status;
+  final ParkingParamsModel params;
+  final List<RateModel> rates;
+  final ParkingOperationMode operationMode;
+  final bool isOwner;
+  final int areaCount;
+  final int totalSpots;
+  final int occupiedSpots;
+  final int availableSpots;
 
   ParkingSimpleModel({
     required this.id,
     required this.name,
-    required this.email,
-    required this.phone,
-    required this.address,
-    required this.status,
-    required this.isOwner,
-    required this.isActive,
+    this.email,
+    this.phone,
+    this.address,
+    this.location,
     this.logoUrl,
-    this.areaCount,
-    this.totalSpots,
-    this.occupiedSpots,
-    this.availableSpots,
-    this.operationMode,
-    this.capacity,
-    required this.rates,
+    required this.status,
     required this.params,
+    required this.rates,
+    required this.operationMode,
+    required this.isOwner,
+    required this.areaCount,
+    required this.totalSpots,
+    required this.occupiedSpots,
+    required this.availableSpots,
   });
 
   factory ParkingSimpleModel.fromParkingModel(ParkingModel parking) =>
       ParkingSimpleModel(
         id: parking.id,
         name: parking.name,
-        email: parking.email ?? '',
-        phone: parking.phone ?? '',
-        address: parking.address ?? '',
-        status: parking.status ?? '',
-        isOwner: parking.isOwner ?? false,
-        isActive: parking.isActive ?? false,
+        email: parking.email,
+        phone: parking.phone,
+        address: parking.address,
+        location: parking.location,
         logoUrl: parking.logoUrl,
-        rates: parking.rates ?? [],
+        status: parking.status ?? '',
         params: parking.params,
-        operationMode: parking.operationMode,
-        capacity: parking.capacity,
+        rates: parking.rates,
+        operationMode: parking.operationMode ?? ParkingOperationMode.map,
+        isOwner: parking.isOwner ?? false,
+        areaCount: parking.areaCount ?? 0,
+        totalSpots: parking.totalSpots ?? 0,
+        occupiedSpots: parking.occupiedSpots ?? 0,
+        availableSpots: parking.availableSpots ?? 0,
       );
 
   factory ParkingSimpleModel.fromJson(Map<String, dynamic> json) =>
@@ -125,13 +609,9 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
   final ParkingParamsModel params;
   final List<AreaModel>? areas;
   final List<EmployeeModel>? employees;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final DateTime? deletedAt;
 
   // Additional fields for maps and availability
-  final double? latitude;
-  final double? longitude;
+  final ParkingLocationModel? location;
   final int? totalSpots;
   final int? availableSpots;
   final int? occupiedSpots;
@@ -156,11 +636,7 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     required this.params,
     this.areas,
     this.employees,
-    required this.createdAt,
-    required this.updatedAt,
-    this.deletedAt,
-    this.latitude,
-    this.longitude,
+    this.location,
     this.totalSpots,
     this.availableSpots,
     this.occupiedSpots,
@@ -187,11 +663,7 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     required ParkingParamsModel params,
     List<AreaModel>? areas,
     List<EmployeeModel>? employees,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    DateTime? deletedAt,
-    double? latitude,
-    double? longitude,
+    ParkingLocationModel? location,
     int? totalSpots,
     int? availableSpots,
     int? occupiedSpots,
@@ -216,11 +688,7 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
       params: params,
       areas: areas ?? this.areas,
       employees: employees ?? this.employees,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      deletedAt: deletedAt ?? this.deletedAt,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
+      location: location ?? this.location,
       totalSpots: totalSpots ?? this.totalSpots,
       availableSpots: availableSpots ?? this.availableSpots,
       occupiedSpots: occupiedSpots ?? this.occupiedSpots,
@@ -239,19 +707,31 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
 }
 
 @JsonSerializable()
+class ParkingLocationModel extends JsonConvertible<ParkingLocationModel> {
+  final double? lat;
+  final double? lng;
+
+  ParkingLocationModel({this.lat, this.lng});
+
+  factory ParkingLocationModel.fromJson(Map<String, dynamic> json) =>
+      _$ParkingLocationModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$ParkingLocationModelToJson(this);
+}
+
+@JsonSerializable()
 class ParkingCreateModel extends JsonConvertible<ParkingCreateModel> {
   final String name;
   final String companyId;
-  final double? latitude;
-  final double? longitude;
+  final ParkingLocationModel? location;
   final String? address;
   final int? totalSpots;
 
   ParkingCreateModel({
     required this.name,
     required this.companyId,
-    this.latitude,
-    this.longitude,
+    this.location,
     this.address,
     this.totalSpots,
   });
@@ -268,8 +748,7 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
   final String? name;
   final ParkingParamsModel? params;
   final List<RateModel>? rates;
-  final double? latitude;
-  final double? longitude;
+  final ParkingLocationModel? location;
   final String? address;
   final int? totalSpots;
   final int? availableSpots;
@@ -282,8 +761,7 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
     this.name,
     this.params,
     this.rates,
-    this.latitude,
-    this.longitude,
+    this.location,
     this.address,
     this.totalSpots,
     this.availableSpots,
@@ -304,15 +782,15 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
 class ParkingPreviewModel extends JsonConvertible<ParkingPreviewModel> {
   final String id;
   final String name;
-  final String address;
-  final String logoUrl;
+  final String? address;
+  final String? logoUrl;
   final ParkingParamsModel params;
 
   ParkingPreviewModel({
     required this.id,
     required this.name,
-    required this.address,
-    required this.logoUrl,
+    this.address,
+    this.logoUrl,
     required this.params,
   });
 

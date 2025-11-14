@@ -1,65 +1,126 @@
-import { ParkingSimple } from "../../models/parking";
-import { User, UserCreate, UserUpdate } from "../../models/user";
-import { BaseCrud } from "./base-crud";
+import { PoolClient } from "pg";
+import { getConnection, withClient } from "../connection";
+import { User, UserCreate, UserUpdate, UserCreateSchema, UserUpdateSchema, UserCreateRequest, UserUpdateRequest } from "../../models/user";
+import { getSchemaValidator } from "elysia";
 
-class UserCrud extends BaseCrud<User, UserCreate, UserUpdate> {
-  constructor() {
-    super("t_user", "u");
-  }
+const TABLE_NAME = "t_user";
 
-  baseQuery() {
-    return `
-select u.* 
-from t_user u
-`;
-  }
+// ===== CRUD OPERATIONS =====
 
-  async getUserParkings(id: string): Promise<ParkingSimple[]> {
-    // Primero obtenemos los datos base de los estacionamientos
-    const sql = `
-      WITH parking_stats AS (
-        SELECT 
-          p.id as "parkingId",
-          COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
-          COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL AND occ."status" = 'available') as "availableSpots",
-          COUNT(a.id) as "areaCount"
-        FROM t_parking p
-        LEFT JOIN t_area a ON a."parkingId" = p.id AND a."deletedAt" IS NULL
-        LEFT JOIN t_element e ON (e."parkingId" = p.id OR e."areaId" = a.id) AND e."deletedAt" IS NULL
-        LEFT JOIN v_element_occupancy occ ON occ."elementId" = e.id
-        WHERE (p."ownerId" = $1 OR EXISTS (SELECT 1 FROM t_employee emp WHERE emp."parkingId" = p.id AND emp."userId" = $1))
-        AND p."deletedAt" IS NULL
-        GROUP BY p.id
-      )
-      SELECT 
-        p.id,
-        p.name,
-        p.phone,
-        p.address,
-        p.email,
-        p."logoUrl",
-        p.rates,
-        p.params,
-        p."operationMode",
-        p.capacity,
-        CASE WHEN p."ownerId" = $1 THEN true ELSE false END as "isOwner",
-        true as "isActive",
-        p.status,
-        ps."areaCount"::INTEGER as "areaCount",
-        ps."totalSpots"::INTEGER as "totalSpots",
-        (ps."totalSpots" - ps."availableSpots")::INTEGER as "occupiedSpots",
-        ps."availableSpots"::INTEGER as "availableSpots"
-      FROM t_parking p
-      JOIN parking_stats ps ON ps."parkingId" = p.id
-      WHERE (p."ownerId" = $1
-      OR EXISTS (SELECT 1 FROM t_employee e WHERE e."parkingId" = p.id AND e."userId" = $1))
-      AND p."deletedAt" IS NULL
-      GROUP BY p.id, p.name, p.phone, p.address, p.email, p."logoUrl", p."ownerId", p.status, p.rates, p.params,
-               ps."areaCount", ps."totalSpots", ps."availableSpots", p."operationMode", p.capacity
-    `;
-    const results = await this.query<ParkingSimple>({ sql, params: [id] });
-    return results;
-  }
+/**
+ * Crear un nuevo usuario
+ */
+export async function createUser(input: UserCreateRequest): Promise<User> {
+  const validator = getSchemaValidator(UserCreateSchema);
+  const data = validator.parse({
+    ...input,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    // updatedAt: new Date().toISOString(),
+  });
+
+  const columns = Object.keys(data)
+    .map((key) => `"${key}"`)
+    .join(", ");
+
+  const values = Object.values(data).map((value) =>
+    typeof value === "object" ? JSON.stringify(value) : value,
+  );
+
+  const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+  
+  const query = {
+    text: `INSERT INTO ${TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
+    values: values,
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<User>(query);
+    return res.rows[0];
+  });
 }
 
-export const userCrud = new UserCrud();
+/**
+ * Buscar un usuario por ID
+ */
+export async function findUserById(id: string): Promise<User | undefined> {
+  const query = {
+    text: `SELECT * FROM ${TABLE_NAME} WHERE id = $1 LIMIT 1`,
+    values: [id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<User>(query);
+    return res.rows[0];
+  });
+}
+
+/**
+ * Buscar usuarios por criterios
+ */
+export async function findUsers(where: Partial<User> = {}): Promise<User[]> {
+  const conditions = Object.entries(where)
+    .map(([key, value], i) => `"${key}" = $${i + 1}`)
+    .join(" AND ");
+  
+  const query = {
+    text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+    values: Object.values(where),
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<User>(query);
+    return res.rows;
+  });
+}
+
+/**
+ * Actualizar un usuario
+ */
+export async function updateUser(id: string, input: UserUpdateRequest): Promise<User> {
+  const validator = getSchemaValidator(UserUpdateSchema);
+  const data = validator.parse(input);
+  
+  const setClause = Object.keys(data)
+    .map((key, i) => `"${key}" = $${i + 1}`)
+    .join(", ");
+
+  const values = Object.values(data).map((value) =>
+    typeof value === "object" ? JSON.stringify(value) : value,
+  );
+  
+  const query = {
+    text: `UPDATE ${TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
+    values: [...values, id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<User>(query);
+    
+    if (!res.rows || res.rows.length === 0) {
+      throw new Error(`No se encontró el usuario con ID ${id} para actualizar`);
+    }
+    
+    return res.rows[0];
+  });
+}
+
+/**
+ * Eliminar un usuario
+ */
+export async function deleteUser(id: string): Promise<User> {
+  const query = {
+    text: `DELETE FROM ${TABLE_NAME} WHERE id = $1 RETURNING *`,
+    values: [id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<User>(query);
+    
+    if (!res.rows || res.rows.length === 0) {
+      throw new Error(`No se encontró el usuario con ID ${id} para eliminar`);
+    }
+    
+    return res.rows[0];
+  });
+}

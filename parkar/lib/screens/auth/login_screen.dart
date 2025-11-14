@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/api_exception.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/auth/auth_layout.dart';
+import '../../widgets/custom_input_field.dart';
+import '../../widgets/custom_snackbar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +17,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'admin@example.com');
+  final _emailController = TextEditingController(text: 'test@example.com');
   final _passwordController = TextEditingController(text: 'password123');
   bool _showPassword = false;
   bool _isLoading = false;
@@ -46,8 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
 
         // Usar el modelo de respuesta de autenticación
-        print('Token recibido en login: ${authResponse.token}');
-        appState.setAccessToken(authResponse.token);
+        print('Token recibido en login: ${authResponse.auth.token}');
+        appState.setAccessToken(authResponse.auth.token);
         print('Token después de setAccessToken: ${appState.authToken}');
         appState.setCurrentUser(authResponse.user);
 
@@ -70,9 +73,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
         // Si no hay estacionamientos, ir directamente al home
         if (mounted) context.go('/home');
+      } on ApiException catch (e) {
+        String errorMessage;
+
+        if (e.isValidationError) {
+          // Manejar errores de validación específicamente
+          errorMessage = _parseValidationError(e);
+        } else {
+          // Manejar otros errores de API
+          switch (e.statusCode) {
+            case 401:
+              errorMessage =
+                  'Credenciales incorrectas. Verifica tu email y contraseña.';
+              break;
+            case 404:
+              errorMessage = 'Usuario no encontrado. Verifica tu email.';
+              break;
+            case 500:
+              errorMessage =
+                  'Error del servidor. Intenta nuevamente más tarde.';
+              break;
+            default:
+              errorMessage = e.message;
+          }
+        }
+
+        setState(() {
+          _errorMessage = errorMessage;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       } catch (e) {
         setState(() {
-          _errorMessage = 'Error al iniciar sesión: $e';
+          _errorMessage = 'Error inesperado: ${e.toString()}';
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -93,6 +134,43 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Parse validation errors from API response
+  String _parseValidationError(ApiException e) {
+    if (e.errors != null) {
+      // Buscar errores específicos en la respuesta de validación
+      final errors = e.errors!;
+
+      // Si hay un resumen del error, usarlo
+      if (errors['summary'] != null) {
+        return errors['summary'] as String;
+      }
+
+      // Si hay un mensaje específico, usarlo
+      if (errors['message'] != null) {
+        return errors['message'] as String;
+      }
+
+      // Si hay una lista de errores, procesar el primero
+      if (errors['errors'] != null && errors['errors'] is List) {
+        final errorList = errors['errors'] as List;
+        if (errorList.isNotEmpty) {
+          final firstError = errorList.first;
+          if (firstError is Map<String, dynamic>) {
+            if (firstError['summary'] != null) {
+              return firstError['summary'] as String;
+            }
+            if (firstError['message'] != null) {
+              return firstError['message'] as String;
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback al mensaje general
+    return e.message;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -104,49 +182,28 @@ class _LoginScreenState extends State<LoginScreen> {
       title: 'Iniciar Sesión',
       subtitle: 'Ingresa tus credenciales para acceder',
       children: [
-        if (_errorMessage != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withValues(alpha: 127),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: colorScheme.error, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              ConditionalMessageWidget(
+                message: _errorMessage,
+                type: MessageType.error,
+                onClose: () {
+                  setState(() {
+                    _errorMessage = null;
+                  });
+                },
+              ),
               // Campo de Email moderno y compacto
-              TextFormField(
+              CustomFormInputField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'ejemplo@correo.com',
-                  prefixIcon: Icon(
-                    Icons.email_outlined,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                labelText: 'Email',
+                hintText: 'ejemplo@correo.com',
+                prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.email],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu email';
@@ -156,37 +213,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
                   return null;
                 },
-                autocorrect: false,
-                enableSuggestions: true,
-                style: textTheme.bodyMedium,
               ),
 
               const SizedBox(height: 20),
 
               // Campo de Contraseña moderno y compacto
-              TextFormField(
+              CustomFormInputField(
                 controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Contraseña',
-                  hintText: '********',
-                  prefixIcon: Icon(
-                    Icons.lock_outline,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _showPassword ? Icons.visibility_off : Icons.visibility,
-                      size: 18,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showPassword = !_showPassword;
-                      });
-                    },
-                  ),
-                ),
+                labelText: 'Contraseña',
+                hintText: '********',
+                prefixIcon: Icons.lock_outline,
                 obscureText: !_showPassword,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -195,12 +231,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   return null;
                 },
                 textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) {
+                onSubmitted: () {
                   if (!_isLoading) {
                     _submitForm();
                   }
                 },
-                style: textTheme.bodyMedium,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showPassword = !_showPassword;
+                    });
+                  },
+                ),
               ),
 
               Align(

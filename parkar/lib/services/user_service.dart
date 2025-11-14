@@ -1,93 +1,79 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../config/app_config.dart';
+import '../models/user_model.dart';
 import '../models/parking_model.dart';
 import 'base_service.dart';
-import '../models/user_model.dart';
 
 class UserService extends BaseService {
-  UserService() : super(path: AppConfig.apiEndpoints['user']!);
+  UserService() : super(path: AppConfig.apiEndpoints['user'] ?? '/users');
 
-  /// Clave para almacenar los datos del usuario en SharedPreferences
-  static const String _userKey = 'user_data';
-
-  /// Obtener un usuario por ID
   Future<UserModel> getUser(String id) async {
     return get<UserModel>(
       endpoint: '/$id',
-      parser: (json) => UserModel.fromJson(json),
+      parser: (json) => parseModel(json, UserModel.fromJson),
     );
   }
 
-  /// Actualizar un usuario
+  Future<UserModel> createUser(UserCreateModel model) async {
+    return post<UserModel>(
+      endpoint: '',
+      body: model,
+      parser: (json) => parseModel(json, UserModel.fromJson),
+    );
+  }
+
   Future<UserModel> updateUser(String id, UserUpdateModel model) async {
     return patch<UserModel>(
       endpoint: '/$id',
       body: model,
-      parser: (json) => UserModel.fromJson(json),
+      parser: (json) => parseModel(json, UserModel.fromJson),
+    );
+  }
+
+  Future<void> deleteUser(String id) async {
+    return delete<void>(endpoint: '/$id', parser: (_) => null);
+  }
+
+  Future<List<UserModel>> getUsersByCompany(String companyId) async {
+    return get<List<UserModel>>(
+      endpoint: '',
+      additionalHeaders: {'companyId': companyId},
+      parser: (json) => parseModelList(json, UserModel.fromJson),
     );
   }
 
   Future<List<ParkingSimpleModel>> getParkings(String userId) async {
     return get<List<ParkingSimpleModel>>(
       endpoint: '/$userId/parkings',
-      parser: (data) =>
-          (data as List<dynamic>).map((e) => ParkingSimpleModel.fromJson(e)).toList(),
+      parser: (json) => parseModelList(json, ParkingSimpleModel.fromJson),
     );
   }
 
-  /// Actualiza el perfil del usuario
-  Future<void> updateUserProfile({
-    required String name,
-    required String email,
-    String? photoUrl,
+  Future<Map<String, dynamic>> getUsersPaginated({
+    int page = 1,
+    int limit = 10,
+    String? search,
+    String? companyId,
   }) async {
-    // Obtener los datos actuales del usuario
-    final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(_userKey);
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
 
-    // Crear un mapa con los datos actuales o uno nuevo si no existe
-    final Map<String, dynamic> userMap =
-        userData != null ? json.decode(userData) as Map<String, dynamic> : {};
-
-    // Actualizar los datos
-    userMap['name'] = name;
-    userMap['email'] = email;
-    if (photoUrl != null) {
-      userMap['photoUrl'] = photoUrl;
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
     }
 
-    // Guardar los datos actualizados
-    await prefs.setString(_userKey, json.encode(userMap));
-  }
-
-  /// Obtiene los datos del usuario
-  Future<Map<String, dynamic>?> getUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userData = prefs.getString(_userKey);
-
-    if (userData != null) {
-      return json.decode(userData) as Map<String, dynamic>;
+    if (companyId != null && companyId.isNotEmpty) {
+      queryParams['companyId'] = companyId;
     }
 
-    return null;
-  }
+    final queryString = queryParams.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
 
-  /// Actualiza la contraseña del usuario
-  Future<void> updatePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    // Aquí se implementaría la lógica real para cambiar la contraseña
-    // Por ahora, simulamos un retraso para simular una operación de red
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Verificar la contraseña actual (simulado)
-    if (currentPassword != '123456') {
-      throw Exception('La contraseña actual es incorrecta');
-    }
-
-    // Aquí se guardaría la nueva contraseña en un sistema real
+    return get<Map<String, dynamic>>(
+      endpoint: '/paginated?$queryString',
+      parser: (json) => parsePaginatedResponse(json, UserModel.fromJson),
+    );
   }
 }

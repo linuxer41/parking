@@ -1,15 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:system_theme/system_theme.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'config/app_config.dart';
+import 'config/localization_config.dart';
 import 'routes/app_router.dart';
 import 'services/service_locator.dart';
 import 'state/app_state.dart';
 import 'state/app_state_container.dart';
 import 'di/di_container.dart';
-import 'package:flutter/services.dart';
-
 
 bool get isDesktop {
   if (kIsWeb) return false;
@@ -32,19 +33,32 @@ bool get isTablet {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Configurar codificación UTF-8 para caracteres especiales
+  LocalizationConfig.configureUtf8();
+
+  // Configurar codificación UTF-8 para toda la aplicación
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
+
   AppConfig.init(
     // apiBaseUrl: 'http://localhost:3002',
     apiBaseUrl: 'http://192.168.100.8:3002',
+    // apiBaseUrl: 'http://192.168.1.13:3002',
     apiTimeout: 30,
     apiEndpoints: {
       'auth': '/auth',
       'user': '/users',
       'employee': '/employees',
       'parking': '/parkings',
-      'area': '/areas',
       'vehicle': '/vehicles',
+      'booking': '/booking',
+      'entryExit': '/entry-exits',
       'subscription': '/subscriptions',
-      'entry': '/entries',
       'exit': '/exits',
       'cashRegister': '/cash_registers',
       'movement': '/movements',
@@ -61,7 +75,7 @@ void main() async {
       systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
-  
+
   if (!isTablet && !isDesktop) {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -100,7 +114,8 @@ void main() async {
   // Añadir listener para depuración
   appState.addListener(() {
     print(
-        'DEBUG main: AppState cambió - modo: ${appState.mode}, color: ${appState.color}');
+      'DEBUG main: AppState cambió - modo: ${appState.mode}, color: ${appState.color}',
+    );
   });
 
   // Crear una instancia de animación para forzar actualizaciones
@@ -111,11 +126,7 @@ class MyApp extends StatelessWidget {
   final AppState appState;
   final DIContainer diContainer;
 
-  const MyApp({
-    super.key,
-    required this.appState,
-    required this.diContainer,
-  });
+  const MyApp({super.key, required this.appState, required this.diContainer});
 
   @override
   Widget build(BuildContext context) {
@@ -127,12 +138,18 @@ class MyApp extends StatelessWidget {
         listenable: appState,
         builder: (context, child) {
           print(
-              'DEBUG: ListenableBuilder reconstruido - appState.mode: ${appState.mode}, color: ${appState.color}');
+            'DEBUG: ListenableBuilder reconstruido - appState.mode: ${appState.mode}, color: ${appState.color}',
+          );
           return MaterialApp.router(
             title: 'Parking Control',
             debugShowCheckedModeBanner: false,
-            locale: appState.locale,
+            locale: appState.locale ?? LocalizationConfig.defaultLocale,
             themeMode: appState.mode,
+
+            // Configuración de localización para soporte completo de caracteres especiales
+            localizationsDelegates: LocalizationConfig.localizationsDelegates,
+            supportedLocales: LocalizationConfig.supportedLocales,
+
             theme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(

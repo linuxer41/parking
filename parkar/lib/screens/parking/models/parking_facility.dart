@@ -5,7 +5,7 @@ import 'dart:math' as math;
 
 import 'enums.dart';
 import 'parking_elements.dart';
-import '../../../models/element_model.dart';
+import '../../../models/parking_model.dart';
 
 /// Implementación de una instalación de parkeo
 class ParkingFacility extends ParkingElement {
@@ -50,13 +50,13 @@ class ParkingFacility extends ParkingElement {
   set isSelected(bool value) {
     if (value == _isSelected) return;
     _isSelected = value;
-    
+
     if (_isSelected) {
       _startPulseAnimation();
     } else {
       _stopPulseAnimation();
     }
-    
+
     notifyListeners();
   }
 
@@ -133,12 +133,14 @@ class ParkingFacility extends ParkingElement {
       colors: [
         HSLColor.fromColor(color)
             .withLightness(
-                (HSLColor.fromColor(color).lightness + 0.15).clamp(0.0, 1.0))
+              (HSLColor.fromColor(color).lightness + 0.15).clamp(0.0, 1.0),
+            )
             .toColor(),
         color,
         HSLColor.fromColor(color)
             .withLightness(
-                (HSLColor.fromColor(color).lightness - 0.1).clamp(0.0, 1.0))
+              (HSLColor.fromColor(color).lightness - 0.1).clamp(0.0, 1.0),
+            )
             .toColor(),
       ],
       stops: const [0.0, 0.5, 1.0],
@@ -160,7 +162,8 @@ class ParkingFacility extends ParkingElement {
     final borderPaint = Paint()
       ..color = HSLColor.fromColor(color)
           .withLightness(
-              (HSLColor.fromColor(color).lightness + 0.3).clamp(0.0, 1.0))
+            (HSLColor.fromColor(color).lightness + 0.3).clamp(0.0, 1.0),
+          )
           .toColor()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
@@ -197,8 +200,10 @@ class ParkingFacility extends ParkingElement {
     drawIcon(
       canvas,
       iconData,
-      Size(width * 0.6,
-          height * 0.6), // Hacer el icono más grande ya que no tiene fondo
+      Size(
+        width * 0.6,
+        height * 0.6,
+      ), // Hacer el icono más grande ya que no tiene fondo
       Colors.white, // Usar blanco para mejor contraste con el fondo de color
       1.0,
     );
@@ -214,7 +219,7 @@ class ParkingFacility extends ParkingElement {
         ..color = Colors.white.withOpacity(0.5 + _pulseValue * 0.5)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           rect.inflate(4 + _pulseValue * 3),
@@ -332,10 +337,7 @@ class ParkingFacility extends ParkingElement {
       'facilityType': type.toString(),
       'name': name,
       'isAvailable': _isAvailable,
-      'position': {
-        'x': position.x,
-        'y': position.y,
-      },
+      'position': {'x': position.x, 'y': position.y},
       'rotation': rotation,
       'scale': scale,
       'isVisible': isVisible,
@@ -377,11 +379,9 @@ class ParkingFacility extends ParkingElement {
 
 extension ParkingFacilityElementConversion on ParkingFacility {
   // Convertir ParkingFacility a ElementModel
-  ElementModel toElementModel(String areaId, String parkingId) {
+  ElementModel toElementModel() {
     return ElementModel(
       id: id,
-      areaId: areaId,
-      parkingId: parkingId,
       name: name,
       type: ElementType.facility,
       subType: type.index + 1, // Add 1 to match backend schema
@@ -390,22 +390,23 @@ extension ParkingFacilityElementConversion on ParkingFacility {
       posZ: 0.0,
       rotation: rotation,
       scale: scale,
-      accessId: null, // Las instalaciones no tienen accessId
+      isActive: _isAvailable,
       occupancy: ElementOccupancyModel(
-        status: isAvailable ? 'available' : 'unavailable',
+        status: _isAvailable ? 'available' : 'unavailable',
       ),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      deletedAt: null,
     );
   }
-  
+
   // Método estático para crear un ParkingFacility desde un ElementModel
   static ParkingFacility fromElementModel(ElementModel element) {
     return ParkingFacility(
       id: element.id,
       position: vector_math.Vector2(element.posX, element.posY),
-      type: FacilityType.values[element.subType - 1], // Subtract 1 to match enum
+      type:
+          FacilityType.values[(element.subType - 1).clamp(
+            0,
+            FacilityType.values.length - 1,
+          )], // Subtract 1 to match enum
       name: element.name,
       isAvailable: element.occupancy.status == 'available',
       rotation: element.rotation,

@@ -1,12 +1,14 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../../../services/print_service.dart';
-import '../../../services/access_service.dart';
-import '../../../state/app_state_container.dart';
-import '../../../models/element_model.dart';
-import '../../../models/access_model.dart';
+
+import '../../../models/booking_model.dart';
 import '../../../models/employee_model.dart';
+import '../../../models/parking_model.dart';
 import '../../../models/vehicle_model.dart';
+import '../../../services/booking_service.dart';
+import '../../../services/print_service.dart';
+import '../../../state/app_state_container.dart';
 import '../models/parking_spot.dart';
 import 'components/index.dart';
 
@@ -14,21 +16,20 @@ import 'components/index.dart';
 class ManageAccess extends StatefulWidget {
   final ParkingSpot spot;
 
-  const ManageAccess({
-    super.key,
-    required this.spot,
-  });
+  const ManageAccess({super.key, required this.spot});
 
   @override
   State<ManageAccess> createState() => _ManageAccessState();
-  
+
   /// Mostrar el modal como un bottom sheet
   static Future<void> show(BuildContext context, ParkingSpot spot) async {
     // Verificar que el spot tenga un acceso asociado
     if (spot.occupancy == null || spot.occupancy!.access == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Error: Este espacio no tiene un vehículo registrado'),
+          content: const Text(
+            'Error: Este espacio no tiene un vehículo registrado',
+          ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -64,17 +65,17 @@ class _ManageAccessState extends State<ManageAccess> {
   double cost = 0;
   bool isLoading = false;
   String errorMessage = '';
-  
+
   // Variables para determinar el tipo de acceso
   bool isReservation = false;
   bool isSubscription = false;
   double? advanceAmount;
-  
+
   @override
   void initState() {
     super.initState();
     _determineAccessType();
-    
+
     // Parse entry time safely
     try {
       entryTime = DateTime.parse(widget.spot.occupancy!.access!.startDate);
@@ -83,7 +84,7 @@ class _ManageAccessState extends State<ManageAccess> {
       entryTime = DateTime.now().subtract(const Duration(hours: 1));
     }
     currentDuration = DateTime.now().difference(entryTime);
-    
+
     // Calcular tarifa inicial solo si no es suscripción
     if (!isSubscription) {
       final hours = (currentDuration.inMinutes / 60).ceil();
@@ -99,35 +100,35 @@ class _ManageAccessState extends State<ManageAccess> {
       }
     });
   }
-  
+
   /// Determina el tipo de acceso basado en la ocupación del spot
   void _determineAccessType() {
     final occupancy = widget.spot.occupancy;
     if (occupancy == null) return;
-    
+
     // Verificar si hay una reserva asociada
     if (occupancy.reservation != null) {
       isReservation = true;
       advanceAmount = occupancy.reservation!.amount;
     }
-    
+
     // Verificar si hay una suscripción asociada
     if (occupancy.subscription != null) {
       isSubscription = true;
     }
-    
+
     // Si el status es 'subscribed', también es una suscripción
     if (occupancy.status == 'subscribed') {
       isSubscription = true;
     }
   }
-  
+
   @override
   void dispose() {
     timer?.cancel();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     // Contenido principal
@@ -138,9 +139,9 @@ class _ManageAccessState extends State<ManageAccess> {
         children: [
           // Información del vehículo
           VehicleInfoCard(vehicle: widget.spot.occupancy!.access!.vehicle),
-          
+
           const SizedBox(height: 16),
-          
+
           // Información de permanencia
           StayInfoCard(
             entryTime: entryTime,
@@ -179,7 +180,7 @@ class _ManageAccessState extends State<ManageAccess> {
       errorMessage: errorMessage,
     );
   }
-  
+
   // Método para registrar la salida
   Future<void> _registerExit() async {
     setState(() {
@@ -199,13 +200,24 @@ class _ManageAccessState extends State<ManageAccess> {
         return;
       }
 
-      final accessService = AppStateContainer.di(context).resolve<AccessService>();
-      final now = DateTime.now();
-      final access = widget.spot.occupancy!.access!;
+      final bookingService = AppStateContainer.di(
+        context,
+      ).resolve<BookingService>();
+
+      final booking = await bookingService.getBooking(
+        widget.spot.occupancy!.access!.id,
+      );
+      if (booking == null) {
+        setState(() {
+          errorMessage = 'No se encontró el booking';
+          isLoading = false;
+        });
+        return;
+      }
 
       // Determinar el monto a cobrar según el tipo de acceso
       double finalCost = 0;
-      
+
       if (isSubscription) {
         // Para suscripciones, no se cobra nada
         finalCost = 0;
@@ -215,9 +227,9 @@ class _ManageAccessState extends State<ManageAccess> {
       } else {
         // Para acceso normal, calcular tarifa
         try {
-          finalCost = await accessService.calculateExitFee(
+          finalCost = await bookingService.calculateExitFeeLegacy(
             parkingId,
-            access.id,
+            booking.id,
           );
         } catch (e) {
           debugPrint('Error al calcular tarifa: $e');
@@ -225,11 +237,11 @@ class _ManageAccessState extends State<ManageAccess> {
           finalCost = cost;
         }
       }
-      
+
       // Registrar salida en la API
-      final updatedAccess = await accessService.registerExit(
+      final updatedAccess = await bookingService.registerExitLegacy(
         parkingId: parkingId,
-        accessId: access.id,
+        bookingId: booking.id,
         amount: finalCost,
       );
 
@@ -237,44 +249,39 @@ class _ManageAccessState extends State<ManageAccess> {
       _updateSpotWithExitData(updatedAccess);
 
       // Imprimir ticket de salida
-      final printService = AppStateContainer.di(context).resolve<PrintService>();
-      
+      final printService = AppStateContainer.di(
+        context,
+      ).resolve<PrintService>();
+
       // Asegurarse de que startDate no sea nulo
       DateTime entryTime;
       try {
-        entryTime = access.startDate != null ? DateTime.parse(access.startDate) : now.subtract(const Duration(hours: 1));
+        entryTime = booking.startDate;
       } catch (e) {
         // Si hay un error de parsing, usar un valor por defecto
-        entryTime = now.subtract(const Duration(hours: 1));
+        entryTime = DateTime.now().subtract(const Duration(hours: 1));
       }
-      
+
       await printService.printExitTicket(
-        plate: access.vehicle.plate,
-        spotLabel: widget.spot.label,
-        entryTime: entryTime,
-        exitTime: now,
-        duration: currentDuration,
-        cost: finalCost,
-        parkingName: appState.currentParking?.name ?? 'Estacionamiento',
-        parkingAddress: appState.currentParking?.address ?? 'Dirección no disponible',
-        employeeName: appState.employee?.role,
+        booking: booking,
         context: context,
-        accessType: _getAccessTypeString(),
+        isSimpleMode:
+            appState.currentParking?.operationMode == ParkingOperationMode.list,
       );
 
       // Cerrar el diálogo después de imprimir
       if (mounted) {
         // Cerrar el diálogo
         Navigator.pop(context);
-        
+
         // Mostrar confirmación
-        String message = 'Vehículo ${access.vehicle.plate} ha salido';
+        String message = 'Vehículo ${booking.vehicle.plate} ha salido';
         if (isSubscription) {
           message += ' (Suscripción)';
         } else if (isReservation) {
           message += ' (Reserva)';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -306,80 +313,58 @@ class _ManageAccessState extends State<ManageAccess> {
   }
 
   // Función para actualizar el spot con datos de salida
-  void _updateSpotWithExitData(AccessModel updatedAccess) {
+  void _updateSpotWithExitData(BookingModel updatedAccess) {
     // Si el acceso tiene fecha de salida, marcar el spot como disponible
-    if (updatedAccess.exitTime != null) {
+    if (updatedAccess.endDate != null) {
       widget.spot.isOccupied = false;
-      widget.spot.occupancy = ElementOccupancyModel(
-        status: 'available',
-      );
+      widget.spot.occupancy = ElementOccupancyModel(status: 'available');
     } else {
       // Si no hay fecha de salida, actualizar con los datos del acceso
       final occupancy = ElementOccupancyModel(
         access: ElementActivityModel(
           id: updatedAccess.id,
-          startDate: updatedAccess.entryTime.toIso8601String(),
-          endDate: updatedAccess.exitTime?.toIso8601String(),
+          startDate: updatedAccess.startDate?.toIso8601String() ?? '',
+          endDate: updatedAccess.endDate?.toIso8601String(),
           vehicle: VehiclePreviewModel(
             id: updatedAccess.vehicle.id,
-            plate: updatedAccess.vehicle.plate,
-            type: updatedAccess.vehicle.type,
+            plate: updatedAccess.vehicle.plate ?? '',
+            type: updatedAccess.vehicle.type ?? '',
             color: updatedAccess.vehicle.color,
             ownerName: updatedAccess.vehicle.ownerName,
             ownerDocument: updatedAccess.vehicle.ownerDocument,
             ownerPhone: updatedAccess.vehicle.ownerPhone,
           ),
           employee: EmployeePreviewModel(
-            id: updatedAccess.employee.id,
+            id: updatedAccess.employee.id ?? '',
             name: updatedAccess.employee.name,
             role: updatedAccess.employee.role,
           ),
-          amount: updatedAccess.amount ?? 0.0,
+          amount: updatedAccess.amount,
         ),
-        status: updatedAccess.exitTime != null ? 'available' : 'occupied',
+        status: updatedAccess.endDate != null ? 'available' : 'occupied',
       );
 
       widget.spot.occupancy = occupancy;
-      widget.spot.isOccupied = updatedAccess.exitTime == null;
+      widget.spot.isOccupied = updatedAccess.endDate == null;
     }
   }
 
   // Método para imprimir ticket
-  void _printTicket() {
+  Future<void> _printTicket() async {
     final printService = AppStateContainer.di(context).resolve<PrintService>();
+    final bookingService = AppStateContainer.di(
+      context,
+    ).resolve<BookingService>();
     final appState = AppStateContainer.of(context);
-    final now = DateTime.now();
-    final access = widget.spot.occupancy!.access!;
-    
-    // Asegurarse de que startDate no sea nulo
-    DateTime entryTime;
-    try {
-      entryTime = access.startDate != null ? DateTime.parse(access.startDate) : now.subtract(const Duration(hours: 1));
-    } catch (e) {
-      // Si hay un error de parsing, usar un valor por defecto
-      entryTime = now.subtract(const Duration(hours: 1));
-    }
-    
-    // Determinar el costo para el ticket
-    double ticketCost = cost;
-    if (isSubscription) {
-      ticketCost = 0;
-    } else if (isReservation && advanceAmount != null) {
-      ticketCost = advanceAmount!;
-    }
-    
+    final booking = await bookingService.getBooking(
+      widget.spot.occupancy!.access!.id,
+    );
+
     printService.printExitTicket(
-      plate: access.vehicle.plate,
-      spotLabel: widget.spot.label,
-      entryTime: entryTime,
-      exitTime: now,
-      duration: currentDuration,
-      cost: ticketCost,
-      parkingName: appState.currentParking?.name ?? 'Estacionamiento',
-      parkingAddress: appState.currentParking?.address ?? 'Dirección no disponible',
-      employeeName: appState.employee?.role,
+      booking: booking,
       context: context,
-      accessType: _getAccessTypeString(),
+      isSimpleMode:
+          appState.currentParking?.operationMode == ParkingOperationMode.list,
     );
   }
-} 
+}

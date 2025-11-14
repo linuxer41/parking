@@ -6,9 +6,37 @@ part of 'auth_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+ValidationErrorModel _$ValidationErrorModelFromJson(
+  Map<String, dynamic> json,
+) => ValidationErrorModel(
+  type: json['type'] as String,
+  on: json['on'] as String,
+  summary: json['summary'] as String,
+  property: json['property'] as String,
+  message: json['message'] as String,
+  expected: json['expected'] as Map<String, dynamic>?,
+  found: json['found'] as Map<String, dynamic>?,
+  errors: (json['errors'] as List<dynamic>)
+      .map((e) => e as Map<String, dynamic>)
+      .toList(),
+);
+
+Map<String, dynamic> _$ValidationErrorModelToJson(
+  ValidationErrorModel instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'on': instance.on,
+  'summary': instance.summary,
+  'property': instance.property,
+  'message': instance.message,
+  'expected': instance.expected,
+  'found': instance.found,
+  'errors': instance.errors,
+};
+
 AuthResponseModel _$AuthResponseModelFromJson(Map<String, dynamic> json) =>
     AuthResponseModel(
-      token: json['token'] as String,
+      auth: AuthDataModel.fromJson(json['auth'] as Map<String, dynamic>),
       user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
       parkings: (json['parkings'] as List<dynamic>)
           .map((e) => ParkingSimpleModel.fromJson(e as Map<String, dynamic>))
@@ -17,9 +45,21 @@ AuthResponseModel _$AuthResponseModelFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$AuthResponseModelToJson(AuthResponseModel instance) =>
     <String, dynamic>{
-      'token': instance.token,
+      'auth': instance.auth,
       'user': instance.user,
       'parkings': instance.parkings,
+    };
+
+AuthDataModel _$AuthDataModelFromJson(Map<String, dynamic> json) =>
+    AuthDataModel(
+      token: json['token'] as String,
+      refreshToken: json['refreshToken'] as String,
+    );
+
+Map<String, dynamic> _$AuthDataModelToJson(AuthDataModel instance) =>
+    <String, dynamic>{
+      'token': instance.token,
+      'refreshToken': instance.refreshToken,
     };
 
 RegisterCompleteModel _$RegisterCompleteModelFromJson(
@@ -55,11 +95,11 @@ RegisterParkingModel _$RegisterParkingModelFromJson(
   Map<String, dynamic> json,
 ) => RegisterParkingModel(
   name: json['name'] as String,
-  capacity: (json['capacity'] as num).toInt(),
+  capacity: (json['capacity'] as num?)?.toInt(),
   operationMode: json['operationMode'] as String,
-  location: (json['location'] as List<dynamic>)
-      .map((e) => (e as num).toDouble())
-      .toList(),
+  location: json['location'] == null
+      ? null
+      : ParkingLocationModel.fromJson(json['location'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$RegisterParkingModelToJson(

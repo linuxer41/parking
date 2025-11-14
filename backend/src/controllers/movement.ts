@@ -1,8 +1,8 @@
-import Elysia from "elysia";
-import { t } from "elysia";
+import Elysia, { t } from "elysia";
 import { db } from "../db";
 import { accessPlugin } from "../plugins/access";
 import { MovementSchema, Movement, MovementCreateSchema, MovementUpdateSchema } from "../models/movement";
+import { NotFoundError } from "../utils/error";
 
 export const movementController = new Elysia({
   prefix: "/movements",
@@ -17,7 +17,7 @@ export const movementController = new Elysia({
   .get(
     "/",
     async ({ query }) => {
-      const res = await db.movement.findMany({});
+      const res = await db.movement.find({});
       return res as Movement[];
     },
     {
@@ -25,6 +25,16 @@ export const movementController = new Elysia({
         summary: "Obtener todos los movements",
         description: "Retorna una lista de todos los movements registrados.",
       },
+      query: t.Object({
+        parkingId: t.String({
+          description: "ID del parking",
+          required: false,
+        }),
+        cashRegisterId: t.String({
+          description: "ID de la caja registradora",
+          required: false,
+        }),
+      }),
       response: {
         200: t.Array(MovementSchema),
         400: t.String(),
@@ -35,9 +45,7 @@ export const movementController = new Elysia({
   .post(
     "/",
     async ({ body }) => {
-      const res = await db.movement.create({
-        data: body,
-      });
+      const res = await db.movement.create(body);
       return res as Movement;
     },
     {
@@ -57,11 +65,10 @@ export const movementController = new Elysia({
   .get(
     "/:id",
     async ({ params }) => {
-      const res = await db.movement.findUnique({
-        where: {
-          id: params.id,
-        },
-      });
+      const res = await db.movement.findById(params.id);
+      if (!res) {
+        throw new NotFoundError("Movimiento no encontrado");
+      }
       return res as Movement;
     },
     {
@@ -79,12 +86,7 @@ export const movementController = new Elysia({
   .patch(
     "/:id",
     async ({ params, body }) => {
-      const res = await db.movement.update({
-        where: {
-          id: params.id,
-        },
-        data: body,
-      });
+      const res = await db.movement.update(params.id, body);
       return res as Movement;
     },
     {
@@ -104,17 +106,14 @@ export const movementController = new Elysia({
   .delete(
     "/:id",
     async ({ params }) => {
-      const res = await db.movement.delete({
-        where: {
-          id: params.id,
-        },
-      });
+      const res = await db.movement.delete(params.id);
       return res as Movement;
     },
     {
       detail: {
         summary: "Eliminar un movement",
-        description: "Elimina un registro de movement basado en su ID.",
+        description:
+          "Elimina un registro de movement existente basado en su ID.",
       },
       response: {
         200: MovementSchema,

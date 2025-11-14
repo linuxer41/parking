@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_state_container.dart';
+import '../../widgets/custom_input_field.dart';
+import '../../widgets/custom_snackbar.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -79,74 +81,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        if (_errorMessage != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withValues(alpha: 127),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: colorScheme.error, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        if (_successMessage != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 127),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  color: colorScheme.primary,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _successMessage!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        CustomMessageWidget(
+          message: _errorMessage ?? '',
+          type: MessageType.error,
+          onClose: () {
+            setState(() {
+              _errorMessage = null;
+            });
+          },
+        ),
+        CustomMessageWidget(
+          message: _successMessage ?? '',
+          type: MessageType.success,
+          onClose: () {
+            setState(() {
+              _successMessage = null;
+            });
+          },
+        ),
         Form(
           key: _formKey,
           child: Column(
             children: [
-              TextFormField(
+              CustomFormInputField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'ejemplo@correo.com',
-                  prefixIcon: Icon(
-                    Icons.email_outlined,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                labelText: 'Email',
+                hintText: 'ejemplo@correo.com',
+                prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.email],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu email';
@@ -156,12 +119,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   }
                   return null;
                 },
-                onFieldSubmitted: (_) {
+                onSubmitted: () {
                   if (!_isLoading) {
                     _submitForm();
                   }
                 },
-                style: textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
               FilledButton(

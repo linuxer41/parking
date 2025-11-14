@@ -1,7 +1,5 @@
-
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
-
 
 part 'user_model.g.dart';
 
@@ -10,17 +8,15 @@ class UserModel extends JsonConvertible<UserModel> {
   final String id;
   final String name;
   final String email;
-  final String password;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String phone;
+  final String? avatarUrl;
 
   UserModel({
     required this.id,
     required this.name,
     required this.email,
-    required this.password,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.phone,
+    this.avatarUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>
@@ -54,10 +50,7 @@ class UserUpdateModel extends JsonConvertible<UserUpdateModel> {
   final String? name;
   final String? email;
 
-  UserUpdateModel({
-    this.name,
-    this.email,
-  });
+  UserUpdateModel({this.name, this.email});
 
   factory UserUpdateModel.fromJson(Map<String, dynamic> json) =>
       _$UserUpdateModelFromJson(json);
@@ -65,5 +58,3 @@ class UserUpdateModel extends JsonConvertible<UserUpdateModel> {
   @override
   Map<String, dynamic> toJson() => _$UserUpdateModelToJson(this);
 }
-
-

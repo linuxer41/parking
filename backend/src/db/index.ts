@@ -1,48 +1,134 @@
-import { userCrud } from "./crud/user";
-import { employeeCrud } from "./crud/employee";
-import { parkingCrud } from "./crud/parking";
-import { areaCrud } from "./crud/area";
-import { vehicleCrud } from "./crud/vehicle";
-import { accessCrud } from "./crud/access";
-import { cashRegisterCrud } from "./crud/cash-register";
-import { movementCrud } from "./crud/movement";
-import { reservationCrud } from "./crud/reservation";
-import { reportCrud } from "./crud/report";
-import { notificationCrud } from "./crud/notification";
-import { PoolClient } from "pg";
-import { getConnection } from "./connection";
-import { QueryResultRow } from "pg";
-import { elementCrud } from "./crud/element";
+import { bookingCrud } from "./crud/booking";
+import { entryExitCrud } from "./crud/entry-exit";
 import { subscriptionCrud } from "./crud/subscription";
-
-// Función para realizar consultas SQL directas
-async function query<T extends QueryResultRow = any>(sql: string, params: any[] = []): Promise<T[]> {
-  let conn: PoolClient | undefined;
-  try {
-    conn = await getConnection();
-    const result = await conn.query<T>(sql, params);
-    return result.rows;
-  } catch (error) {
-    console.error("Error ejecutando consulta directa:", error);
-    throw error;
-  } finally {
-    conn?.release();
-  }
-}
+import * as parkingCrud from "./crud/parking";
+import * as vehicleCrud from "./crud/vehicle";
+import * as employeeCrud from "./crud/employee";
+import * as userCrud from "./crud/user";
+import * as cashRegisterCrud from "./crud/cash-register";
+import * as movementCrud from "./crud/movement";
+import * as notificationCrud from "./crud/notification";
+import * as reportCrud from "./crud/report";
 
 export const db = {
-  user: userCrud,
-  employee: employeeCrud,
-  element: elementCrud,
+  // ===== BOOKING (RESERVAS) =====
+  booking: {
+    create: bookingCrud.createBooking,
+    find: bookingCrud.findBookings,
+    findById: bookingCrud.getBookingById,
+    update: bookingCrud.updateBooking,
+    delete: bookingCrud.deleteBooking,
+    getActiveForSpot: bookingCrud.getActiveBookingsForSpot,
+    getActiveForVehicle: bookingCrud.getActiveBookingsForVehicle,
+    getStats: bookingCrud.getBookingStats,
+    generateNumber: bookingCrud.generateBookingNumber,
+  },
+
+  // ===== ENTRY/EXIT (ACCESOS) =====
+  entryExit: {
+    create: entryExitCrud.createEntryExit,
+    find: entryExitCrud.findEntryExits,
+    findById: entryExitCrud.getEntryExitById,
+    update: entryExitCrud.updateEntryExit,
+    delete: entryExitCrud.deleteEntryExit,
+    registerExit: entryExitCrud.registerExit,
+    getActiveForSpot: entryExitCrud.getActiveEntryExitsForSpot,
+    getActiveForVehicle: entryExitCrud.getActiveEntryExitsForVehicle,
+    getStats: entryExitCrud.getEntryExitStats,
+    generateNumber: entryExitCrud.generateEntryExitNumber,
+  },
+
+  // ===== SUBSCRIPTION (SUSCRIPCIONES) =====
+  subscription: {
+    create: subscriptionCrud.createSubscription,
+    find: subscriptionCrud.findSubscriptions,
+    findById: subscriptionCrud.getSubscriptionById,
+    update: subscriptionCrud.updateSubscription,
+    delete: subscriptionCrud.deleteSubscription,
+    renew: subscriptionCrud.renewSubscription,
+    getActiveForSpot: subscriptionCrud.getActiveSubscriptionsForSpot,
+    getActiveForVehicle: subscriptionCrud.getActiveSubscriptionsForVehicle,
+    getExpiring: subscriptionCrud.getExpiringSubscriptions,
+    getStats: subscriptionCrud.getSubscriptionStats,
+    generateNumber: subscriptionCrud.generateSubscriptionNumber,
+  },
+
+  // ===== PARKING =====
   parking: parkingCrud,
-  area: areaCrud,
-  vehicle: vehicleCrud,
-  subscription: subscriptionCrud,
-  access: accessCrud,
-  cashRegister: cashRegisterCrud,
-  movement: movementCrud,
-  reservation: reservationCrud,
+
+  // ===== AREA (MANEJADO POR PARKING CRUD) =====
+  area: {
+    create: parkingCrud.createArea,
+    findById: parkingCrud.findAreaById,
+    findByParkingId: parkingCrud.findAreasByParkingId,
+    update: parkingCrud.updateArea,
+    delete: parkingCrud.deleteArea,
+  },
+
+  // ===== ELEMENT (MANEJADO POR PARKING CRUD) =====
+  element: {
+    create: parkingCrud.createElement,
+    findById: parkingCrud.findElementById,
+    findByAreaId: parkingCrud.findElementsByAreaId,
+    findByParkingId: parkingCrud.findElementsByParkingId,
+    update: parkingCrud.updateElement,
+    delete: parkingCrud.deleteElement,
+  },
+
+  // ===== VEHICLE =====
+  vehicle: {
+    create: vehicleCrud.createVehicle,
+    find: vehicleCrud.findVehicles,
+    findById: vehicleCrud.findVehicleById,
+    update: vehicleCrud.updateVehicle,
+    delete: vehicleCrud.deleteVehicle,
+  },
+
+  // ===== EMPLOYEE =====
+  employee: {
+    create: employeeCrud.createEmployee,
+    find: employeeCrud.findEmployees,
+    findById: employeeCrud.findEmployeeById,
+    update: employeeCrud.updateEmployee,
+    delete: employeeCrud.deleteEmployee,
+  },
+
+  // ===== USER =====
+  user: {
+    create: userCrud.createUser,
+    find: userCrud.findUsers,
+    findById: userCrud.findUserById,
+    update: userCrud.updateUser,
+    delete: userCrud.deleteUser,
+  },
+
+  // ===== CASH REGISTER =====
+  cashRegister: {
+    create: cashRegisterCrud.createCashRegister,
+    find: cashRegisterCrud.findCashRegisters,
+    findById: cashRegisterCrud.findCashRegisterById,
+    update: cashRegisterCrud.updateCashRegister,
+    delete: cashRegisterCrud.deleteCashRegister,
+  },
+
+  // ===== MOVEMENT =====
+  movement: {
+    create: movementCrud.createMovement,
+    find: movementCrud.findMovements,
+    findById: movementCrud.findMovementById,
+    update: movementCrud.updateMovement,
+    delete: movementCrud.deleteMovement,
+  },
+
+  // ===== NOTIFICATION =====
+  notification: {
+    create: notificationCrud.createNotification,
+    find: notificationCrud.findNotifications,
+    findById: notificationCrud.findNotificationById,
+    update: notificationCrud.updateNotification,
+    delete: notificationCrud.deleteNotification,
+  },
+
+  // ===== REPORT =====
   report: reportCrud,
-  notification: notificationCrud,
-  query, // Método de consulta directa
 };

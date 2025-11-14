@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 import 'api_exception.dart';
-import 'service_locator.dart';
+import 'auth_manager.dart';
 
 /// Base class for all services
 class BaseService {
@@ -39,15 +39,20 @@ class BaseService {
   }
 
   /// Log request details
-  void _logRequest(String method, Uri uri, Map<String, String> headers,
-      [dynamic body]) {
+  void _logRequest(
+    String method,
+    Uri uri,
+    Map<String, String> headers, [
+    dynamic body,
+  ]) {
     if (kDebugMode) {
       print('📤 REQUEST: $method ${uri.toString()}');
       print('📋 Headers: $headers');
       if (body != null) {
         try {
-          final prettyBody = const JsonEncoder.withIndent('  ')
-              .convert(body is String ? json.decode(body) : body);
+          final prettyBody = const JsonEncoder.withIndent(
+            '  ',
+          ).convert(body is String ? json.decode(body) : body);
           print('📦 Body: $prettyBody');
         } catch (e) {
           print('📦 Body: $body');
@@ -62,8 +67,9 @@ class BaseService {
       print('📥 RESPONSE: ${response.statusCode} ${response.reasonPhrase}');
       print('📋 Headers: ${response.headers}');
       try {
-        final prettyBody = const JsonEncoder.withIndent('  ')
-            .convert(json.decode(response.body));
+        final prettyBody = const JsonEncoder.withIndent(
+          '  ',
+        ).convert(json.decode(response.body));
         print('📦 Body: $prettyBody');
       } catch (e) {
         print('📦 Body: ${response.body}');
@@ -99,11 +105,11 @@ class BaseService {
 
   /// Get authentication token
   String? _getAuthToken() {
-    return ServiceLocator().getAppState().authToken;
+    return AuthManager().token;
   }
 
   String? _getParkingId() {
-    return ServiceLocator().getAppState().currentParking?.id;
+    return AuthManager().parkingId;
   }
 
   /// Generic method to handle HTTP requests with retry logic
@@ -122,7 +128,8 @@ class BaseService {
         Duration(seconds: AppConfig.apiTimeout),
         onTimeout: () {
           final error = TimeoutException(
-              'Request timed out after ${AppConfig.apiTimeout} seconds');
+            'Request timed out after ${AppConfig.apiTimeout} seconds',
+          );
           _logError('Request timeout', error);
           throw error;
         },
@@ -190,16 +197,21 @@ class BaseService {
           return null as T;
         }
 
-        // Decode the JSON response
+        // Decode the JSON response with proper validation
         dynamic decoded;
         try {
-          if (response.body.contains('{')) {
+          // Validate if response body is valid JSON
+          if (_isValidJson(response.body)) {
             decoded = json.decode(response.body);
           } else {
+            // Handle non-JSON responses (plain text, etc.)
             decoded = response.body;
           }
-        } catch (e) {
-          print(e);
+        } catch (e, stackTrace) {
+          _logError('JSON decoding failed', e, stackTrace);
+          _logError('Response body', response.body);
+
+          // If JSON decoding fails, treat as plain text
           decoded = response.body;
         }
 
@@ -207,11 +219,7 @@ class BaseService {
         try {
           return parser(decoded);
         } catch (e, stackTrace) {
-          _logError(
-            'Error parsing response',
-            e,
-            stackTrace,
-          );
+          _logError('Error parsing response', e, stackTrace);
           _logError('Response data', {
             'statusCode': response.statusCode,
             'body': response.body,
@@ -224,11 +232,7 @@ class BaseService {
           );
         }
       } catch (e, stackTrace) {
-        _logError(
-          'Error decoding JSON response',
-          e,
-          stackTrace,
-        );
+        _logError('Error processing response', e, stackTrace);
         _logError('Response data', {
           'statusCode': response.statusCode,
           'body': response.body,
@@ -237,7 +241,7 @@ class BaseService {
 
         throw ApiException(
           statusCode: 500,
-          message: 'Failed to decode response: ${e.toString()}',
+          message: 'Failed to process response: ${e.toString()}',
         );
       }
     }
@@ -245,7 +249,7 @@ class BaseService {
     // Handle error response
     Map<String, dynamic> errorData = {};
     try {
-      if (response.body.contains('{')) {
+      if (_isValidJson(response.body)) {
         errorData = json.decode(response.body) as Map<String, dynamic>;
       } else {
         errorData = {'message': response.body};
@@ -256,6 +260,21 @@ class BaseService {
         'error': 'Failed to parse error response',
         'details': response.body,
       };
+    }
+
+    // Special handling for 422 validation errors
+    if (response.statusCode == 422) {
+      final exception = ApiException(
+        statusCode: response.statusCode,
+        message:
+            errorData['summary'] as String? ??
+            errorData['message'] as String? ??
+            'Validation error',
+        errors: errorData,
+        isValidationError: true,
+      );
+      _logError('Validation error response', exception);
+      throw exception;
     }
 
     final exception = ApiException(
@@ -269,6 +288,246 @@ class BaseService {
     throw exception;
   }
 
+  /// Validate if a string is valid JSON
+  bool _isValidJson(String str) {
+    if (str.trim().isEmpty) {
+      return false;
+    }
+
+    try {
+      json.decode(str);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Professional model parsing utilities
+  /// Parse a single model with validation
+  T parseModel<T>(dynamic data, T Function(Map<String, dynamic>) fromJson) {
+    try {
+      if (data == null) {
+        throw ApiException(statusCode: 500, message: 'Response data is null');
+      }
+
+      if (data is Map<String, dynamic>) {
+        return fromJson(data);
+      }
+
+      if (data is String) {
+        // Try to parse as JSON if it's a string
+        try {
+          final jsonData = json.decode(data) as Map<String, dynamic>;
+          return fromJson(jsonData);
+        } catch (e) {
+          throw ApiException(
+            statusCode: 500,
+            message: 'Invalid JSON string for model parsing: $data',
+          );
+        }
+      }
+
+      throw ApiException(
+        statusCode: 500,
+        message: 'Invalid data type for model parsing: ${data.runtimeType}',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+
+      _logError('Model parsing failed', e);
+      throw ApiException(
+        statusCode: 500,
+        message: 'Failed to parse model: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Parse a list of models with validation
+  List<T> parseModelList<T>(
+    dynamic data,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    try {
+      if (data == null) {
+        return [];
+      }
+
+      if (data is List) {
+        return data.map((item) {
+          if (item is Map<String, dynamic>) {
+            return fromJson(item);
+          } else if (item is String) {
+            // Handle case where items might be JSON strings
+            try {
+              final jsonItem = json.decode(item) as Map<String, dynamic>;
+              return fromJson(jsonItem);
+            } catch (e) {
+              _logError('Failed to parse list item as JSON', e);
+              throw ApiException(
+                statusCode: 500,
+                message: 'Invalid JSON in list item: $item',
+              );
+            }
+          } else {
+            throw ApiException(
+              statusCode: 500,
+              message: 'Invalid item type in list: ${item.runtimeType}',
+            );
+          }
+        }).toList();
+      }
+
+      if (data is String) {
+        // Try to parse as JSON array if it's a string
+        try {
+          final jsonData = json.decode(data) as List;
+          return parseModelList(jsonData, fromJson);
+        } catch (e) {
+          throw ApiException(
+            statusCode: 500,
+            message: 'Invalid JSON string for list parsing: $data',
+          );
+        }
+      }
+
+      throw ApiException(
+        statusCode: 500,
+        message: 'Invalid data type for list parsing: ${data.runtimeType}',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+
+      _logError('Model list parsing failed', e);
+      throw ApiException(
+        statusCode: 500,
+        message: 'Failed to parse model list: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Parse a paginated response with validation
+  Map<String, dynamic> parsePaginatedResponse<T>(
+    dynamic data,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    try {
+      if (data == null) {
+        throw ApiException(
+          statusCode: 500,
+          message: 'Paginated response data is null',
+        );
+      }
+
+      if (data is! Map<String, dynamic>) {
+        throw ApiException(
+          statusCode: 500,
+          message:
+              'Invalid data type for paginated response: ${data.runtimeType}',
+        );
+      }
+
+      final items = data['items'] ?? data['data'] ?? [];
+      final parsedItems = parseModelList(items, fromJson);
+
+      return {
+        'items': parsedItems,
+        'total': data['total'] ?? parsedItems.length,
+        'page': data['page'] ?? 1,
+        'limit': data['limit'] ?? parsedItems.length,
+        'hasMore': data['hasMore'] ?? false,
+      };
+    } catch (e) {
+      if (e is ApiException) rethrow;
+
+      _logError('Paginated response parsing failed', e);
+      throw ApiException(
+        statusCode: 500,
+        message: 'Failed to parse paginated response: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Parse a response that might be a single model or a list
+  dynamic parseFlexibleResponse<T>(
+    dynamic data,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
+    try {
+      if (data == null) {
+        return null;
+      }
+
+      if (data is List) {
+        return parseModelList(data, fromJson);
+      }
+
+      if (data is Map<String, dynamic>) {
+        // Check if it's a paginated response
+        if (data.containsKey('items') || data.containsKey('data')) {
+          return parsePaginatedResponse(data, fromJson);
+        }
+
+        // Single model
+        return parseModel(data, fromJson);
+      }
+
+      if (data is String) {
+        try {
+          final jsonData = json.decode(data);
+          return parseFlexibleResponse(jsonData, fromJson);
+        } catch (e) {
+          throw ApiException(
+            statusCode: 500,
+            message: 'Invalid JSON string for flexible parsing: $data',
+          );
+        }
+      }
+
+      throw ApiException(
+        statusCode: 500,
+        message: 'Invalid data type for flexible parsing: ${data.runtimeType}',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+
+      _logError('Flexible response parsing failed', e);
+      throw ApiException(
+        statusCode: 500,
+        message: 'Failed to parse flexible response: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Safe JSON parsing with detailed error information
+  Map<String, dynamic> safeJsonDecode(String jsonString) {
+    try {
+      if (jsonString.trim().isEmpty) {
+        return {};
+      }
+
+      final decoded = json.decode(jsonString);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+
+      throw ApiException(
+        statusCode: 500,
+        message: 'Decoded JSON is not a Map: ${decoded.runtimeType}',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+
+      _logError('JSON decode failed', e);
+      _logError('JSON string', jsonString);
+
+      throw ApiException(
+        statusCode: 500,
+        message: 'Invalid JSON format: ${e.toString()}',
+      );
+    }
+  }
+
   /// Generic GET request
   Future<T> get<T>({
     required String endpoint,
@@ -277,10 +536,8 @@ class BaseService {
   }) async {
     final uri = Uri.parse('$baseUrl$path$endpoint');
     return _handleRequest<T>(
-      request: () => httpClient.get(
-        uri,
-        headers: buildHeaders(additionalHeaders),
-      ),
+      request: () =>
+          httpClient.get(uri, headers: buildHeaders(additionalHeaders)),
       parser: parser,
       method: 'GET',
       uri: uri,
@@ -367,10 +624,8 @@ class BaseService {
   }) async {
     final uri = Uri.parse('$baseUrl$path$endpoint');
     return _handleRequest<T>(
-      request: () => httpClient.delete(
-        uri,
-        headers: buildHeaders(additionalHeaders),
-      ),
+      request: () =>
+          httpClient.delete(uri, headers: buildHeaders(additionalHeaders)),
       parser: parser,
       method: 'DELETE',
       uri: uri,

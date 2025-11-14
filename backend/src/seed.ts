@@ -1,6 +1,6 @@
-import { db } from "./db";
+import { pool } from "./db/connection";
 import { Rate } from "./models/parking";
-import { ELEMENT_TYPES, ELEMENT_STATUS, SPOT_SUBTYPES, FACILITY_SUBTYPES, SIGNAGE_SUBTYPES } from "./models/element";
+import { ELEMENT_TYPES, ELEMENT_STATUS, SPOT_SUBTYPES, FACILITY_SUBTYPES, SIGNAGE_SUBTYPES } from "./models/parking";
 
 function getUUID() {
   return crypto.randomUUID().toString();
@@ -166,9 +166,14 @@ function createSignageElement(areaId: string, parkingId: string, name: string, s
 
 // Función para crear un área con elementos
 async function createArea(parkingId: string, name: string, level: number): Promise<string> {
-  const area = await db.area.create({ 
-    data: { name, parkingId } 
-  });
+  const areaId = getUUID();
+  const createdAt = new Date().toISOString();
+  
+  // Crear área con query plano
+  await pool.query(`
+    INSERT INTO t_area ("id", "createdAt", "name", "parkingId")
+    VALUES ($1, $2, $3, $4)
+  `, [areaId, createdAt, name, parkingId]);
   
   const elements: any[] = [];
   
@@ -194,42 +199,60 @@ async function createArea(parkingId: string, name: string, level: number): Promi
   
   // Crear spots
   config.forEach(({ startX, startY, cols, rows, prefix }) => {
-    elements.push(...createGridElements(startX, startY, cols, rows, prefix, area.id, parkingId, 'spot'));
+    elements.push(...createGridElements(startX, startY, cols, rows, prefix, areaId, parkingId, 'spot'));
   });
   
   // Agregar oficinas
-  elements.push(createOfficeElement(area.id, parkingId, "Oficina Principal", 0, 0));
-  elements.push(createOfficeElement(area.id, parkingId, "Sala de Control", 
+  elements.push(createOfficeElement(areaId, parkingId, "Oficina Principal", 0, 0));
+  elements.push(createOfficeElement(areaId, parkingId, "Sala de Control", 
     8 * (ELEMENT_CONFIG.spotWidth + ELEMENT_CONFIG.columnSpacing) - ELEMENT_CONFIG.officeSize,
     6 * (ELEMENT_CONFIG.spotHeight + ELEMENT_CONFIG.rowSpacing) - ELEMENT_CONFIG.officeSize
   ));
   
   // Agregar señales básicas
-  elements.push(createSignageElement(area.id, parkingId, "Entrada", SIGNAGE_SUBTYPES.ENTRANCE, 
+  elements.push(createSignageElement(areaId, parkingId, "Entrada", SIGNAGE_SUBTYPES.ENTRANCE, 
     ELEMENT_CONFIG.spotWidth * 2, ELEMENT_CONFIG.spotHeight * 2));
-  elements.push(createSignageElement(area.id, parkingId, "Salida", SIGNAGE_SUBTYPES.EXIT, 
+  elements.push(createSignageElement(areaId, parkingId, "Salida", SIGNAGE_SUBTYPES.EXIT, 
     ELEMENT_CONFIG.spotWidth * 6, ELEMENT_CONFIG.spotHeight * 2));
   
   // Agregar señales adicionales para niveles > 1
   if (level > 1) {
-    elements.push(createSignageElement(area.id, parkingId, "Rampa", SIGNAGE_SUBTYPES.DIRECTION, 
+    elements.push(createSignageElement(areaId, parkingId, "Rampa", SIGNAGE_SUBTYPES.DIRECTION, 
       ELEMENT_CONFIG.spotWidth * 4, ELEMENT_CONFIG.spotHeight * 1));
-    elements.push(createSignageElement(area.id, parkingId, "Escalera", SIGNAGE_SUBTYPES.DIRECTION, 
+    elements.push(createSignageElement(areaId, parkingId, "Escalera", SIGNAGE_SUBTYPES.DIRECTION, 
       ELEMENT_CONFIG.spotWidth * 4, ELEMENT_CONFIG.spotHeight * 5));
   }
   
-  // Insertar todos los elementos
+  // Insertar todos los elementos con queries planos
   for (const element of elements) {
-    await db.element.create({ data: element });
+    const elementCreatedAt = new Date().toISOString();
+    const columns = Object.keys(element)
+      .map((key) => `"${key}"`)
+      .join(", ");
+    const values = Object.values(element).map((value) => {
+      if (typeof value === "object") {
+        return JSON.stringify(value);
+      }
+      return value;
+    });
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
+    
+    await pool.query(`
+      INSERT INTO t_element (${columns}, "createdAt")
+      VALUES (${placeholders}, $${values.length + 1})
+    `, [...values, elementCreatedAt]);
   }
   
-  return area.id;
+  return areaId;
 }
 
 // Función para crear un estacionamiento
 async function createParking(name: string, ownerId: string, numAreas: number = 3, location: string = "Centro"): Promise<string> {
+  const parkingId = getUUID();
+  const createdAt = new Date().toISOString();
+  
   const parkingData = {
-    id: getUUID(),
+    id: parkingId,
     name: `Estacionamiento ${name}`,
     email: `parking.${name.toLowerCase()}@example.com`,
     phone: `${Math.floor(Math.random() * 900000) + 100000}`,
@@ -243,47 +266,74 @@ async function createParking(name: string, ownerId: string, numAreas: number = 3
       slogan: `Estacionamiento ${name} - ${location}`,
     },
     rates: BASE_RATES.map(rate => ({ ...rate, id: getUUID() })),
-    operationMode: "visual",
-    capacity: 100,
+    operationMode: "map",
   };
 
-  const parking = await db.parking.create({ data: parkingData });
+  // Crear parking con query plano
+  const parkingColumns = Object.keys(parkingData)
+    .map((key) => `"${key}"`)
+    .join(", ");
+  const parkingValues = Object.values(parkingData).map((value) => {
+    if (typeof value === "object") {
+      return JSON.stringify(value);
+    }
+    return value;
+  });
+  const parkingPlaceholders = parkingValues.map((_, i) => `$${i + 1}`).join(", ");
+  
+  await pool.query(`
+    INSERT INTO t_parking (${parkingColumns}, "createdAt")
+    VALUES (${parkingPlaceholders}, $${parkingValues.length + 1})
+  `, [...parkingValues, createdAt]);
   
   // Crear áreas
   for (let i = 1; i <= numAreas; i++) {
-    await createArea(parking.id, `Nivel ${i}`, i);
+    await createArea(parkingId, `Nivel ${i}`, i);
   }
   
-  // Crear empleado
-  await db.employee.create({ 
-    data: {
-      userId: ownerId,
-      parkingId: parking.id,
-      role: "operator",
-    }
-  });
+  // Crear empleado con query plano
+  const employeeId = getUUID();
+  const employeeCreatedAt = new Date().toISOString();
+  await pool.query(`
+    INSERT INTO t_employee ("id", "createdAt", "userId", "parkingId", "role")
+    VALUES ($1, $2, $3, $4, $5)
+  `, [employeeId, employeeCreatedAt, ownerId, parkingId, "operator"]);
   
-  return parking.id;
+  return parkingId;
 }
 
 async function main() {
   // Crear usuario por defecto
+  const defaultUserId = getUUID();
+  const defaultUserCreatedAt = new Date().toISOString();
   const defaultUser = {
-    id: getUUID(),
+    id: defaultUserId,
     name: "Usuario Admin",
     email: "admin@example.com",
-    password: await Bun.password.hash("password123"),
+    passwordHash: await Bun.password.hash("password123"),
     phone: "123456789",
   };
 
-  let user = await db.user.findUnique({ where: { email: defaultUser.email } });
+  // Verificar si el usuario ya existe
+  const existingUsers = await pool.query(`
+    SELECT * FROM t_user WHERE "email" = $1
+  `, [defaultUser.email]);
+  
+  let user = existingUsers.rows[0];
   if (!user) {
-    user = await db.user.create({ data: defaultUser });
+    // Crear usuario con query plano
+    await pool.query(`
+      INSERT INTO t_user ("id", "createdAt", "name", "email", "passwordHash", "phone")
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [defaultUser.id, defaultUserCreatedAt, defaultUser.name, defaultUser.email, defaultUser.passwordHash, defaultUser.phone]);
+    user = defaultUser;
   }
 
   // Crear estacionamiento por defecto
+  const defaultParkingId = getUUID();
+  const defaultParkingCreatedAt = new Date().toISOString();
   const defaultParking = {
-    id: getUUID(),
+    id: defaultParkingId,
     name: "Estacionamiento Centro",
     email: "parking@example.com",
     phone: "123456789",
@@ -296,34 +346,66 @@ async function main() {
       slogan: "Estacionamiento Central",
     },
     rates: BASE_RATES.map(rate => ({ ...rate, id: getUUID() })),
-    operationMode: "visual",
-    capacity: 100,
+    operationMode: "map",
   };
 
-  let parking = await db.parking.findFirst({ where: { ownerId: defaultParking.ownerId } });
+  // Verificar si el parking ya existe
+  const existingParkings = await pool.query(`
+    SELECT * FROM t_parking WHERE "ownerId" = $1
+  `, [defaultParking.ownerId]);
+  
+  let parking = existingParkings.rows[0];
   if (!parking) {
-    parking = await db.parking.create({ data: defaultParking });
+    // Crear parking con query plano
+    const parkingColumns = Object.keys(defaultParking)
+      .map((key) => `"${key}"`)
+      .join(", ");
+    const parkingValues = Object.values(defaultParking).map((value) => {
+      if (typeof value === "object") {
+        return JSON.stringify(value);
+      }
+      return value;
+    });
+    const parkingPlaceholders = parkingValues.map((_, i) => `$${i + 1}`).join(", ");
+    
+    await pool.query(`
+      INSERT INTO t_parking (${parkingColumns}, "createdAt")
+      VALUES (${parkingPlaceholders}, $${parkingValues.length + 1})
+    `, [...parkingValues, defaultParkingCreatedAt]);
+    parking = defaultParking;
   }
 
   // Crear empleado por defecto
+  const defaultEmployeeId = getUUID();
+  const defaultEmployeeCreatedAt = new Date().toISOString();
   const defaultEmployee = {
-    id: getUUID(),
+    id: defaultEmployeeId,
     userId: user.id,
     parkingId: parking.id,
     role: "supervisor",
   };
 
-  let employee = await db.employee.findFirst({
-    where: { userId: defaultEmployee.userId, parkingId: defaultEmployee.parkingId },
-  });
+  // Verificar si el empleado ya existe
+  const existingEmployees = await pool.query(`
+    SELECT * FROM t_employee WHERE "userId" = $1 AND "parkingId" = $2
+  `, [defaultEmployee.userId, defaultEmployee.parkingId]);
+  
+  let employee = existingEmployees.rows[0];
   if (!employee) {
-    employee = await db.employee.create({ data: defaultEmployee });
+    // Crear empleado con query plano
+    await pool.query(`
+      INSERT INTO t_employee ("id", "createdAt", "userId", "parkingId", "role")
+      VALUES ($1, $2, $3, $4, $5)
+    `, [defaultEmployee.id, defaultEmployeeCreatedAt, defaultEmployee.userId, defaultEmployee.parkingId, defaultEmployee.role]);
+    employee = defaultEmployee;
   }
 
   // Crear área por defecto si no existe
-  let area = await db.area.findFirst({
-    where: { name: "Nivel 1", parkingId: parking.id },
-  });
+  const existingAreas = await pool.query(`
+    SELECT * FROM t_area WHERE "name" = $1 AND "parkingId" = $2
+  `, ["Nivel 1", parking.id]);
+  
+  let area = existingAreas.rows[0];
   
   if (!area) {
     await createArea(parking.id, "Nivel 1", 1);

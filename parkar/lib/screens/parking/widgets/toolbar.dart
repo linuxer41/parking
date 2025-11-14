@@ -15,7 +15,7 @@ class ParkingToolbar extends StatefulWidget {
 class _ParkingToolbarState extends State<ParkingToolbar>
     with SingleTickerProviderStateMixin {
   // Estado de expansión de la barra
-  bool _isExpanded = false;  // Cambiado a false para iniciar contraído
+  bool _isExpanded = false; // Cambiado a false para iniciar contraído
 
   // Controlador de animación para expandir/colapsar
   late AnimationController _animationController;
@@ -38,7 +38,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
     );
 
     // Iniciar en estado contraído
-    _animationController.value = 0.0;  // Cambiado a 0.0 para iniciar contraído
+    _animationController.value = 0.0; // Cambiado a 0.0 para iniciar contraído
   }
 
   @override
@@ -75,12 +75,12 @@ class _ParkingToolbarState extends State<ParkingToolbar>
           // Colores con el tema actual (fondo sólido)
           final backgroundColor = theme.brightness == Brightness.dark
               ? colorScheme
-                  .surfaceContainerHighest // Usar color sólido para modo oscuro
+                    .surfaceContainerHighest // Usar color sólido para modo oscuro
               : colorScheme
-                  .surfaceContainer; // Usar color sólido para modo claro
+                    .surfaceContainer; // Usar color sólido para modo claro
 
           final separatorColor = theme.brightness == Brightness.dark
-              ? colorScheme.surfaceTint.withOpacity(0.2)
+              ? colorScheme.surfaceTint.withValues(alpha: 0.3)
               : colorScheme.outlineVariant;
 
           // Verificar si hay elementos seleccionados
@@ -112,7 +112,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -192,7 +192,9 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   MediaQuery.of(context).size.height / 2,
                                 );
                                 parkingState.zoomCamera(
-                                    1.2, screenCenter); // Factor 1.2 = +20%
+                                  1.2,
+                                  screenCenter,
+                                ); // Factor 1.2 = +20%
                               },
                               colorScheme: colorScheme,
                             ),
@@ -208,7 +210,9 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   MediaQuery.of(context).size.height / 2,
                                 );
                                 parkingState.zoomCamera(
-                                    0.8, screenCenter); // Factor 0.8 = -20%
+                                  0.8,
+                                  screenCenter,
+                                ); // Factor 0.8 = -20%
                               },
                               colorScheme: colorScheme,
                             ),
@@ -231,7 +235,8 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                       ? () => parkingState.undoLastAction()
                                       : null,
                                   colorScheme: colorScheme,
-                                  isDisabled: !parkingState.historyManager.canUndo,
+                                  isDisabled:
+                                      !parkingState.historyManager.canUndo,
                                 ),
                                 _buildBlenderStyleButton(
                                   context,
@@ -242,14 +247,15 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                       ? () => parkingState.redoLastAction()
                                       : null,
                                   colorScheme: colorScheme,
-                                  isDisabled: !parkingState.historyManager.canRedo,
+                                  isDisabled:
+                                      !parkingState.historyManager.canRedo,
                                 ),
                               ],
                             ),
-                            
+
                             // Separador ligero
                             const SizedBox(height: 4),
-                            
+
                             // Botones de copiar/pegar - versión mejorada
                             Row(
                               children: [
@@ -263,21 +269,26 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                           // Implementar copia al clipboard
                                           parkingState.clipboardManager
                                               .copyElements(
-                                                  parkingState.selectedElements);
+                                                parkingState.selectedElements,
+                                              );
                                           // Mostrar snackbar con tema personalizado
                                           final snackBar = SnackBar(
                                             content: Text(
                                               'Elementos copiados',
                                               style: TextStyle(
-                                                color: colorScheme.onInverseSurface,
+                                                color: colorScheme
+                                                    .onInverseSurface,
                                               ),
                                             ),
-                                            duration: const Duration(seconds: 1),
+                                            duration: const Duration(
+                                              seconds: 1,
+                                            ),
                                             backgroundColor:
                                                 colorScheme.inverseSurface,
                                           );
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(snackBar);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(snackBar);
                                         }
                                       : null,
                                   colorScheme: colorScheme,
@@ -294,9 +305,9 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                           final elements = parkingState
                                               .clipboardManager
                                               .pasteElements(
-                                            parkingState.cursorPosition.x,
-                                            parkingState.cursorPosition.y,
-                                          );
+                                                parkingState.cursorPosition.x,
+                                                parkingState.cursorPosition.y,
+                                              );
 
                                           // Añadir los elementos pegados al estado
                                           for (final element in elements) {
@@ -308,15 +319,19 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                             content: Text(
                                               '${elements.length} elementos pegados',
                                               style: TextStyle(
-                                                color: colorScheme.onInverseSurface,
+                                                color: colorScheme
+                                                    .onInverseSurface,
                                               ),
                                             ),
-                                            duration: const Duration(seconds: 1),
+                                            duration: const Duration(
+                                              seconds: 1,
+                                            ),
                                             backgroundColor:
                                                 colorScheme.inverseSurface,
                                           );
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(snackBar);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(snackBar);
                                         }
                                       : null,
                                   colorScheme: colorScheme,
@@ -324,7 +339,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                 ),
                               ],
                             ),
-                            
+
                             // Separador ligero
                             const SizedBox(height: 8),
                           ],
@@ -365,11 +380,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
   Widget _buildSeparator(BuildContext context, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: color,
-      ),
+      child: Divider(height: 1, thickness: 1, color: color),
     );
   }
 
@@ -389,43 +400,44 @@ class _ParkingToolbarState extends State<ParkingToolbar>
     // Si se proporciona un modo, verificar si está seleccionado
     if (mode != null && parkingState != null) {
       isSelected = parkingState.isEditMode && parkingState.editorMode == mode;
-      onPressed =
-          parkingState.isEditMode ? () => parkingState.editorMode = mode : null;
+      onPressed = parkingState.isEditMode
+          ? () => parkingState.editorMode = mode
+          : null;
     }
 
     // Colores basados en el tema
     final selectedBgColor = colorScheme.primaryContainer;
     final selectedFgColor = colorScheme.onPrimaryContainer;
     final normalFgColor = colorScheme.onSurfaceVariant;
-    final disabledFgColor = colorScheme.onSurfaceVariant.withOpacity(0.4);
+    final disabledFgColor = colorScheme.onSurfaceVariant.withValues(alpha: 0.5);
 
     return Tooltip(
       message: tooltip,
       preferBelow: false,
       verticalOffset: 20,
       child: Container(
-        width: 56,  // Ancho aumentado para mejor espaciado
+        width: 56, // Ancho aumentado para mejor espaciado
         height: 56, // Alto aumentado para mejor espaciado
         margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
         decoration: BoxDecoration(
           color: isSelected ? selectedBgColor : Colors.transparent,
           borderRadius: BorderRadius.circular(8), // Bordes más redondeados
           border: Border.all(
-            color: isSelected 
-              ? colorScheme.primary.withOpacity(0.5)
-              : Colors.transparent,
+            color: isSelected
+                ? colorScheme.primary.withValues(alpha: 0.3)
+                : Colors.transparent,
             width: 1,
           ),
           // Añadir sombra sutil para efecto elevado
-          boxShadow: isSelected 
-            ? [
-                BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ]
-            : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: colorScheme.shadow.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Material(
           color: Colors.transparent,
@@ -450,7 +462,9 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                         ? disabledFgColor
                         : (isSelected ? selectedFgColor : normalFgColor),
                     fontSize: 11, // Texto un poco más grande
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                   textAlign: TextAlign.center,
                 ),

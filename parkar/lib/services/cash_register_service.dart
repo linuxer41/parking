@@ -5,23 +5,75 @@ import '../models/cash_register_model.dart';
 class CashRegisterService extends BaseService {
   CashRegisterService() : super(path: AppConfig.apiEndpoints['cashRegister']!);
 
-  /// Get a cash register by ID
   Future<CashRegisterModel> getCashRegister(String id) async {
     return get<CashRegisterModel>(
       endpoint: '/$id',
-      parser: (json) => CashRegisterModel.fromJson(json),
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
     );
   }
 
-  /// Get cash registers by parking
   Future<List<CashRegisterModel>> getCashRegistersByParking(
-      String parkingId) async {
+    String parkingId,
+  ) async {
     return get<List<CashRegisterModel>>(
       endpoint: '',
       additionalHeaders: {'parkingId': parkingId},
-      parser: (data) => (data as List<dynamic>)
-          .map((item) => CashRegisterModel.fromJson(item))
-          .toList(),
+      parser: (json) => parseModelList(json, CashRegisterModel.fromJson),
+    );
+  }
+
+  Future<CashRegisterModel> createCashRegister(
+    CashRegisterCreateModel model,
+  ) async {
+    return post<CashRegisterModel>(
+      endpoint: '',
+      body: model,
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+    );
+  }
+
+  Future<CashRegisterModel> updateCashRegister(
+    String id,
+    CashRegisterUpdateModel model,
+  ) async {
+    return patch<CashRegisterModel>(
+      endpoint: '/$id',
+      body: model,
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+    );
+  }
+
+  Future<void> deleteCashRegister(String id) async {
+    return delete<void>(endpoint: '/$id', parser: (_) => null);
+  }
+
+  Future<Map<String, dynamic>> getCashRegistersPaginated({
+    int page = 1,
+    int limit = 10,
+    String? search,
+    String? parkingId,
+  }) async {
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
+    }
+
+    if (parkingId != null && parkingId.isNotEmpty) {
+      queryParams['parkingId'] = parkingId;
+    }
+
+    final queryString = queryParams.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+
+    return get<Map<String, dynamic>>(
+      endpoint: '/paginated?$queryString',
+      parser: (json) =>
+          parsePaginatedResponse(json, CashRegisterModel.fromJson),
     );
   }
 }

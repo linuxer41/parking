@@ -4,6 +4,7 @@ import 'package:parkar/services/user_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
 import '../../widgets/auth/auth_layout.dart';
+import '../../widgets/custom_snackbar.dart';
 
 class InitScreen extends StatelessWidget {
   const InitScreen({super.key});
@@ -70,28 +71,10 @@ class InitScreen extends StatelessWidget {
                         ),
                       );
                     } else if (snapshot.hasError) {
-                      return Container(
+                      return CustomMessageWidget(
+                        message: 'Error: ${snapshot.error}',
+                        type: MessageType.error,
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: colorScheme.errorContainer.withValues(
-                            alpha: 127,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.error_outline, color: colorScheme.error),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Error: ${snapshot.error}',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.error,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
                       );
                     } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return Container(

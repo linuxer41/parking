@@ -31,6 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localización para soporte de caracteres especiales
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -109,10 +112,9 @@ flutter:
   assets:
     - assets/images/
     # - assets/icons/
-    - assets/data/
-    - lib/assets/data/
-    - assets/images/spot/
-    - assets/spot/
+    # - assets/data/
+    # - assets/images/spot/
+    # - assets/spot/
     # - assets/coin.glb  # Comentado porque son archivos 3D que ya no usaremos
     # - assets/dash.glb
     # - assets/ground.glb

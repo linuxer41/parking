@@ -164,9 +164,12 @@ class WelcomeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
+        color: colorScheme.primaryContainer.withValues(alpha: 40),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 20)),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 30),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
@@ -174,11 +177,11 @@ class WelcomeScreen extends StatelessWidget {
             '¿Por qué elegir Parkar?',
             style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
+              color: colorScheme.onPrimaryContainer,
             ),
           ),
           const SizedBox(height: 12),
-          // Características en lista simple
+          // Características en lista list
           _buildFeatureItem(
             Icons.dashboard_rounded,
             'Control total',
@@ -220,10 +223,10 @@ class WelcomeScreen extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
+            color: colorScheme.primary,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: colorScheme.primary, size: 18),
+          child: Icon(icon, color: colorScheme.onPrimary, size: 18),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -234,13 +237,13 @@ class WelcomeScreen extends StatelessWidget {
                 title,
                 style: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
+                  color: colorScheme.onPrimaryContainer,
                 ),
               ),
               Text(
                 description,
                 style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                  color: colorScheme.onPrimaryContainer.withValues(alpha: 80),
                   height: 1.2,
                 ),
               ),
@@ -259,9 +262,12 @@ class WelcomeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.tertiaryContainer,
+        color: colorScheme.secondaryContainer.withValues(alpha: 50),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 20)),
+        border: Border.all(
+          color: colorScheme.secondary.withValues(alpha: 30),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
@@ -271,7 +277,7 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               Icon(
                 Icons.support_agent_rounded,
-                color: colorScheme.onTertiaryContainer,
+                color: colorScheme.onSecondaryContainer,
                 size: 20,
               ),
               const SizedBox(width: 6),
@@ -279,7 +285,7 @@ class WelcomeScreen extends StatelessWidget {
                 '¿Necesitas ayuda?',
                 style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: colorScheme.onTertiaryContainer,
+                  color: colorScheme.onSecondaryContainer,
                 ),
               ),
             ],
@@ -292,13 +298,13 @@ class WelcomeScreen extends StatelessWidget {
               Icon(
                 Icons.phone_rounded,
                 size: 18,
-                color: colorScheme.onTertiaryContainer,
+                color: colorScheme.onSecondaryContainer,
               ),
               const SizedBox(width: 6),
               Text(
                 '+591 7543450',
                 style: textTheme.titleSmall?.copyWith(
-                  color: colorScheme.onTertiaryContainer,
+                  color: colorScheme.onSecondaryContainer,
                   fontWeight: FontWeight.w600,
                 ),
               ),

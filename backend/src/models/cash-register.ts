@@ -3,14 +3,10 @@ import { ParkingSchema } from "./parking";
 import { EmployeeSchema } from "./employee";
 import { BaseSchema } from "./base-model";
 
-// Esquemas JSON adicionales
-// No hay esquemas adicionales
-
-// Modelo Principal
-export const CashRegisterSchema = t.Object(
-  {
-    // Campos base
-    ...BaseSchema.properties,
+// ===== ESQUEMA PRINCIPAL =====
+export const CashRegisterSchema = t.Composite([
+  BaseSchema,
+  t.Object({
     // Campos específicos
     number: t.Integer({
       description: "Número de la caja",
@@ -19,11 +15,13 @@ export const CashRegisterSchema = t.Object(
     parkingId: t.String({
       description: "ID del estacionamiento asociado",
       required: true,
+      format: "uuid",
     }),
     parking: ParkingSchema,
     employeeId: t.String({
       description: "ID del empleado asociado",
       required: true,
+      format: "uuid",
     }),
     employee: EmployeeSchema,
     startDate: t.Union([
@@ -50,24 +48,35 @@ export const CashRegisterSchema = t.Object(
       description: "Estado de la caja (activa, inactiva, etc.)",
       required: true,
     }),
-  },
+  }),
+  ],
   {
     description: "Esquema principal para la entidad CashRegister",
-  },
+  }
 );
 
-export type CashRegister = typeof CashRegisterSchema.static;
-
-// Modelo de Creación
-export const CashRegisterCreateSchema = t.Pick(CashRegisterSchema, ["number", "parkingId", "employeeId", "startDate"], {
+// ===== ESQUEMA DE CREACIÓN =====
+export const CashRegisterCreateSchema = t.Pick(CashRegisterSchema, ["id", "createdAt", "number", "parkingId", "employeeId", "startDate"], {
   description: "Esquema para la creación de un CashRegister",
 });
 
-export type CashRegisterCreate = typeof CashRegisterCreateSchema.static;
-
-// Modelo de Actualización
-export const CashRegisterUpdateSchema = t.Pick(CashRegisterSchema, ["number", "employeeId", "startDate", "endDate", "status"], {
+// ===== ESQUEMA DE ACTUALIZACIÓN =====
+export const CashRegisterUpdateSchema = t.Pick(CashRegisterSchema, ["updatedAt", "number", "employeeId", "startDate", "endDate", "status"], {
   description: "Esquema para la actualización de un CashRegister",
 });
 
+// ===== ESQUEMAS DE REQUEST =====
+export const CashRegisterCreateRequestSchema = t.Pick(CashRegisterSchema, ["number", "parkingId", "employeeId", "startDate"], {
+  description: "Esquema de request para la creación de un CashRegister",
+});
+
+export const CashRegisterUpdateRequestSchema = t.Partial(t.Pick(CashRegisterSchema, ["number", "employeeId", "startDate", "endDate", "status"]), {
+  description: "Esquema de request para la actualización de un CashRegister",
+});
+
+// ===== EXPORT TYPES =====
+export type CashRegister = typeof CashRegisterSchema.static;
+export type CashRegisterCreate = typeof CashRegisterCreateSchema.static;
 export type CashRegisterUpdate = typeof CashRegisterUpdateSchema.static;
+export type CashRegisterCreateRequest = typeof CashRegisterCreateRequestSchema.static;
+export type CashRegisterUpdateRequest = typeof CashRegisterUpdateRequestSchema.static;

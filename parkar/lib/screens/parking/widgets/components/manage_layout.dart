@@ -1,37 +1,38 @@
 import 'package:flutter/material.dart';
+import '../../../../widgets/custom_snackbar.dart';
 
 /// Layout común para todos los bottom sheets modales
 class ManageLayout extends StatelessWidget {
   /// Título principal del modal
   final String title;
-  
+
   /// Subtítulo o descripción adicional
   final String subtitle;
-  
+
   /// Icono para mostrar junto al título
   final IconData icon;
-  
+
   /// Color de fondo del contenedor del icono
   final Color? iconBackgroundColor;
-  
+
   /// Color del icono
   final Color? iconColor;
-  
+
   /// Contenido principal del modal
   final Widget content;
-  
+
   /// Botones de acción en la parte inferior
   final List<Widget> actions;
-  
+
   /// Widget opcional para mostrar en la parte superior derecha (ej: botón de cancelar)
   final Widget? headerAction;
-  
+
   /// Mensaje de error opcional
   final String? errorMessage;
-  
+
   /// Altura relativa del modal (porcentaje de la altura de la pantalla)
   final double heightFactor;
-  
+
   const ManageLayout({
     super.key,
     required this.title,
@@ -49,30 +50,33 @@ class ManageLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
-        constraints: const BoxConstraints(
-          maxWidth: 400,
-        ),
+        constraints: const BoxConstraints(maxWidth: 400),
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height * 0.6,
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8),
+          ],
         ),
         child: Column(
           children: [
             // Indicador de arrastre
             Container(
               margin: const EdgeInsets.only(top: 8, bottom: 8),
-              width: 36, height: 4,
+              width: 36,
+              height: 4,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Encabezado con título e icono
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -81,7 +85,9 @@ class ManageLayout extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: iconBackgroundColor ?? Theme.of(context).colorScheme.primaryContainer,
+                      color:
+                          iconBackgroundColor ??
+                          Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -116,30 +122,15 @@ class ManageLayout extends StatelessWidget {
                 ],
               ),
             ),
-      
+
             // Mensaje de error si existe
-            if (errorMessage != null && errorMessage!.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 14),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        errorMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      
+            ConditionalMessageWidget(
+              message: errorMessage,
+              type: MessageType.error,
+              margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            ),
+
             // Contenido principal
             Expanded(
               child: Padding(
@@ -147,7 +138,7 @@ class ManageLayout extends StatelessWidget {
                 child: content,
               ),
             ),
-      
+
             // Botones de acción
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -178,19 +169,17 @@ class ManageLayout extends StatelessWidget {
       return showModalBottomSheet<T>(
         context: context,
         isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      builder: (context) => child,
-    );
+        backgroundColor: Colors.transparent,
+        isDismissible: isDismissible,
+        enableDrag: enableDrag,
+        builder: (context) => child,
+      );
     } else {
       return showDialog<T>(
         context: context,
-        builder: (context) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: child,
-        ),
+        builder: (context) =>
+            Dialog(backgroundColor: Colors.transparent, child: child),
       );
     }
   }
-} 
+}

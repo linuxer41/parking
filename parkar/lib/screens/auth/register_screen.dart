@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/auth/auth_layout.dart';
+import '../../widgets/custom_input_field.dart';
+import '../../widgets/custom_snackbar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -96,77 +98,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return AuthLayout(
       title: 'Crear Cuenta',
       children: [
-        if (_errorMessage != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withValues(alpha: 127),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: colorScheme.error, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
         Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              ConditionalMessageWidget(
+                message: _errorMessage,
+                type: MessageType.error,
+                onClose: () {
+                  setState(() {
+                    _errorMessage = null;
+                  });
+                },
+              ),
               // Campo de Nombre
-              TextFormField(
+              CustomFormInputField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'Nombre completo',
-                  hintText: 'Juan Pérez',
-                  prefixIcon: Icon(
-                    Icons.person_outline,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                labelText: 'Nombre completo',
+                hintText: 'Juan Pérez',
+                prefixIcon: Icons.person_outline,
                 textCapitalization: TextCapitalization.words,
                 keyboardType: TextInputType.name,
                 textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.name],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu nombre';
                   }
                   return null;
                 },
-                style: textTheme.bodyMedium,
               ),
 
               const SizedBox(height: 16),
 
               // Campo de Email
-              TextFormField(
+              CustomFormInputField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'ejemplo@correo.com',
-                  prefixIcon: Icon(
-                    Icons.email_outlined,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                labelText: 'Email',
+                hintText: 'ejemplo@correo.com',
+                prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.email],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu email';
@@ -176,35 +148,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }
                   return null;
                 },
-                style: textTheme.bodyMedium,
               ),
 
               const SizedBox(height: 16),
 
               // Campo de Contraseña
-              TextFormField(
+              CustomFormInputField(
                 controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Contraseña',
-                  hintText: 'Mínimo 6 caracteres',
-                  prefixIcon: Icon(
-                    Icons.lock_outline,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _showPassword ? Icons.visibility_off : Icons.visibility,
-                      size: 18,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showPassword = !_showPassword;
-                      });
-                    },
-                  ),
-                ),
+                labelText: 'Contraseña',
+                hintText: 'Mínimo 6 caracteres',
+                prefixIcon: Icons.lock_outline,
                 obscureText: !_showPassword,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -216,37 +169,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }
                   return null;
                 },
-                style: textTheme.bodyMedium,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showPassword = !_showPassword;
+                    });
+                  },
+                ),
               ),
 
               const SizedBox(height: 16),
 
               // Campo de Confirmar Contraseña
-              TextFormField(
+              CustomFormInputField(
                 controller: _confirmPasswordController,
-                decoration: InputDecoration(
-                  labelText: 'Confirmar contraseña',
-                  hintText: 'Repite tu contraseña',
-                  prefixIcon: Icon(
-                    Icons.lock_outline,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _showConfirmPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                      size: 18,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showConfirmPassword = !_showConfirmPassword;
-                      });
-                    },
-                  ),
-                ),
+                labelText: 'Confirmar contraseña',
+                hintText: 'Repite tu contraseña',
+                prefixIcon: Icons.lock_outline,
                 obscureText: !_showConfirmPassword,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
@@ -258,12 +202,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }
                   return null;
                 },
-                onFieldSubmitted: (_) {
+                onSubmitted: () {
                   if (!_isLoading) {
                     _submitForm();
                   }
                 },
-                style: textTheme.bodyMedium,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showConfirmPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showConfirmPassword = !_showConfirmPassword;
+                    });
+                  },
+                ),
               ),
 
               const SizedBox(height: 24),
@@ -276,8 +233,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  disabledBackgroundColor:
-                      colorScheme.primary.withValues(alpha: 102),
+                  disabledBackgroundColor: colorScheme.primary.withValues(
+                    alpha: 102,
+                  ),
                 ),
                 child: _isLoading
                     ? SizedBox(

@@ -26,7 +26,10 @@ class StepProgressIndicator extends StatelessWidget {
 
     final active = activeColor ?? colorScheme.primary;
     final inactive =
-        inactiveColor ?? colorScheme.outline.withValues(alpha: 102);
+        inactiveColor ??
+        (theme.brightness == Brightness.dark
+            ? colorScheme.outline.withValues(alpha: 102)
+            : colorScheme.outline.withValues(alpha: 153));
     final completed = completedColor ?? colorScheme.primary;
 
     return Column(
@@ -54,7 +57,9 @@ class StepProgressIndicator extends StatelessWidget {
                                 ? completed
                                 : isActive
                                 ? active.withValues(alpha: 51)
-                                : colorScheme.surfaceContainerHighest,
+                                : (theme.brightness == Brightness.dark
+                                      ? colorScheme.surfaceContainerHighest
+                                      : colorScheme.surfaceContainerLow),
                             border: Border.all(
                               color: isCompleted || isActive
                                   ? active
@@ -83,7 +88,9 @@ class StepProgressIndicator extends StatelessWidget {
                                     style: textTheme.titleMedium?.copyWith(
                                       color: isActive
                                           ? active
-                                          : colorScheme.onSurfaceVariant,
+                                          : (theme.brightness == Brightness.dark
+                                                ? colorScheme.onSurfaceVariant
+                                                : colorScheme.onSurface),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -95,7 +102,9 @@ class StepProgressIndicator extends StatelessWidget {
                           style: textTheme.bodySmall?.copyWith(
                             color: isCompleted || isActive
                                 ? active
-                                : colorScheme.onSurfaceVariant,
+                                : (theme.brightness == Brightness.dark
+                                      ? colorScheme.onSurfaceVariant
+                                      : colorScheme.onSurface),
                             fontWeight: isCompleted || isActive
                                 ? FontWeight.w600
                                 : FontWeight.normal,

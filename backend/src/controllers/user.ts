@@ -1,7 +1,8 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
-import { User, UserSchema, UserCreateSchema, UserUpdateSchema } from "../models/user";
-import { authPlugin } from "../plugins/auth";
+import { accessPlugin } from "../plugins/access";
+import { UserSchema, User, UserCreateSchema, UserUpdateSchema } from "../models/user";
+import { NotFoundError } from "../utils/error";
 import { ParkingSimpleSchema } from "../models/parking";
 
 export const userController = new Elysia({
@@ -10,14 +11,14 @@ export const userController = new Elysia({
   detail: {
     summary: "Obtener todos los users",
     description: "Retorna una lista de todos los users registrados.",
-    security: [{ token: [] }],
+    security: [{ branchId: [], token: [] }],
   },
 })
-  .use(authPlugin)
+  .use(accessPlugin)
   .get(
     "/",
     async ({ query }) => {
-      const res = await db.user.findMany({});
+      const res = await db.user.find({});
       return res as User[];
     },
     {
@@ -25,6 +26,16 @@ export const userController = new Elysia({
         summary: "Obtener todos los users",
         description: "Retorna una lista de todos los users registrados.",
       },
+      query: t.Object({
+        email: t.String({
+          description: "Email del usuario",
+          required: false,
+        }),
+        role: t.String({
+          description: "Rol del usuario",
+          required: false,
+        }),
+      }),
       response: {
         200: t.Array(UserSchema),
         400: t.String(),
@@ -35,9 +46,7 @@ export const userController = new Elysia({
   .post(
     "/",
     async ({ body }) => {
-      const res = await db.user.create({
-        data: body,
-      });
+      const res = await db.user.createUser(body);
       return res as User;
     },
     {
@@ -57,11 +66,10 @@ export const userController = new Elysia({
   .get(
     "/:id",
     async ({ params }) => {
-      const res = await db.user.findUnique({
-        where: {
-          id: params.id,
-        },
-      });
+      const res = await db.user.findUserById(params.id);
+      if (!res) {
+        throw new NotFoundError("Usuario no encontrado");
+      }
       return res as User;
     },
     {
@@ -79,12 +87,7 @@ export const userController = new Elysia({
   .patch(
     "/:id",
     async ({ params, body }) => {
-      const res = await db.user.update({
-        where: {
-          id: params.id,
-        },
-        data: body,
-      });
+      const res = await db.user.updateUser(params.id, body);
       return res as User;
     },
     {
@@ -104,17 +107,14 @@ export const userController = new Elysia({
   .delete(
     "/:id",
     async ({ params }) => {
-      const res = await db.user.delete({
-        where: {
-          id: params.id,
-        },
-      });
+      const res = await db.user.deleteUser(params.id);
       return res as User;
     },
     {
       detail: {
         summary: "Eliminar un user",
-        description: "Elimina un registro de user basado en su ID.",
+        description:
+          "Elimina un registro de user existente basado en su ID.",
       },
       response: {
         200: UserSchema,

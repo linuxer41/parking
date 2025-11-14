@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math.dart' as vector_math;
 
-import '../../../models/element_model.dart';
+import '../../../models/parking_model.dart';
 import 'enums.dart';
 import 'parking_elements.dart';
 import 'parking_spot.dart';
@@ -9,7 +9,6 @@ import 'parking_facility.dart';
 
 /// Factory para crear elementos del sistema de parkeo
 class ElementFactory {
-
   static ParkingElement? createFromModel(ElementModel model) {
     switch (model.type) {
       case ElementType.spot:
@@ -18,6 +17,8 @@ class ElementFactory {
         return createSignage(model);
       case ElementType.facility:
         return createFacility(model);
+      default:
+        return null;
     }
   }
 
@@ -40,16 +41,16 @@ class ElementFactory {
         spotType = SpotType.vehicle;
     }
 
-
     return ParkingSpot(
       id: model.id,
       position: vector_math.Vector2(model.posX, model.posY),
       type: spotType,
       label: model.name,
-      isOccupied: model.isOccupied,
+      isOccupied: model.occupancy.status == 'occupied',
       rotation: model.rotation,
       scale: model.scale,
       occupancy: model.occupancy,
+      isActive: model.isActive,
     );
   }
 
@@ -115,7 +116,7 @@ class ElementFactory {
       position: vector_math.Vector2(model.posX, model.posY),
       type: facilityType,
       name: model.name,
-      isAvailable: model.isAvailable,
+      isAvailable: model.occupancy.status == 'available',
       rotation: model.rotation,
       scale: model.scale,
     );

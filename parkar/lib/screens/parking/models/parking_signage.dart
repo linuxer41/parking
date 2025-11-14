@@ -6,7 +6,7 @@ import 'dart:math' as math;
 
 import 'enums.dart';
 import 'parking_elements.dart';
-import '../../../models/element_model.dart';
+import '../../../models/parking_model.dart';
 
 /// Implementación de una señalización de parkeo
 class ParkingSignage extends ParkingElement {
@@ -47,13 +47,13 @@ class ParkingSignage extends ParkingElement {
   set isSelected(bool value) {
     if (value == _isSelected) return;
     _isSelected = value;
-    
+
     if (_isSelected) {
       _startPulseAnimation();
     } else {
       _stopPulseAnimation();
     }
-    
+
     notifyListeners();
   }
 
@@ -109,16 +109,14 @@ class ParkingSignage extends ParkingElement {
     final signShape = _getSignageShape(rect);
 
     // Sombra más sutil y cercana para un look moderno
-    canvas.drawPath(
-      signShape.shift(const Offset(1, 1)),
-      shadowPaint,
-    );
+    canvas.drawPath(signShape.shift(const Offset(1, 1)), shadowPaint);
 
     // Fondo plano con color ligeramente más claro para un aspecto minimalista
     final mainPaint = Paint()
       ..color = HSLColor.fromColor(color)
           .withLightness(
-              (HSLColor.fromColor(color).lightness + 0.05).clamp(0.0, 1.0))
+            (HSLColor.fromColor(color).lightness + 0.05).clamp(0.0, 1.0),
+          )
           .toColor()
       ..style = PaintingStyle.fill;
 
@@ -128,7 +126,8 @@ class ParkingSignage extends ParkingElement {
     final borderPaint = Paint()
       ..color = HSLColor.fromColor(color)
           .withLightness(
-              (HSLColor.fromColor(color).lightness - 0.1).clamp(0.0, 1.0))
+            (HSLColor.fromColor(color).lightness - 0.1).clamp(0.0, 1.0),
+          )
           .toColor()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
@@ -189,7 +188,7 @@ class ParkingSignage extends ParkingElement {
         ..color = Colors.white.withOpacity(0.5 + _pulseValue * 0.5)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.0;
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           rect.inflate(4 + _pulseValue * 3),
@@ -249,12 +248,7 @@ class ParkingSignage extends ParkingElement {
     final cornerRadius = min(w, h) * 0.2;
 
     // Todas las señales con forma rectangular con esquinas redondeadas
-    path.addRRect(
-      RRect.fromRectAndRadius(
-        rect,
-        Radius.circular(cornerRadius),
-      ),
-    );
+    path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(cornerRadius)));
 
     return path;
   }
@@ -265,8 +259,9 @@ class ParkingSignage extends ParkingElement {
     final textSpan = TextSpan(
       text: labelText,
       style: TextStyle(
-        color:
-            Colors.white.withOpacity(0.95), // Blanco ligeramente transparente
+        color: Colors.white.withOpacity(
+          0.95,
+        ), // Blanco ligeramente transparente
         fontSize: 6.5, // Tamaño más pequeño para un look minimalista
         fontWeight: FontWeight.w500, // Menos negrita para aspecto más refinado
         letterSpacing: 0.3, // Espaciado de letras para elegancia
@@ -320,10 +315,7 @@ class ParkingSignage extends ParkingElement {
       'type': 'signage',
       'signageType': type.toString(),
       'text': text,
-      'position': {
-        'x': position.x,
-        'y': position.y,
-      },
+      'position': {'x': position.x, 'y': position.y},
       'rotation': rotation,
       'scale': scale,
       'isVisible': isVisible,
@@ -364,11 +356,9 @@ class ParkingSignage extends ParkingElement {
 
 extension ParkingSignageElementConversion on ParkingSignage {
   // Convertir ParkingSignage a ElementModel
-  ElementModel toElementModel(String areaId, String parkingId) {
+  ElementModel toElementModel() {
     return ElementModel(
       id: id,
-      areaId: areaId,
-      parkingId: parkingId,
       name: text ?? _getSignageLabel(),
       type: ElementType.signage,
       subType: type.index + 1, // Add 1 to match backend schema
@@ -377,22 +367,21 @@ extension ParkingSignageElementConversion on ParkingSignage {
       posZ: 0.0,
       rotation: rotation,
       scale: scale,
-      accessId: null, // Las señalizaciones no tienen accessId
-      occupancy: ElementOccupancyModel(
-        status: 'active',
-      ),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      deletedAt: null,
+      isActive: true,
+      occupancy: ElementOccupancyModel(status: 'active'),
     );
   }
-  
+
   // Método estático para crear un ParkingSignage desde un ElementModel
   static ParkingSignage fromElementModel(ElementModel element) {
     return ParkingSignage(
       id: element.id,
       position: vector_math.Vector2(element.posX, element.posY),
-      type: SignageType.values[element.subType - 1], // Subtract 1 to match enum
+      type:
+          SignageType.values[(element.subType - 1).clamp(
+            0,
+            SignageType.values.length - 1,
+          )], // Subtract 1 to match enum
       text: element.name,
       rotation: element.rotation,
       scale: element.scale,

@@ -1,4 +1,3 @@
-
 import 'package:json_annotation/json_annotation.dart';
 
 import '_base_model.dart';
@@ -8,25 +7,17 @@ part 'employee_model.g.dart';
 @JsonSerializable()
 class EmployeeModel extends JsonConvertible<EmployeeModel> {
   final String id;
-  final String userId;
-  final String parkingId;
   final String role;
   final String name;
   final String? email;
   final String? phone;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   EmployeeModel({
     required this.id,
-    required this.userId,
-    required this.parkingId,
     required this.role,
     required this.name,
     this.email,
     this.phone,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory EmployeeModel.fromJson(Map<String, dynamic> json) =>
@@ -59,9 +50,7 @@ class EmployeeCreateModel extends JsonConvertible<EmployeeCreateModel> {
 class EmployeeUpdateModel extends JsonConvertible<EmployeeUpdateModel> {
   final String? role;
 
-  EmployeeUpdateModel({
-    this.role,
-  });
+  EmployeeUpdateModel({this.role});
 
   factory EmployeeUpdateModel.fromJson(Map<String, dynamic> json) =>
       _$EmployeeUpdateModelFromJson(json);
@@ -92,5 +81,3 @@ class EmployeePreviewModel extends JsonConvertible<EmployeePreviewModel> {
   @override
   Map<String, dynamic> toJson() => _$EmployeePreviewModelToJson(this);
 }
-
-

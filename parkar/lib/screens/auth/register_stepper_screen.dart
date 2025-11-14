@@ -6,10 +6,11 @@ import '../../state/app_state_container.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/phone_input_field.dart';
 import '../../widgets/custom_operation_mode_selector.dart';
-import '../../widgets/custom_capacity_input.dart';
+
 import '../../widgets/custom_address_input.dart';
 import '../../models/parking_model.dart';
 import '../../models/auth_model.dart';
+import '../../widgets/custom_snackbar.dart';
 
 class RegisterStepperScreen extends StatefulWidget {
   const RegisterStepperScreen({super.key});
@@ -29,7 +30,6 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
   final _parkingAddressController = TextEditingController();
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
-  final _capacityController = TextEditingController();
 
   bool _showPassword = false;
   bool _showConfirmPassword = false;
@@ -41,7 +41,7 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
   TempUserData? _tempUserData;
 
   // Variables para el estacionamiento
-  ParkingOperationMode _operationMode = ParkingOperationMode.visual;
+  ParkingOperationMode _operationMode = ParkingOperationMode.list;
 
   // Referencia al widget de teléfono
   final GlobalKey _phoneFieldKey = GlobalKey();
@@ -57,7 +57,7 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
     _parkingAddressController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
-    _capacityController.dispose();
+
     super.dispose();
   }
 
@@ -89,14 +89,6 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
           _currentStep = 1;
           _isLoading = false;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Datos del usuario guardados'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       } catch (e) {
         if (mounted) {
           setState(() {
@@ -123,13 +115,6 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
       return;
     }
 
-    if (_capacityController.text.isEmpty) {
-      setState(() {
-        _errorMessage = 'Por favor ingresa la capacidad del estacionamiento';
-      });
-      return;
-    }
-
     if (_tempUserData == null) {
       setState(() {
         _errorMessage = 'Datos del usuario no encontrados';
@@ -145,24 +130,14 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
     final authService = AppStateContainer.di(context).resolve<AuthService>();
 
     try {
-      // Validar capacidad
-      final capacity = int.tryParse(_capacityController.text);
-      if (capacity == null || capacity <= 0) {
-        setState(() {
-          _errorMessage = 'Por favor ingresa una capacidad válida';
-          _isLoading = false;
-        });
-        return;
-      }
-
       // Preparar las coordenadas
-      List<double> location = [];
+      ParkingLocationModel? location;
       if (_latitudeController.text.isNotEmpty &&
           _longitudeController.text.isNotEmpty) {
         final lat = double.tryParse(_latitudeController.text);
         final lng = double.tryParse(_longitudeController.text);
         if (lat != null && lng != null) {
-          location = [lat, lng];
+          location = ParkingLocationModel(lat: lat, lng: lng);
         }
       }
 
@@ -171,7 +146,6 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
         user: _tempUserData!.toRegisterUserModel(),
         parking: RegisterParkingModel(
           name: _parkingNameController.text,
-          capacity: capacity,
           operationMode: _operationMode.value,
           location: location,
         ),
@@ -184,7 +158,7 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
 
       // Configurar el estado de la aplicación igual que en login
       final appState = AppStateContainer.of(context);
-      appState.setAccessToken(response.token);
+      appState.setAccessToken(response.auth.token);
       appState.setCurrentUser(response.user);
 
       // Los parkings vienen en la respuesta
@@ -290,31 +264,6 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
             ],
           ),
         ),
-
-        // Mensaje de error (mismo estilo que login)
-        if (_errorMessage != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.errorContainer.withValues(alpha: 127),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: colorScheme.error, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
         // Contenido del paso actual
         AnimatedSwitcher(
@@ -483,6 +432,15 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          ConditionalMessageWidget(
+            message: _errorMessage,
+            type: MessageType.error,
+            onClose: () {
+              setState(() {
+                _errorMessage = null;
+              });
+            },
+          ),
           // Campo de Nombre (mismo estilo que login)
           TextFormField(
             controller: _nameController,
@@ -657,6 +615,15 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        ConditionalMessageWidget(
+          message: _errorMessage,
+          type: MessageType.error,
+          onClose: () {
+            setState(() {
+              _errorMessage = null;
+            });
+          },
+        ),
         // Campo de Nombre del Aparcamiento (mismo estilo que login)
         TextFormField(
           controller: _parkingNameController,
@@ -701,11 +668,6 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
         ),
 
         const SizedBox(height: 16),
-
-        // Campo de Capacidad
-        CustomCapacityInput(controller: _capacityController),
-
-        const SizedBox(height: 20),
 
         // Selector de modo de operación
         CustomOperationModeSelector(

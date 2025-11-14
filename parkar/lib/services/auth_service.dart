@@ -1,25 +1,49 @@
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
-
 import '../config/app_config.dart';
 import '../models/auth_model.dart';
 import 'base_service.dart';
+import 'api_exception.dart';
+import 'auth_manager.dart';
 
-/// Service for managing authentication
 class AuthService extends BaseService {
-  /// Constructor
   AuthService() : super(path: AppConfig.apiEndpoints['auth'] ?? '/auth');
 
-  /// Login with email and password
   Future<AuthResponseModel> login(String email, String password) async {
-    return post<AuthResponseModel>(
-      endpoint: '/sign-in',
-      body: {'email': email, 'password': password},
-      parser: (json) => AuthResponseModel.fromJson(json),
-    );
+    try {
+      final response = await post<AuthResponseModel>(
+        endpoint: '/sign-in',
+        body: {'email': email, 'password': password},
+        parser: (json) => parseModel(json, AuthResponseModel.fromJson),
+      );
+
+      // Store authentication data after successful login
+      await AuthManager().setAuthData(
+        token: response.auth.token,
+        refreshToken: response.auth.refreshToken,
+        userData: response.user.toJson(),
+        parkingId: response.parkings.isNotEmpty
+            ? response.parkings.first.id
+            : null,
+      );
+
+      return response;
+    } on ApiException catch (e) {
+      if (e.isValidationError) {
+        throw ApiException(
+          statusCode: e.statusCode,
+          message: 'Error de validación: ${e.message}',
+          errors: e.errors,
+          isValidationError: true,
+        );
+      }
+      rethrow;
+    } catch (e) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Error inesperado durante el login: ${e.toString()}',
+      );
+    }
   }
 
-  /// Register a new user (legacy method - kept for compatibility)
   Future<Map<String, dynamic>> register(
     String email,
     String password,
@@ -38,34 +62,99 @@ class AuthService extends BaseService {
     );
   }
 
-  /// Register complete (user + parking)
-  Future<AuthResponseModel> registerComplete(RegisterCompleteModel data) async {
-    return post<AuthResponseModel>(
-      endpoint: '/register-complete',
-      body: data.toJson(),
-      parser: (json) => AuthResponseModel.fromJson(json),
-    );
-  }
-
-  /// Request password reset
-  Future<Map<String, dynamic>> forgotPassword(String email) async {
-    return post<Map<String, dynamic>>(
-      endpoint: '/forgot-password',
-      body: {'email': email},
-      parser: (json) => json as Map<String, dynamic>,
-    );
-  }
-
-  /// Reset password with token
-  Future<Map<String, dynamic>> resetPassword(
-    String email,
-    String token,
-    String password,
+  Future<AuthResponseModel> registerComplete(
+    RegisterCompleteModel registerData,
   ) async {
-    return post<Map<String, dynamic>>(
-      endpoint: '/reset-password',
-      body: {'email': email, 'token': token, 'password': password},
-      parser: (json) => json as Map<String, dynamic>,
-    );
+    try {
+      final response = await post<AuthResponseModel>(
+        endpoint: '/register-complete',
+        body: registerData,
+        parser: (json) => parseModel(json, AuthResponseModel.fromJson),
+      );
+
+      // Store authentication data after successful registration
+      await AuthManager().setAuthData(
+        token: response.auth.token,
+        refreshToken: response.auth.refreshToken,
+        userData: response.user.toJson(),
+        parkingId: response.parkings.isNotEmpty
+            ? response.parkings.first.id
+            : null,
+      );
+
+      return response;
+    } on ApiException catch (e) {
+      if (e.isValidationError) {
+        throw ApiException(
+          statusCode: e.statusCode,
+          message: 'Error de validación en el registro: ${e.message}',
+          errors: e.errors,
+          isValidationError: true,
+        );
+      }
+      rethrow;
+    } catch (e) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Error inesperado durante el registro: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await post<void>(endpoint: '/sign-out', body: {}, parser: (_) => null);
+    } catch (e) {
+      // Even if API call fails, clear local auth data
+      print('Warning: Logout API call failed, clearing local data: $e');
+    } finally {
+      // Always clear local authentication data
+      await AuthManager().clearAuth();
+    }
+  }
+
+  Future<AuthResponseModel> refreshToken(String refreshToken) async {
+    try {
+      return await post<AuthResponseModel>(
+        endpoint: '/refresh',
+        body: {'refreshToken': refreshToken},
+        parser: (json) => parseModel(json, AuthResponseModel.fromJson),
+      );
+    } catch (e) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Error al renovar el token: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> forgotPassword(String email) async {
+    try {
+      await post<void>(
+        endpoint: '/forgot-password',
+        body: {'email': email},
+        parser: (_) => null,
+      );
+    } catch (e) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Error al enviar email de recuperación: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> resetPassword(String token, String newPassword) async {
+    try {
+      await post<void>(
+        endpoint: '/reset-password',
+        body: {'token': token, 'newPassword': newPassword},
+        parser: (_) => null,
+      );
+    } catch (e) {
+      throw ApiException(
+        statusCode: 500,
+        message: 'Error al restablecer contraseña: ${e.toString()}',
+      );
+    }
   }
 }

@@ -1,8 +1,8 @@
-import Elysia from "elysia";
-import { t } from "elysia";
+import Elysia, { t } from "elysia";
 import { db } from "../db";
 import { accessPlugin } from "../plugins/access";
 import { VehicleSchema, Vehicle, VehicleCreateSchema, VehicleUpdateSchema } from "../models/vehicle";
+import { NotFoundError } from "../utils/error";
 
 export const vehicleController = new Elysia({
   prefix: "/vehicles",
@@ -17,7 +17,7 @@ export const vehicleController = new Elysia({
   .get(
     "/",
     async ({ query }) => {
-      const res = await db.vehicle.findMany({});
+      const res = await db.vehicle.find({});
       return res as Vehicle[];
     },
     {
@@ -25,6 +25,16 @@ export const vehicleController = new Elysia({
         summary: "Obtener todos los vehicles",
         description: "Retorna una lista de todos los vehicles registrados.",
       },
+      query: t.Object({
+        parkingId: t.String({
+          description: "ID del parking",
+          required: false,
+        }),
+        plate: t.String({
+          description: "Placa del vehículo",
+          required: false,
+        }),
+      }),
       response: {
         200: t.Array(VehicleSchema),
         400: t.String(),
@@ -35,9 +45,7 @@ export const vehicleController = new Elysia({
   .post(
     "/",
     async ({ body }) => {
-      const res = await db.vehicle.create({
-        data: body,
-      });
+      const res = await db.vehicle.create(body);
       return res as Vehicle;
     },
     {
@@ -57,17 +65,16 @@ export const vehicleController = new Elysia({
   .get(
     "/status",
     async ({ query }) => {
-      const res = await db.vehicle.findUnique({
-        where: {
-          plate: query.plate,
-          parkingId: query.parkingId,
-        },
+      const vehicles = await db.vehicle.find({
+        plate: query.plate,
+        parkingId: query.parkingId,
       });
-      console.log(res);
-      if (!res) {
-        throw new Response("Vehículo no encontrado", { status: 404 });
+      
+      if (vehicles.length === 0) {
+        throw new NotFoundError("Vehículo no encontrado");
       }
-      return res;
+      
+      return vehicles[0];
     },
     {
       query: t.Object({
@@ -94,11 +101,10 @@ export const vehicleController = new Elysia({
   .get(
     "/:id",
     async ({ params }) => {
-      const res = await db.vehicle.findUnique({
-        where: {
-          id: params.id,
-        },
-      });
+      const res = await db.vehicle.findById(params.id);
+      if (!res) {
+        throw new NotFoundError("Vehículo no encontrado");
+      }
       return res as Vehicle;
     },
     {
@@ -116,12 +122,7 @@ export const vehicleController = new Elysia({
   .patch(
     "/:id",
     async ({ params, body }) => {
-      const res = await db.vehicle.update({
-        where: {
-          id: params.id,
-        },
-        data: body,
-      });
+      const res = await db.vehicle.update(params.id, body);
       return res as Vehicle;
     },
     {
@@ -141,17 +142,14 @@ export const vehicleController = new Elysia({
   .delete(
     "/:id",
     async ({ params }) => {
-      const res = await db.vehicle.delete({
-        where: {
-          id: params.id,
-        },
-      });
+      const res = await db.vehicle.delete(params.id);
       return res as Vehicle;
     },
     {
       detail: {
         summary: "Eliminar un vehicle",
-        description: "Elimina un registro de vehicle basado en su ID.",
+        description:
+          "Elimina un registro de vehicle existente basado en su ID.",
       },
       response: {
         200: VehicleSchema,
