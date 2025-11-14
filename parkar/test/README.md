@@ -8,7 +8,7 @@ Este directorio contiene todas las pruebas unitarias e integración para la apli
 test/
 ├── services/                    # Pruebas unitarias de servicios
 │   ├── booking_service_test.dart
-│   ├── entry_exit_service_test.dart
+│   ├── access_service_test.dart
 │   └── subscription_service_test.dart
 ├── integration/                 # Pruebas de integración
 │   ├── api_integration_test.dart
@@ -74,11 +74,11 @@ flutter test --reporter=compact
 - ✅ Manejo de campos requeridos
 - ✅ Configuración de `BookingService`
 
-#### `entry_exit_service_test.dart`
+#### `access_service_test.dart`
 - ✅ Creación correcta de `AccessCreateModel`
 - ✅ Conversión JSON correcta
 - ✅ Manejo de campos requeridos
-- ✅ Configuración de `EntryExitService`
+- ✅ Configuración de `AccessService`
 
 #### `subscription_service_test.dart`
 - ✅ Creación correcta de `SubscriptionCreateModel`
@@ -115,7 +115,7 @@ flutter test --reporter=compact
 
 ### Servicios API
 - ✅ `BookingService` - Gestión de reservas
-- ✅ `EntryExitService` - Gestión de entradas/salidas
+- ✅ `AccessService` - Gestión de entradas/salidas
 - ✅ `SubscriptionService` - Gestión de suscripciones
 - ✅ `AuthService` - Autenticación y registro
 

@@ -16,7 +16,7 @@ Todas las pruebas de API han pasado exitosamente. El sistema está completamente
 - ✅ Conversión a JSON
 - ✅ Manejo de campos mínimos
 
-#### EntryExitService Tests: 5/5 ✅
+#### AccessService Tests: 5/5 ✅
 - ✅ Creación de modelos de acceso
 - ✅ Validación de campos requeridos
 - ✅ Conversión a JSON
@@ -59,15 +59,15 @@ Todas las pruebas de API han pasado exitosamente. El sistema está completamente
   - `getBookingsByParking()` - Listar por parking
   - `getBookingsPaginated()` - Lista paginada
 
-### ✅ EntryExitService
+### ✅ AccessService
 - **Endpoint**: `/entry-exit`
 - **Métodos principales**:
   - `createEntry()` - Crear acceso
   - `registerEntry()` - Registrar entrada
   - `registerExit()` - Registrar salida
-  - `getEntryExit()` - Obtener acceso por ID
-  - `updateEntryExit()` - Actualizar acceso
-  - `deleteEntryExit()` - Eliminar acceso
+  - `getAccess()` - Obtener acceso por ID
+  - `updateAccess()` - Actualizar acceso
+  - `deleteAccess()` - Eliminar acceso
   - `calculateExitFee()` - Calcular tarifa
 
 ### ✅ SubscriptionService
@@ -171,7 +171,7 @@ flutter test test/services/ test/integration/
 
 # Ejecutar pruebas específicas
 flutter test test/services/booking_service_test.dart
-flutter test test/services/entry_exit_service_test.dart
+flutter test test/services/access_service_test.dart
 flutter test test/services/subscription_service_test.dart
 flutter test test/integration/api_integration_test.dart
 ```
@@ -182,7 +182,7 @@ flutter test test/integration/api_integration_test.dart
 
 ### ✅ Servicios
 - `lib/services/booking_service.dart` - Actualizado
-- `lib/services/entry_exit_service.dart` - Actualizado
+- `lib/services/access_service.dart` - Actualizado
 - `lib/services/subscription_service.dart` - Actualizado
 
 ### ✅ Modelos
@@ -197,7 +197,7 @@ flutter test test/integration/api_integration_test.dart
 
 ### ✅ Pruebas
 - `test/services/booking_service_test.dart` - Nuevo
-- `test/services/entry_exit_service_test.dart` - Nuevo
+- `test/services/access_service_test.dart` - Nuevo
 - `test/services/subscription_service_test.dart` - Nuevo
 - `test/integration/api_integration_test.dart` - Nuevo
 - `test/test_runner.dart` - Nuevo

@@ -1,6 +1,6 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 import { UserSchema, User, UserCreateSchema, UserUpdateSchema } from "../models/user";
 import { NotFoundError } from "../utils/error";
 import { ParkingSimpleSchema } from "../models/parking";
@@ -14,7 +14,7 @@ export const userController = new Elysia({
     security: [{ branchId: [], token: [] }],
   },
 })
-  .use(accessPlugin)
+  .use(authPlugin)
   .get(
     "/",
     async ({ query }) => {

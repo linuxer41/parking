@@ -1,6 +1,6 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 import { EmployeeSchema, Employee, EmployeeCreateSchema, EmployeeUpdateSchema } from "../models/employee";
 import { NotFoundError } from "../utils/error";
 
@@ -13,7 +13,7 @@ export const employeeController = new Elysia({
     security: [{ branchId: [], token: [] }],
   },
 })
-  .use(accessPlugin)
+  .use(authPlugin)
   .get(
     "/",
     async ({ query }) => {

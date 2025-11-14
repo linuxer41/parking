@@ -1,19 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:parkar/services/booking_service.dart';
-import 'package:parkar/services/entry_exit_service.dart';
+import 'package:parkar/services/access_service.dart';
 import 'package:parkar/services/subscription_service.dart';
 import 'package:parkar/models/booking_model.dart';
 
 void main() {
   group('API Integration Tests', () {
     late BookingService bookingService;
-    late EntryExitService entryExitService;
+    late AccessService accessService;
     late SubscriptionService subscriptionService;
 
     setUp(() {
       bookingService = BookingService();
-      entryExitService = EntryExitService();
+      accessService = AccessService();
       subscriptionService = SubscriptionService();
     });
 
@@ -325,7 +325,7 @@ void main() {
     group('Service Configuration Tests', () {
       test('should have correct service instances', () {
         expect(bookingService, isA<BookingService>());
-        expect(entryExitService, isA<EntryExitService>());
+        expect(accessService, isA<AccessService>());
         expect(subscriptionService, isA<SubscriptionService>());
       });
     });

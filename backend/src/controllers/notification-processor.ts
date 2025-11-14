@@ -1,6 +1,6 @@
 import Elysia, { t } from "elysia";
 import { processNotifications } from "../utils/notification-sender";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 
 export const notificationProcessorController = new Elysia({
   prefix: "/notification-processor",
@@ -11,7 +11,7 @@ export const notificationProcessorController = new Elysia({
     security: [{ branchId: [], token: [] }],
   },
 })
-  .use(accessPlugin)
+  .use(authPlugin)
   .post(
     "/process",
     async () => {

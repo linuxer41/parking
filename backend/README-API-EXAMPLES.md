@@ -106,7 +106,7 @@ POST /booking
 
 ### Endpoint
 ```http
-POST /entry-exit
+POST /access
 ```
 
 ### Ejemplo de Request
@@ -183,7 +183,7 @@ POST /entry-exit
 Para registrar la salida de un vehículo:
 
 ```http
-POST /entry-exit/{id}/exit
+POST /access/{id}/exit
 ```
 
 ```json
@@ -310,7 +310,7 @@ GET /booking/stats/{parkingId}?startDate=2024-01-01&endDate=2024-01-31
 
 ### Estadísticas de Accesos
 ```http
-GET /entry-exit/stats/{parkingId}?startDate=2024-01-01&endDate=2024-01-31
+GET /access/stats/{parkingId}?startDate=2024-01-01&endDate=2024-01-31
 ```
 
 ### Estadísticas de Suscripciones
@@ -395,7 +395,7 @@ curl -X POST http://localhost:3002/booking \
 
 ### Crear un Acceso
 ```bash
-curl -X POST http://localhost:3002/entry-exit \
+curl -X POST http://localhost:3002/access \
   -H "Authorization: Bearer tu_token_aqui" \
   -H "parking-id: 550e8400-e29b-41d4-a716-446655440000" \
   -H "employee-id: 550e8400-e29b-41d4-a716-446655440002" \
@@ -439,7 +439,7 @@ curl -X POST http://localhost:3002/subscription \
 - Si ya existe, se usa el vehículo existente
 
 ### Números Únicos
-- Cada booking, entry-exit y subscription tiene un número único por parking
+- Cada booking, access y subscription tiene un número único por parking
 - Los números se generan automáticamente
 
 ### Estados

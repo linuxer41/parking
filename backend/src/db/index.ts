@@ -1,5 +1,5 @@
 import { bookingCrud } from "./crud/booking";
-import { entryExitCrud } from "./crud/entry-exit";
+import { accessCrud } from "./crud/access";
 import { subscriptionCrud } from "./crud/subscription";
 import * as parkingCrud from "./crud/parking";
 import * as vehicleCrud from "./crud/vehicle";
@@ -25,17 +25,17 @@ export const db = {
   },
 
   // ===== ENTRY/EXIT (ACCESOS) =====
-  entryExit: {
-    create: entryExitCrud.createEntryExit,
-    find: entryExitCrud.findEntryExits,
-    findById: entryExitCrud.getEntryExitById,
-    update: entryExitCrud.updateEntryExit,
-    delete: entryExitCrud.deleteEntryExit,
-    registerExit: entryExitCrud.registerExit,
-    getActiveForSpot: entryExitCrud.getActiveEntryExitsForSpot,
-    getActiveForVehicle: entryExitCrud.getActiveEntryExitsForVehicle,
-    getStats: entryExitCrud.getEntryExitStats,
-    generateNumber: entryExitCrud.generateEntryExitNumber,
+  access: {
+    create: accessCrud.createAccess,
+    find: accessCrud.findAccesss,
+    findById: accessCrud.getAccessById,
+    update: accessCrud.updateAccess,
+    delete: accessCrud.deleteAccess,
+    registerExit: accessCrud.registerExit,
+    getActiveForSpot: accessCrud.getActiveAccesssForSpot,
+    getActiveForVehicle: accessCrud.getActiveAccesssForVehicle,
+    getStats: accessCrud.getAccessStats,
+    generateNumber: accessCrud.generateAccessNumber,
   },
 
   // ===== SUBSCRIPTION (SUSCRIPCIONES) =====

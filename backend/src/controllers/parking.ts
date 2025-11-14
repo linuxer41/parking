@@ -1,12 +1,19 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
-import { 
-  Parking, ParkingSchema, ParkingCreateSchema, ParkingUpdateSchema, ParkingDetailedResponseSchema,
-  AreaCreateRequestSchema, AreaUpdateRequestSchema, AreaResponseSchema,
-  ElementCreateRequestSchema, ElementUpdateRequestSchema, ElementResponseSchema
+import {
+  AreaCreateRequestSchema,
+  AreaResponseSchema,
+  AreaUpdateRequestSchema,
+  ElementCreateRequestSchema,
+  ElementResponseSchema,
+  ElementUpdateRequestSchema,
+  Parking,
+  ParkingCreateSchema,
+  ParkingSchema,
+  ParkingUpdateSchema
 } from "../models/parking";
 import { authPlugin } from "../plugins";
-import { NotFoundError, BadRequestError, InternalServerError, ApiError } from "../utils/error";
+import { ApiError, InternalServerError, NotFoundError } from "../utils/error";
 
 export const parkingController = new Elysia({
   prefix: "/parkings",

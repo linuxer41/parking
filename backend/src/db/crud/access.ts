@@ -1,5 +1,5 @@
 import { pool, withTransaction } from "../connection";
-import { EntryExit, EntryExitCreate, EntryExitUpdate, EntryExitCreateRequest, ExitRequest, ACCESS_STATUS } from "../../models/entry-exit";
+import { Access, AccessCreate, AccessUpdate, AccessCreateRequest, ExitRequest, ACCESS_STATUS } from "../../models/access";
 import { BadRequestError } from "../../utils/error";
 import { getSchemaValidator } from "elysia";
 import { VehicleCreateSchema } from "../../models/vehicle";
@@ -10,10 +10,10 @@ import { randomUUID } from "crypto";
 /**
  * Generar número único para un acceso
  */
-const generateEntryExitNumber = async (parkingId: string): Promise<number> => {
+const generateAccessNumber = async (parkingId: string): Promise<number> => {
   const result = await pool.query(`
     SELECT COALESCE(MAX("number"), 0) + 1 as next_number
-    FROM t_entry_exit
+    FROM t_access
     WHERE "parkingId" = $1
   `, [parkingId]);
 
@@ -23,18 +23,18 @@ const generateEntryExitNumber = async (parkingId: string): Promise<number> => {
 /**
  * Obtener un acceso por ID
  */
-const getEntryExitById = async (id: string): Promise<EntryExit | null> => {
-  const entryExits = await findEntryExits({ id: id });
-  if (entryExits.length === 0) {
+const getAccessById = async (id: string): Promise<Access | null> => {
+  const accesss = await findAccesss({ id: id });
+  if (accesss.length === 0) {
     return null;
   }
-  return entryExits[0];
+  return accesss[0];
 };
 
 /**
  * Buscar accesos por filtros
  */
-const findEntryExits = async (filters: {
+const findAccesss = async (filters: {
   id?: string;
   parkingId?: string;
   employeeId?: string;
@@ -43,7 +43,7 @@ const findEntryExits = async (filters: {
   status?: string;
   startDate?: string;
   endDate?: string;
-} = {}): Promise<EntryExit[]> => {
+} = {}): Promise<Access[]> => {
   const conditions: string[] = [];
   const values: any[] = [];
   let paramIndex = 1;
@@ -125,7 +125,7 @@ const findEntryExits = async (filters: {
         'ownerPhone', v."ownerPhone",
         'isSubscribed', v."isSubscribed"
       ) as vehicle
-    FROM t_entry_exit ee
+    FROM t_access ee
     LEFT JOIN t_vehicle v ON ee.vehicleId = v.id
     LEFT JOIN t_parking p ON ee.parkingId = p.id
     LEFT JOIN t_employee e ON ee.employeeId = e.id
@@ -144,8 +144,8 @@ const findEntryExits = async (filters: {
 /**
  * Crear un nuevo acceso (entrada)
  */
-const createEntryExit = async (data: EntryExitCreateRequest, parkingId: string, employeeId: string): Promise<EntryExit> => {
-  const entryExit = await withTransaction(async (client) => {
+const createAccess = async (data: AccessCreateRequest, parkingId: string, employeeId: string): Promise<Access> => {
+  const access = await withTransaction(async (client) => {
     const { vehiclePlate, vehicleType, vehicleColor, ownerName, ownerDocument, ownerPhone, spotId, notes } = data;
 
     // Buscar vehículo existente o crear uno nuevo
@@ -179,10 +179,10 @@ const createEntryExit = async (data: EntryExitCreateRequest, parkingId: string, 
     }
 
     // Generar número de acceso
-    const number = await generateEntryExitNumber(parkingId);
+    const number = await generateAccessNumber(parkingId);
 
     // Crear el acceso
-    const entryExitData = {
+    const accessData = {
       id: randomUUID(),
       createdAt: new Date().toISOString(),
       number,
@@ -198,23 +198,23 @@ const createEntryExit = async (data: EntryExitCreateRequest, parkingId: string, 
       notes: notes || null,
     };
 
-    const columns = Object.keys(entryExitData)
+    const columns = Object.keys(accessData)
       .map((key) => `"${key}"`)
       .join(", ");
-    const values = Object.values(entryExitData);
+    const values = Object.values(accessData);
     const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
 
     const result = await client.query(`
-      INSERT INTO t_entry_exit (${columns})
+      INSERT INTO t_access (${columns})
       VALUES (${placeholders})
       RETURNING *
     `, values);
 
     return result.rows[0];
   });
-  console.log({entryExit});
+  console.log({access});
 
-  const result = await getEntryExitById(entryExit.id);
+  const result = await getAccessById(access.id);
   if (!result) {
     throw new BadRequestError("Error al crear el acceso");
   }
@@ -224,7 +224,7 @@ const createEntryExit = async (data: EntryExitCreateRequest, parkingId: string, 
 /**
  * Registrar salida de un vehículo
  */
-const registerExit = async (id: string, data: ExitRequest): Promise<EntryExit> => {
+const registerExit = async (id: string, data: ExitRequest): Promise<Access> => {
   const { exitEmployeeId, amount, notes } = data;
 
   const updates: string[] = [];
@@ -256,7 +256,7 @@ const registerExit = async (id: string, data: ExitRequest): Promise<EntryExit> =
   values.push(id);
 
   const result = await pool.query(`
-    UPDATE t_entry_exit
+    UPDATE t_access
     SET ${updates.join(", ")}
     WHERE "id" = $${paramIndex}
     RETURNING *
@@ -266,17 +266,17 @@ const registerExit = async (id: string, data: ExitRequest): Promise<EntryExit> =
     throw new BadRequestError("Acceso no encontrado");
   }
 
-  const updatedEntryExit = await getEntryExitById(id);
-  if (!updatedEntryExit) {
+  const updatedAccess = await getAccessById(id);
+  if (!updatedAccess) {
     throw new BadRequestError("Error al obtener el acceso actualizado");
   }
-  return updatedEntryExit;
+  return updatedAccess;
 };
 
 /**
  * Actualizar un acceso
  */
-const updateEntryExit = async (id: string, data: EntryExitUpdate): Promise<EntryExit | null> => {
+const updateAccess = async (id: string, data: AccessUpdate): Promise<Access | null> => {
   const updates: string[] = [];
   const values: any[] = [];
   let paramIndex = 1;
@@ -293,12 +293,12 @@ const updateEntryExit = async (id: string, data: EntryExitUpdate): Promise<Entry
   });
 
   if (updates.length === 1) { // Solo updatedAt
-    return getEntryExitById(id);
+    return getAccessById(id);
   }
 
   values.push(id);
   const result = await pool.query(`
-    UPDATE t_entry_exit
+    UPDATE t_access
     SET ${updates.join(", ")}
     WHERE "id" = $${paramIndex}
     RETURNING *
@@ -310,9 +310,9 @@ const updateEntryExit = async (id: string, data: EntryExitUpdate): Promise<Entry
 /**
  * Eliminar un acceso
  */
-const deleteEntryExit = async (id: string): Promise<boolean> => {
+const deleteAccess = async (id: string): Promise<boolean> => {
   const result = await pool.query(`
-    DELETE FROM t_entry_exit WHERE "id" = $1
+    DELETE FROM t_access WHERE "id" = $1
   `, [id]);
 
   return result.rowCount ? result.rowCount > 0 : false;
@@ -321,9 +321,9 @@ const deleteEntryExit = async (id: string): Promise<boolean> => {
 /**
  * Obtener accesos activos para un spot
  */
-const getActiveEntryExitsForSpot = async (spotId: string): Promise<EntryExit[]> => {
+const getActiveAccesssForSpot = async (spotId: string): Promise<Access[]> => {
   const result = await pool.query(`
-    SELECT * FROM t_entry_exit
+    SELECT * FROM t_access
     WHERE "spotId" = $1
       AND "status" = 'entered'
     ORDER BY "entryTime" DESC
@@ -335,9 +335,9 @@ const getActiveEntryExitsForSpot = async (spotId: string): Promise<EntryExit[]> 
 /**
  * Obtener accesos activos para un vehículo
  */
-const getActiveEntryExitsForVehicle = async (vehicleId: string): Promise<EntryExit[]> => {
+const getActiveAccesssForVehicle = async (vehicleId: string): Promise<Access[]> => {
   const result = await pool.query(`
-    SELECT * FROM t_entry_exit
+    SELECT * FROM t_access
     WHERE "vehicleId" = $1
       AND "status" = 'entered'
     ORDER BY "entryTime" DESC
@@ -349,7 +349,7 @@ const getActiveEntryExitsForVehicle = async (vehicleId: string): Promise<EntryEx
 /**
  * Obtener estadísticas de accesos por parking
  */
-const getEntryExitStats = async (parkingId: string, startDate?: string, endDate?: string): Promise<{
+const getAccessStats = async (parkingId: string, startDate?: string, endDate?: string): Promise<{
   total: number;
   entered: number;
   exited: number;
@@ -377,7 +377,7 @@ const getEntryExitStats = async (parkingId: string, startDate?: string, endDate?
       COUNT(CASE WHEN "status" = 'entered' THEN 1 END) as entered,
       COUNT(CASE WHEN "status" = 'exited' THEN 1 END) as exited,
       COUNT(CASE WHEN "status" = 'cancelled' THEN 1 END) as cancelled
-    FROM t_entry_exit
+    FROM t_access
     WHERE ${whereClause}
   `, values);
 
@@ -390,15 +390,15 @@ const getEntryExitStats = async (parkingId: string, startDate?: string, endDate?
   };
 };
 
-export const entryExitCrud = {
-  createEntryExit,
+export const accessCrud = {
+  createAccess,
   registerExit,
-  findEntryExits,
-  getEntryExitById,
-  updateEntryExit,
-  deleteEntryExit,
-  getActiveEntryExitsForSpot,
-  getActiveEntryExitsForVehicle,
-  getEntryExitStats,
-  generateEntryExitNumber,
+  findAccesss,
+  getAccessById,
+  updateAccess,
+  deleteAccess,
+  getActiveAccesssForSpot,
+  getActiveAccesssForVehicle,
+  getAccessStats,
+  generateAccessNumber,
 };

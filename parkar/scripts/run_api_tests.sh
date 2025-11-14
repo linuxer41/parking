@@ -74,7 +74,7 @@ fi
 
 # Entry/Exit Service Tests
 print_status "  - Entry/Exit Service Tests..."
-flutter test test/services/entry_exit_service_test.dart
+flutter test test/services/access_service_test.dart
 
 if [ $? -eq 0 ]; then
     print_success "  ✅ Entry/Exit Service Tests pasaron"
@@ -132,7 +132,7 @@ print_success "🏁 Parkar API Tests Suite completado!"
 echo ""
 print_status "📊 Resumen de pruebas ejecutadas:"
 echo "  - ✅ Pruebas unitarias de BookingService"
-echo "  - ✅ Pruebas unitarias de EntryExitService"
+echo "  - ✅ Pruebas unitarias de AccessService"
 echo "  - ✅ Pruebas unitarias de SubscriptionService"
 echo "  - ✅ Pruebas de integración de API"
 echo ""

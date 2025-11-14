@@ -1,5 +1,5 @@
 import '../services/booking_service.dart';
-import '../services/entry_exit_service.dart';
+import '../services/access_service.dart';
 import '../services/subscription_service.dart';
 import '../models/booking_model.dart';
 
@@ -7,15 +7,15 @@ import '../models/booking_model.dart';
 /// Basado en la documentación de la API proporcionada
 class ApiUsageExamples {
   final BookingService _bookingService;
-  final EntryExitService _entryExitService;
+  final AccessService _accessService;
   final SubscriptionService _subscriptionService;
 
   ApiUsageExamples({
     required BookingService bookingService,
-    required EntryExitService entryExitService,
+    required AccessService accessService,
     required SubscriptionService subscriptionService,
   }) : _bookingService = bookingService,
-       _entryExitService = entryExitService,
+       _accessService = accessService,
        _subscriptionService = subscriptionService;
 
   /// Ejemplo 1: Crear una reserva (booking)
@@ -50,16 +50,12 @@ class ApiUsageExamples {
       notes: 'Cliente frecuente',
     );
 
-    return await _entryExitService.createEntry(
-      accessModel,
-      parkingId: '550e8400-e29b-41d4-a716-446655440000', // Example parking ID
-      employeeId: '550e8400-e29b-41d4-a716-446655440002', // Example employee ID
-    );
+    return await _accessService.createEntry(accessModel);
   }
 
   /// Ejemplo 3: Registrar salida de un vehículo
   Future<BookingModel> registerExitExample(String entryId) async {
-    return await _entryExitService.registerExit(
+    return await _accessService.registerExit(
       entryId: entryId,
       amount: 5000.0,
       notes: 'Pago en efectivo',
@@ -114,10 +110,10 @@ class ApiUsageExamples {
   }
 
   /// Ejemplo 8: Obtener accesos por parking
-  Future<List<BookingModel>> getEntryExitsByParkingExample(
+  Future<List<BookingModel>> getAccesssByParkingExample(
     String parkingId,
   ) async {
-    return await _entryExitService.getEntryExitsByParking(parkingId);
+    return await _accessService.getAccesssByParking(parkingId);
   }
 
   /// Ejemplo 9: Obtener suscripciones por parking
@@ -129,11 +125,11 @@ class ApiUsageExamples {
 
   /// Ejemplo 10: Calcular tarifa de salida
   Future<double> calculateExitFeeExample(String entryId) async {
-    return await _entryExitService.calculateExitFee(entryId);
+    return await _accessService.calculateExitFee(entryId);
   }
 
   /// Ejemplo completo: Flujo de entrada y salida
-  Future<void> completeEntryExitFlowExample() async {
+  Future<void> completeAccessFlowExample() async {
     try {
       // 1. Crear entrada
       final entry = await createEntryExample();
@@ -184,9 +180,9 @@ class VehicleTypeExamples {
       notes: 'Moto de repartidor',
     );
 
-    // Asumiendo que tienes acceso al EntryExitService
-    // return await _entryExitService.createEntry(accessModel);
-    throw UnimplementedError('Implementar acceso al EntryExitService');
+    // Asumiendo que tienes acceso al AccessService
+    // return await _accessService.createEntry(accessModel);
+    throw UnimplementedError('Implementar acceso al AccessService');
   }
 
   /// Crear acceso para camión
@@ -200,9 +196,9 @@ class VehicleTypeExamples {
       notes: 'Carga pesada',
     );
 
-    // Asumiendo que tienes acceso al EntryExitService
-    // return await _entryExitService.createEntry(accessModel);
-    throw UnimplementedError('Implementar acceso al EntryExitService');
+    // Asumiendo que tienes acceso al AccessService
+    // return await _accessService.createEntry(accessModel);
+    throw UnimplementedError('Implementar acceso al AccessService');
   }
 
   /// Crear suscripción anual

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/booking_service.dart';
-import '../../../services/entry_exit_service.dart';
+import '../../../services/access_service.dart';
 import '../../../services/subscription_service.dart';
 import '../../../state/app_state_container.dart';
 import '../../../models/booking_model.dart';
@@ -123,10 +123,10 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         throw Exception('No hay información de suscripción disponible');
       }
 
-      // Crear acceso usando el EntryExitService con los datos de la suscripción
-      final entryExitService = AppStateContainer.di(
+      // Crear acceso usando el AccessService con los datos de la suscripción
+      final accessService = AppStateContainer.di(
         context,
-      ).resolve<EntryExitService>();
+      ).resolve<AccessService>();
       final appState = AppStateContainer.of(context);
 
       final accessModel = AccessCreateModel(
@@ -140,11 +140,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         notes: 'Entrada de suscriptor',
       );
 
-      final entry = await entryExitService.createEntry(
-        accessModel,
-        parkingId: appState.currentParking?.id ?? '',
-        employeeId: appState.employee?.id ?? '',
-      );
+      final entry = await accessService.createEntry(accessModel);
 
       // Actualizar el spot con los datos del acceso
       _updateSpotWithAccessData(entry);
@@ -157,9 +153,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Entrada registrada para ${subscription.vehiclePlate}',
-          ),
+          content: Text('Entrada registrada para ${subscription.vehiclePlate}'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

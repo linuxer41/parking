@@ -84,12 +84,7 @@ class BaseService {
       'Accept': 'application/json',
     };
 
-    final parkingId = _getParkingId();
-    if (parkingId != null) {
-      headers['parking-id'] = parkingId;
-    }
-
-    // Add auth token if available
+    // Add auth token if available (JWT contains tenant and employee info)
     final token = _getAuthToken();
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';

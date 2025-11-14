@@ -3,7 +3,7 @@ import '../services/auth_service.dart';
 import '../services/booking_service.dart';
 import '../services/cash_register_service.dart';
 import '../services/employee_service.dart';
-import '../services/entry_exit_service.dart';
+import '../services/access_service.dart';
 import '../services/level_service.dart';
 import '../services/movement_service.dart';
 import '../services/parking_service.dart';
@@ -29,7 +29,7 @@ class DIContainer {
     _dependencies[VehicleService] = VehicleService();
     _dependencies[MovementService] = MovementService();
     _dependencies[BookingService] = BookingService();
-    _dependencies[EntryExitService] = EntryExitService();
+    _dependencies[AccessService] = AccessService();
     _dependencies[SubscriptionService] = SubscriptionService();
 
     // Register additional services

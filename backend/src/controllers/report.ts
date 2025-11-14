@@ -1,7 +1,7 @@
 import Elysia from "elysia";
 import { t } from "elysia";
 import { db } from "../db";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 import {
   OccupancyReportSchema,
   ReportFilterSchema,
@@ -18,7 +18,7 @@ export const reportController = new Elysia({
     security: [{ branchId: [], token: [] }],
   },
 })
-  .use(accessPlugin)
+  .use(authPlugin)
   .post(
     "/occupancy",
     async ({ body }) => {

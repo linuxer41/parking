@@ -62,7 +62,7 @@ flutter test test/services/booking_service_test.dart
 
 # Entry/Exit Service Tests
 Write-Status "  - Entry/Exit Service Tests..."
-flutter test test/services/entry_exit_service_test.dart
+flutter test test/services/access_service_test.dart
 
 # Subscription Service Tests
 Write-Status "  - Subscription Service Tests..."

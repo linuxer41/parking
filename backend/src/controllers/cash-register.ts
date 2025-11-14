@@ -1,6 +1,6 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 import { CashRegisterSchema, CashRegister, CashRegisterCreateSchema, CashRegisterUpdateSchema } from "../models/cash-register";
 import { NotFoundError } from "../utils/error";
 
@@ -13,7 +13,7 @@ export const cashRegisterController = new Elysia({
     security: [{ branchId: [], token: [] }],
   },
 })
-  .use(accessPlugin)
+  .use(authPlugin)
   .get(
     "/",
     async ({ query }) => {

@@ -2,22 +2,14 @@ import '../config/app_config.dart';
 import '../models/booking_model.dart';
 import 'base_service.dart';
 
-class EntryExitService extends BaseService {
-  EntryExitService()
-    : super(path: AppConfig.apiEndpoints['entryExit'] ?? '/entry-exit');
+class AccessService extends BaseService {
+  AccessService()
+    : super(path: AppConfig.apiEndpoints['access'] ?? '/entry-exit');
 
-  Future<BookingModel> createEntry(
-    AccessCreateModel access, {
-    required String parkingId,
-    required String employeeId,
-  }) async {
+  Future<BookingModel> createEntry(AccessCreateModel access) async {
     return post<BookingModel>(
       endpoint: '',
       body: access.toJson(),
-      additionalHeaders: {
-        'parking-id': parkingId,
-        'employee-id': employeeId,
-      },
       parser: (json) => parseModel(json, BookingModel.fromJson),
     );
   }
@@ -35,10 +27,8 @@ class EntryExitService extends BaseService {
     required double amount,
     String? notes,
   }) async {
-    final data = <String, dynamic>{
-      'amount': amount,
-    };
-    
+    final data = <String, dynamic>{'amount': amount};
+
     if (notes != null) {
       data['notes'] = notes;
     }
@@ -50,14 +40,14 @@ class EntryExitService extends BaseService {
     );
   }
 
-  Future<BookingModel> getEntryExit(String id) async {
+  Future<BookingModel> getAccess(String id) async {
     return get<BookingModel>(
       endpoint: '/$id',
       parser: (json) => parseModel(json, BookingModel.fromJson),
     );
   }
 
-  Future<BookingModel> updateEntryExit(
+  Future<BookingModel> updateAccess(
     String id,
     Map<String, dynamic> data,
   ) async {
@@ -68,11 +58,11 @@ class EntryExitService extends BaseService {
     );
   }
 
-  Future<void> deleteEntryExit(String id) async {
+  Future<void> deleteAccess(String id) async {
     return delete<void>(endpoint: '/$id', parser: (_) => null);
   }
 
-  Future<List<BookingModel>> getEntryExitsByParking(String parkingId) async {
+  Future<List<BookingModel>> getAccesssByParking(String parkingId) async {
     return get<List<BookingModel>>(
       endpoint: '',
       additionalHeaders: {'parkingId': parkingId},

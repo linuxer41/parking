@@ -128,7 +128,7 @@ export async function deleteParking(id: string): Promise<Parking> {
   });
 }
 
-export async function findParkingsByOwnerId(ownerId: string): Promise<ParkingResponse[]> {
+export async function findParkingsByUserId(ownerId: string): Promise<ParkingResponse[]> {
   const sql = `
   WITH parking_stats AS (
     SELECT

@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:parkar/services/entry_exit_service.dart';
+import 'package:parkar/services/access_service.dart';
 import 'package:parkar/models/booking_model.dart';
 
 void main() {
-  group('EntryExitService Tests', () {
-    late EntryExitService entryExitService;
+  group('AccessService Tests', () {
+    late AccessService accessService;
 
     setUp(() {
-      entryExitService = EntryExitService();
+      accessService = AccessService();
     });
 
     group('AccessCreateModel', () {
@@ -65,9 +65,7 @@ void main() {
 
       test('should handle minimal required fields', () {
         // Arrange
-        final accessModel = AccessCreateModel(
-          vehiclePlate: 'ABC123',
-        );
+        final accessModel = AccessCreateModel(vehiclePlate: 'ABC123');
 
         // Assert
         expect(accessModel.vehiclePlate, equals('ABC123'));
@@ -82,9 +80,7 @@ void main() {
 
       test('should handle empty vehicle plate', () {
         // Arrange
-        final accessModel = AccessCreateModel(
-          vehiclePlate: '',
-        );
+        final accessModel = AccessCreateModel(vehiclePlate: '');
 
         // Assert
         expect(accessModel.vehiclePlate, equals(''));
@@ -101,7 +97,7 @@ void main() {
     group('Service Configuration', () {
       test('should have correct base path', () {
         // Assert
-        expect(entryExitService, isA<EntryExitService>());
+        expect(accessService, isA<AccessService>());
       });
     });
   });

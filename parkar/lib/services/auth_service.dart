@@ -67,7 +67,7 @@ class AuthService extends BaseService {
   ) async {
     try {
       final response = await post<AuthResponseModel>(
-        endpoint: '/register-complete',
+        endpoint: '/sign-up',
         body: registerData,
         parser: (json) => parseModel(json, AuthResponseModel.fromJson),
       );

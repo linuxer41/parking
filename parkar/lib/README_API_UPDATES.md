@@ -46,7 +46,7 @@ Esta actualización implementa los cambios necesarios para que la aplicación Fl
 - `createReservation()`: Método específico para crear reservas
 - `renewSubscription()`: Mejorado para aceptar parámetros opcionales
 
-#### `lib/services/entry_exit_service.dart`
+#### `lib/services/access_service.dart`
 
 **Endpoints actualizados:**
 - `/entry-exits` → `/entry-exit`
@@ -73,7 +73,7 @@ Esta actualización implementa los cambios necesarios para que la aplicación Fl
 ```dart
 static Map<String, String> apiEndpoints = {
   'booking': '/booking',
-  'entryExit': '/entry-exit', 
+  'access': '/entry-exit', 
   'subscription': '/subscription',
   'parking': '/parking',
   'vehicle': '/vehicle',
@@ -136,7 +136,7 @@ final accessModel = AccessCreateModel(
   notes: 'Cliente frecuente',
 );
 
-final entry = await entryExitService.createEntry(accessModel);
+final entry = await accessService.createEntry(accessModel);
 ```
 
 ### Crear una Suscripción
@@ -160,7 +160,7 @@ final subscription = await subscriptionService.createSubscription(subscriptionMo
 ### Registrar Salida
 
 ```dart
-final exit = await entryExitService.registerExit(
+final exit = await accessService.registerExit(
   entryId: entryId,
   amount: 5000.0,
   notes: 'Pago en efectivo',

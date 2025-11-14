@@ -18,12 +18,14 @@ class AuthManager {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userDataKey = 'user_data';
   static const String _parkingIdKey = 'parking_id';
+  static const String _employeeIdKey = 'employee_id';
 
   // State management
   String? _currentToken;
   String? _currentRefreshToken;
   Map<String, dynamic>? _currentUserData;
   String? _currentParkingId;
+  String? _currentEmployeeId;
 
   // Test mode flag
   bool _isTestMode = false;
@@ -54,9 +56,30 @@ class AuthManager {
   /// Get current parking ID
   String? get parkingId => _currentParkingId;
 
+  /// Get current employee ID
+  String? get employeeId => _currentEmployeeId;
+
   /// Check if user is authenticated
   bool get isAuthenticated =>
       _currentToken != null && _currentToken!.isNotEmpty;
+
+  /// Decode JWT token payload
+  Map<String, dynamic>? _decodeJwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      // Decode the payload (second part)
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+
+      return json.decode(decoded) as Map<String, dynamic>;
+    } catch (e) {
+      print('Error decoding JWT token: $e');
+      return null;
+    }
+  }
 
   /// Initialize auth manager and load stored data
   Future<void> initialize() async {
@@ -75,6 +98,7 @@ class AuthManager {
       _currentToken = prefs.getString(_tokenKey);
       _currentRefreshToken = prefs.getString(_refreshTokenKey);
       _currentParkingId = prefs.getString(_parkingIdKey);
+      _currentEmployeeId = prefs.getString(_employeeIdKey);
 
       final userDataString = prefs.getString(_userDataKey);
       if (userDataString != null) {
@@ -108,6 +132,10 @@ class AuthManager {
         await prefs.setString(_parkingIdKey, _currentParkingId!);
       }
 
+      if (_currentEmployeeId != null) {
+        await prefs.setString(_employeeIdKey, _currentEmployeeId!);
+      }
+
       if (_currentUserData != null) {
         await prefs.setString(_userDataKey, json.encode(_currentUserData));
       }
@@ -126,7 +154,15 @@ class AuthManager {
     _currentToken = token;
     _currentRefreshToken = refreshToken;
     _currentUserData = userData;
-    _currentParkingId = parkingId;
+
+    // Decode JWT token to extract tenant and employee information
+    final jwtPayload = _decodeJwtPayload(token);
+    if (jwtPayload != null) {
+      _currentParkingId = jwtPayload['tenant']?.toString() ?? parkingId;
+      _currentEmployeeId = jwtPayload['employee']?.toString();
+    } else {
+      _currentParkingId = parkingId;
+    }
 
     await _saveAuthData();
     _notifyTokenChange(token);
@@ -152,6 +188,7 @@ class AuthManager {
     _currentRefreshToken = null;
     _currentUserData = null;
     _currentParkingId = null;
+    _currentEmployeeId = null;
 
     if (!_isTestMode) {
       try {
@@ -160,6 +197,7 @@ class AuthManager {
         await prefs.remove(_refreshTokenKey);
         await prefs.remove(_userDataKey);
         await prefs.remove(_parkingIdKey);
+        await prefs.remove(_employeeIdKey);
       } catch (e) {
         print('Error clearing auth data: $e');
       }

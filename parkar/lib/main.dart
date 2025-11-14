@@ -57,7 +57,7 @@ void main() async {
       'parking': '/parkings',
       'vehicle': '/vehicles',
       'booking': '/booking',
-      'entryExit': '/entry-exit',
+      'access': '/entry-exit',
       'subscription': '/subscriptions',
       'exit': '/exits',
       'cashRegister': '/cash_registers',

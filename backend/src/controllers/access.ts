@@ -1,17 +1,17 @@
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { 
-  EntryExitCreateRequestSchema,
-  EntryExitUpdateSchema, 
-  EntryExitResponseSchema,
+  AccessCreateRequestSchema,
+  AccessUpdateSchema, 
+  AccessResponseSchema,
   ExitRequestSchema,
   ACCESS_STATUS
-} from "../models/entry-exit";
-import { accessPlugin } from "../plugins/access";
+} from "../models/access";
+import { authPlugin } from "../plugins/access";
 import { BadRequestError, NotFoundError } from "../utils/error";
 
-export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["entry-exit"] })
-  .use(accessPlugin)
+export const accessController = new Elysia({ prefix: "/access", tags: ["access"] })
+  .use(authPlugin)
   
   // ===== ENDPOINTS PRINCIPALES =====
   
@@ -36,8 +36,8 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
     
-    const entryExits = await db.entryExit.find(filters);
-    return entryExits;
+    const accesss = await db.access.find(filters);
+    return accesss;
   }, {
     query: t.Object({
       parkingId: t.Optional(t.String()),
@@ -53,7 +53,7 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
       description: "Retorna una lista de todos los accesos con filtros opcionales.",
     },
     response: {
-      200: t.Array(EntryExitResponseSchema),
+      200: t.Array(AccessResponseSchema),
       400: t.String(),
       500: t.String(),
     },
@@ -61,74 +61,49 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   
   // Obtener un acceso por ID
   .get("/:id", async ({ params }) => {
-    const entryExit = await db.entryExit.findById(params.id);
-    if (!entryExit) {
+    const access = await db.access.findById(params.id);
+    if (!access) {
       throw new NotFoundError("Acceso no encontrado");
     }
-    return entryExit;
+    return access;
   }, {
     detail: {
       summary: "Obtener un acceso por ID",
       description: "Retorna un acceso específico por su ID.",
     },
     response: {
-      200: EntryExitResponseSchema,
+      200: AccessResponseSchema,
       404: t.String(),
       500: t.String(),
     },
   })
   
   // Crear un nuevo acceso (entrada)
-  .post("/", async ({ body, headers }) => {
-    const parkingId = headers["parking-id"];
-    const employeeId = headers["employee-id"];
-
-    if (!parkingId || !employeeId) {
-      throw new BadRequestError("Se requiere parking-id y employee-id en headers");
-    }
-
-    // Verificar que el empleado existe
-    const employee = await db.employee.findById(employeeId);
-    if (!employee) {
-      throw new BadRequestError("Empleado no encontrado");
-    }
-
-    const entryExit = await db.entryExit.create(body, parkingId, employeeId);
-    return entryExit;
+  .post("/entry", async ({ body, parking, employee }) => {
+    const access = await db.access.create(body, parking.id, employee.id);
+    return access;
   }, {
-    body: EntryExitCreateRequestSchema,
+    body: AccessCreateRequestSchema,
     detail: {
       summary: "Crear un nuevo acceso",
       description: "Crea un nuevo acceso (entrada) para un vehículo.",
     },
     response: {
-      200: EntryExitResponseSchema,
+      200: AccessResponseSchema,
       400: t.String(),
       500: t.String(),
     },
   })
   
   // Registrar salida de un vehículo
-  .post("/:id/exit", async ({ params, body, headers }) => {
-    const exitEmployeeId = headers["employee-id"];
-
-    if (!exitEmployeeId) {
-      throw new BadRequestError("Se requiere employee-id en headers");
-    }
-
-    // Verificar que el empleado existe
-    const employee = await db.employee.findById(exitEmployeeId);
-    if (!employee) {
-      throw new BadRequestError("Empleado no encontrado");
-    }
-
+  .post("/:id/exit", async ({ params, body, employee }) => {
     const exitData = {
       ...body,
-      exitEmployeeId
+      exitEmployeeId: employee.id
     };
 
-    const entryExit = await db.entryExit.registerExit(params.id, exitData);
-    return entryExit;
+    const access = await db.access.registerExit(params.id, exitData);
+    return access;
   }, {
     body: ExitRequestSchema,
     detail: {
@@ -136,7 +111,7 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
       description: "Registra la salida de un vehículo y calcula el monto a pagar.",
     },
     response: {
-      200: EntryExitResponseSchema,
+      200: AccessResponseSchema,
       400: t.String(),
       404: t.String(),
       500: t.String(),
@@ -145,19 +120,19 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   
   // Actualizar un acceso
   .patch("/:id", async ({ params, body }) => {
-    const entryExit = await db.entryExit.update(params.id, body);
-    if (!entryExit) {
+    const access = await db.access.update(params.id, body);
+    if (!access) {
       throw new NotFoundError("Acceso no encontrado");
     }
-    return entryExit;
+    return access;
   }, {
-    body: EntryExitUpdateSchema,
+    body: AccessUpdateSchema,
     detail: {
       summary: "Actualizar un acceso",
       description: "Actualiza los datos de un acceso existente.",
     },
     response: {
-      200: EntryExitResponseSchema,
+      200: AccessResponseSchema,
       404: t.String(),
       500: t.String(),
     },
@@ -165,7 +140,7 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   
   // Eliminar un acceso
   .delete("/:id", async ({ params }) => {
-    const deleted = await db.entryExit.delete(params.id);
+    const deleted = await db.access.delete(params.id);
     if (!deleted) {
       throw new NotFoundError("Acceso no encontrado");
     }
@@ -186,30 +161,30 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   
   // Obtener accesos activos para un spot
   .get("/spot/:spotId/active", async ({ params }) => {
-    const entryExits = await db.entryExit.getActiveForSpot(params.spotId);
-    return entryExits;
+    const accesss = await db.access.getActiveForSpot(params.spotId);
+    return accesss;
   }, {
     detail: {
       summary: "Obtener accesos activos para un spot",
       description: "Retorna todos los accesos activos para un spot específico.",
     },
     response: {
-      200: t.Array(EntryExitResponseSchema),
+      200: t.Array(AccessResponseSchema),
       500: t.String(),
     },
   })
   
   // Obtener accesos activos para un vehículo
   .get("/vehicle/:vehicleId/active", async ({ params }) => {
-    const entryExits = await db.entryExit.getActiveForVehicle(params.vehicleId);
-    return entryExits;
+    const accesss = await db.access.getActiveForVehicle(params.vehicleId);
+    return accesss;
   }, {
     detail: {
       summary: "Obtener accesos activos para un vehículo",
       description: "Retorna todos los accesos activos para un vehículo específico.",
     },
     response: {
-      200: t.Array(EntryExitResponseSchema),
+      200: t.Array(AccessResponseSchema),
       500: t.String(),
     },
   })
@@ -217,7 +192,7 @@ export const entryExitController = new Elysia({ prefix: "/entry-exit", tags: ["e
   // Obtener estadísticas de accesos
   .get("/stats/:parkingId", async ({ params, query }) => {
     const { startDate, endDate } = query;
-    const stats = await db.entryExit.getStats(
+    const stats = await db.access.getStats(
       params.parkingId, 
       startDate as string, 
       endDate as string

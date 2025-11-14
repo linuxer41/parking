@@ -1,2 +1,1 @@
-export { authPlugin } from "./auth";
-export { accessPlugin } from "./access";
+export { authPlugin } from "./access";

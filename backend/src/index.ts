@@ -9,7 +9,7 @@ import { vehicleController } from "./controllers/vehicle";
 import { cashRegisterController } from "./controllers/cash-register";
 import { movementController } from "./controllers/movement";
 import { bookingController } from "./controllers/booking";
-import { entryExitController } from "./controllers/entry-exit";
+import { accessController } from "./controllers/access";
 import { subscriptionController } from "./controllers/subscription";
 import { reportController } from "./controllers/report";
 import { notificationController } from "./controllers/notification";
@@ -87,7 +87,7 @@ const app = new Elysia()
   .use(cashRegisterController)
   .use(movementController)
   .use(bookingController)
-  .use(entryExitController)
+  .use(accessController)
   .use(subscriptionController)
   .use(reportController)
   .use(notificationController)

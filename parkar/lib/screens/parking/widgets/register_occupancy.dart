@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../services/booking_service.dart';
-import '../../../services/entry_exit_service.dart';
+import '../../../services/access_service.dart';
 import '../../../services/subscription_service.dart';
 import '../../../services/vehicle_service.dart';
 import '../../../state/app_state_container.dart';
@@ -402,28 +402,26 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
         return;
       }
 
-      final entryExitService = AppStateContainer.di(
+      final accessService = AppStateContainer.di(
         context,
-      ).resolve<EntryExitService>();
+      ).resolve<AccessService>();
       BookingModel entry;
 
       // Determinar el tipo de entrada a registrar
       if (vehicle.subscription != null) {
         // Registrar entrada con suscripción
         final subscriptionId = vehicle.subscription!.id;
-        entry = await entryExitService.createEntry(
+        entry = await accessService.createEntry(
           AccessCreateModel(
             vehiclePlate: vehicle.plate,
             vehicleType: vehicle.type,
             vehicleColor: vehicle.color,
           ),
-          parkingId: parkingId,
-          employeeId: appState.employee?.id ?? '',
         );
       } else if (vehicle.reservation != null) {
         // Registrar entrada con reserva
         final reservationId = vehicle.reservation!.id;
-        entry = await entryExitService.registerEntry(reservationId);
+        entry = await accessService.registerEntry(reservationId);
       } else {
         // Registrar entrada normal (aunque tenga un acceso activo)
         await _registerNormalEntry(parkingId);
@@ -472,9 +470,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
   Future<void> _registerNormalEntry(String parkingId) async {
     try {
       final appState = AppStateContainer.of(context);
-      final entryExitService = AppStateContainer.di(
+      final accessService = AppStateContainer.di(
         context,
-      ).resolve<EntryExitService>();
+      ).resolve<AccessService>();
 
       // Determinar el modo de operación y spot ID según la configuración
       final operationMode = _getOperationMode(appState);
@@ -487,11 +485,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       final accessCreateModel = _createAccessModel(spotId: spotId);
 
       // Registrar entrada en el sistema
-      final entry = await entryExitService.createEntry(
-        accessCreateModel,
-        parkingId: parkingId,
-        employeeId: appState.employee?.id ?? '',
-      );
+      final entry = await accessService.createEntry(accessCreateModel);
 
       // Actualizar estado local del spot
       _updateSpotWithAccessData(entry);

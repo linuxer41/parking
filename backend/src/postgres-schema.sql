@@ -174,8 +174,8 @@ CREATE TABLE t_booking (
 );
 
 -- Tabla de entradas y salidas (accesos)
-DROP TABLE IF EXISTS t_entry_exit CASCADE;
-CREATE TABLE t_entry_exit (
+DROP TABLE IF EXISTS t_access CASCADE;
+CREATE TABLE t_access (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "createdAt" timestamptz NOT NULL DEFAULT NOW(),
   "updatedAt" timestamptz,
@@ -230,15 +230,15 @@ CREATE INDEX idx_booking_status ON t_booking ("status");
 CREATE INDEX idx_booking_dates ON t_booking ("startDate", "endDate");
 CREATE INDEX idx_booking_number ON t_booking ("number", "parkingId");
 
--- Índices para t_entry_exit
-CREATE INDEX idx_entry_exit_parking_id ON t_entry_exit ("parkingId");
-CREATE INDEX idx_entry_exit_employee_id ON t_entry_exit ("employeeId");
-CREATE INDEX idx_entry_exit_vehicle_id ON t_entry_exit ("vehicleId");
-CREATE INDEX idx_entry_exit_spot_id ON t_entry_exit ("spotId");
-CREATE INDEX idx_entry_exit_status ON t_entry_exit ("status");
-CREATE INDEX idx_entry_exit_entry_time ON t_entry_exit ("entryTime");
-CREATE INDEX idx_entry_exit_exit_time ON t_entry_exit ("exitTime");
-CREATE INDEX idx_entry_exit_number ON t_entry_exit ("number", "parkingId");
+-- Índices para t_access
+CREATE INDEX idx_access_parking_id ON t_access ("parkingId");
+CREATE INDEX idx_access_employee_id ON t_access ("employeeId");
+CREATE INDEX idx_access_vehicle_id ON t_access ("vehicleId");
+CREATE INDEX idx_access_spot_id ON t_access ("spotId");
+CREATE INDEX idx_access_status ON t_access ("status");
+CREATE INDEX idx_access_entry_time ON t_access ("entryTime");
+CREATE INDEX idx_access_exit_time ON t_access ("exitTime");
+CREATE INDEX idx_access_number ON t_access ("number", "parkingId");
 
 -- Índices para t_subscription
 CREATE INDEX idx_subscription_parking_id ON t_subscription ("parkingId");
@@ -257,12 +257,12 @@ COMMENT ON TABLE t_booking IS 'Tabla para reservas de estacionamiento';
 COMMENT ON COLUMN t_booking."status" IS 'Estado: pending, active, completed, cancelled';
 COMMENT ON COLUMN t_booking."number" IS 'Número secuencial de reserva por parking';
 
-COMMENT ON TABLE t_entry_exit IS 'Entradas y salidas de vehículos (accesos)';
-COMMENT ON COLUMN t_entry_exit."number" IS 'Número secuencial de entrada por parking';
-COMMENT ON COLUMN t_entry_exit."entryTime" IS 'Hora de entrada del vehículo';
-COMMENT ON COLUMN t_entry_exit."exitTime" IS 'Hora de salida del vehículo';
-COMMENT ON COLUMN t_entry_exit."exitEmployeeId" IS 'Empleado que registró la salida';
-COMMENT ON COLUMN t_entry_exit."status" IS 'Estado: entered, exited, cancelled';
+COMMENT ON TABLE t_access IS 'Entradas y salidas de vehículos (accesos)';
+COMMENT ON COLUMN t_access."number" IS 'Número secuencial de entrada por parking';
+COMMENT ON COLUMN t_access."entryTime" IS 'Hora de entrada del vehículo';
+COMMENT ON COLUMN t_access."exitTime" IS 'Hora de salida del vehículo';
+COMMENT ON COLUMN t_access."exitEmployeeId" IS 'Empleado que registró la salida';
+COMMENT ON COLUMN t_access."status" IS 'Estado: entered, exited, cancelled';
 
 COMMENT ON TABLE t_subscription IS 'Suscripciones de vehículos';
 COMMENT ON COLUMN t_subscription."number" IS 'Número secuencial de suscripción por parking';
@@ -401,7 +401,7 @@ CREATE INDEX idx_notification_created_at ON t_notification ("createdAt");
 
 -- Vista para el estado de ocupación de los elementos
 CREATE OR REPLACE VIEW v_element_occupancy AS
-WITH entry_exit_cte AS (
+WITH access_cte AS (
   SELECT
     e.id as "elementId",
     CASE WHEN ee.id IS NOT NULL THEN
@@ -417,7 +417,7 @@ WITH entry_exit_cte AS (
       )
     ELSE NULL END as entry_data
   FROM t_element e
-  LEFT JOIN t_entry_exit ee ON e.id = ee."spotId" AND ee.status = 'entered'
+  LEFT JOIN t_access ee ON e.id = ee."spotId" AND ee.status = 'entered'
   LEFT JOIN t_vehicle v ON ee."vehicleId" = v.id
   WHERE e.type = 'spot' AND e."deletedAt" IS NULL
 ),
@@ -466,7 +466,7 @@ subscription_cte AS (
 )
 SELECT
   e.id as "elementId",
-  (SELECT entry_data FROM entry_exit_cte WHERE "elementId" = e.id LIMIT 1) as entry,
+  (SELECT entry_data FROM access_cte WHERE "elementId" = e.id LIMIT 1) as entry,
   (SELECT subscription_data FROM subscription_cte WHERE "elementId" = e.id LIMIT 1) as subscription,
   (SELECT booking_data FROM booking_cte WHERE "elementId" = e.id LIMIT 1) as booking
 FROM t_element e

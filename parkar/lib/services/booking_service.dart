@@ -139,14 +139,14 @@ class BookingService extends BaseService {
     return registerExit(entryId: bookingId, amount: amount);
   }
 
-  Future<BookingModel> getEntryExit(String id) async {
+  Future<BookingModel> getAccess(String id) async {
     return get<BookingModel>(
       endpoint: '/entry-exit/$id',
       parser: (json) => parseModel(json, BookingModel.fromJson),
     );
   }
 
-  Future<BookingModel> updateEntryExit(
+  Future<BookingModel> updateAccess(
     String id,
     Map<String, dynamic> data,
   ) async {
@@ -157,11 +157,11 @@ class BookingService extends BaseService {
     );
   }
 
-  Future<void> deleteEntryExit(String id) async {
+  Future<void> deleteAccess(String id) async {
     return delete<void>(endpoint: '/entry-exit/$id', parser: (_) => null);
   }
 
-  Future<List<BookingModel>> getEntryExitsByParking(String parkingId) async {
+  Future<List<BookingModel>> getAccesssByParking(String parkingId) async {
     return get<List<BookingModel>>(
       endpoint: '/entry-exit',
       additionalHeaders: {'parkingId': parkingId},
@@ -260,7 +260,7 @@ class BookingService extends BaseService {
   }
 
   Future<void> cancelSubscription(String subscriptionId) async {
-    return deleteEntryExit(subscriptionId);
+    return deleteAccess(subscriptionId);
   }
 
   Future<void> cancelReservation(String reservationId) async {

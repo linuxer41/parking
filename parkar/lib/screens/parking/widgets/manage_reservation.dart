@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/booking_service.dart';
-import '../../../services/entry_exit_service.dart';
+import '../../../services/access_service.dart';
 import '../../../state/app_state_container.dart';
 import '../../../models/booking_model.dart';
 import '../../../models/parking_model.dart';
@@ -123,10 +123,10 @@ class _ManageReservationState extends State<ManageReservation> {
       }
 
       // Registrar entrada usando el servicio de entradas y salidas
-      final entryExitService = AppStateContainer.di(
+      final accessService = AppStateContainer.di(
         context,
-      ).resolve<EntryExitService>();
-      final entry = await entryExitService.registerEntry(reservation.id);
+      ).resolve<AccessService>();
+      final entry = await accessService.registerEntry(reservation.id);
 
       // Actualizar el spot con los datos del acceso
       _updateSpotWithAccessData(entry);

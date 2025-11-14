@@ -6,11 +6,11 @@ import {
   BookingResponseSchema,
   RESERVATION_STATUS
 } from "../models/booking";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 import { BadRequestError, NotFoundError } from "../utils/error";
 
 export const bookingController = new Elysia({ prefix: "/booking", tags: ["booking"] })
-  .use(accessPlugin)
+  .use(authPlugin)
   
   // ===== ENDPOINTS PRINCIPALES =====
   
@@ -78,15 +78,8 @@ export const bookingController = new Elysia({ prefix: "/booking", tags: ["bookin
   })
   
   // Crear una nueva reserva
-  .post("/", async ({ body, headers }) => {
-    const parkingId = headers["parking-id"];
-    const employeeId = headers["employee-id"];
-    
-    if (!parkingId || !employeeId) {
-      throw new BadRequestError("Se requiere parking-id y employee-id en headers");
-    }
-    
-    const booking = await db.booking.create(body, parkingId, employeeId);
+  .post("/", async ({ body, parking, employee }) => {
+    const booking = await db.booking.create(body, parking.id, employee.id);
     return booking;
   }, {
     body: BookingCreateRequestSchema,

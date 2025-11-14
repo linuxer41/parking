@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:parkar/services/auth_service.dart';
 import 'package:parkar/services/auth_manager.dart';
 import 'package:parkar/services/booking_service.dart';
-import 'package:parkar/services/entry_exit_service.dart';
+import 'package:parkar/services/access_service.dart';
 import 'package:parkar/services/subscription_service.dart';
 import 'package:parkar/models/auth_model.dart';
 import 'package:parkar/models/booking_model.dart';
@@ -15,13 +15,13 @@ void main() {
   group('Complete Authentication Flow Tests', () {
     late AuthService authService;
     late BookingService bookingService;
-    late EntryExitService entryExitService;
+    late AccessService accessService;
     late SubscriptionService subscriptionService;
 
     setUp(() async {
       authService = AuthService();
       bookingService = BookingService();
-      entryExitService = EntryExitService();
+      accessService = AccessService();
       subscriptionService = SubscriptionService();
 
       // Initialize AuthManager for tests and enable test mode
@@ -270,14 +270,14 @@ void main() {
       test('should have correct service instances for auth flow', () {
         expect(authService, isA<AuthService>());
         expect(bookingService, isA<BookingService>());
-        expect(entryExitService, isA<EntryExitService>());
+        expect(accessService, isA<AccessService>());
         expect(subscriptionService, isA<SubscriptionService>());
       });
 
       test('should have correct service types', () {
         expect(authService, isA<AuthService>());
         expect(bookingService, isA<BookingService>());
-        expect(entryExitService, isA<EntryExitService>());
+        expect(accessService, isA<AccessService>());
         expect(subscriptionService, isA<SubscriptionService>());
       });
     });

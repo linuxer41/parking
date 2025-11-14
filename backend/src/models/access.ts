@@ -3,6 +3,19 @@ import { BaseSchema } from "./base-model";
 import { EmployeeResponseSchema } from "./employee";
 import { VehiclePreviewSchema } from "./vehicle";
 
+// ===== BASIC SCHEMAS FOR RESPONSE =====
+export const ParkingBasicSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  name: t.String(),
+});
+
+export const EmployeeBasicSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  name: t.String(),
+  email: t.String(),
+  phone: t.String(),
+});
+
 // ===== TIPOS DE ACCESO =====
 export const ACCESS_STATUS = {
   ENTERED: "entered",
@@ -11,7 +24,7 @@ export const ACCESS_STATUS = {
 } as const;
 
 // ===== ESQUEMA PRINCIPAL DE ACCESO =====
-export const EntryExitSchema = t.Composite([
+export const AccessSchema = t.Composite([
   BaseSchema,
   t.Object({
     // Campos específicos para accesos
@@ -91,11 +104,11 @@ export const EntryExitSchema = t.Composite([
     })),
   }),
 ], {
-  description: "Esquema principal para la entidad EntryExit (Acceso)",
+  description: "Esquema principal para la entidad Access (Acceso)",
 });
 
 // ===== ESQUEMA DE CREACIÓN INTERNO =====
-export const EntryExitCreateSchema = t.Pick(EntryExitSchema, [
+export const AccessCreateSchema = t.Pick(AccessSchema, [
   "id", "createdAt", "number", "parkingId", "employeeId", "vehicleId", 
   "spotId", "entryTime", "exitTime", "exitEmployeeId", "amount", "status", "notes"
 ], {
@@ -103,7 +116,7 @@ export const EntryExitCreateSchema = t.Pick(EntryExitSchema, [
 });
 
 // ===== ESQUEMA DE CREACIÓN PARA REQUESTS =====
-export const EntryExitCreateRequestSchema = t.Object({
+export const AccessCreateRequestSchema = t.Object({
   vehiclePlate: t.String({
     description: "Placa del vehículo",
     required: true,
@@ -154,38 +167,58 @@ export const ExitRequestSchema = t.Object({
 });
 
 // ===== ESQUEMA DE ACTUALIZACIÓN =====
-export const EntryExitUpdateSchema = t.Partial(t.Pick(EntryExitSchema, [
+export const AccessUpdateSchema = t.Partial(t.Pick(AccessSchema, [
   "updatedAt", "spotId", "exitTime", "exitEmployeeId", "amount", "status", "notes"
 ]), {
   description: "Esquema para la actualización de un Acceso",
 });
 
 // ===== ESQUEMAS ADICIONALES =====
-export const EntryExitResponseSchema = t.Pick(EntryExitSchema, [
-  "id", "number", "parkingId", "employeeId", "vehicleId", 
-  "spotId", "entryTime", "exitTime", "exitEmployeeId", "amount", "status", "notes"
-], {
-  description: "Esquema para la respuesta de un Acceso",
+export const AccessResponseSchema = t.Object({
+  id: t.String({ format: "uuid" }),
+  entryTime: t.Union([
+    t.String(),
+    t.Date(),
+  ]),
+  exitTime: t.Union([
+    t.Null(),
+    t.String(),
+    t.Date(),
+  ]),
+  status: t.Union([
+    t.Literal(ACCESS_STATUS.ENTERED),
+    t.Literal(ACCESS_STATUS.EXITED),
+    t.Literal(ACCESS_STATUS.CANCELLED),
+  ]),
+  amount: t.Numeric(),
+  number: t.Integer(),
+  notes: t.Optional(t.String()),
+  parking: ParkingBasicSchema,
+  employee: EmployeeBasicSchema,
+  exitEmployee: t.Union([t.Null(), EmployeeBasicSchema]),
+  vehicle: VehiclePreviewSchema,
+}, {
+  description: "Esquema para la respuesta de un Acceso con objetos anidados",
 });
 
-export const EntryExitForElementSchema = t.Pick(EntryExitSchema, [
+export const AccessForElementSchema = t.Pick(AccessSchema, [
   "id", "number", "employee", "vehicle", "entryTime", 
   "exitTime", "amount", "status", "notes"
 ]);
 
-export const EntryExitPreviewSchema = t.Pick(EntryExitSchema, [
+export const AccessPreviewSchema = t.Pick(AccessSchema, [
   "id", "number", "parking", "employee", "vehicle", 
   "entryTime", "exitTime", "amount", "status"
 ]);
 
 // ===== EXPORT TYPES =====
-export type EntryExit = typeof EntryExitSchema.static;
-export type EntryExitCreate = typeof EntryExitCreateSchema.static;
-export type EntryExitUpdate = typeof EntryExitUpdateSchema.static;
-export type EntryExitResponse = typeof EntryExitResponseSchema.static;
-export type EntryExitForElement = typeof EntryExitForElementSchema.static;
-export type EntryExitPreview = typeof EntryExitPreviewSchema.static;
-export type EntryExitCreateRequest = typeof EntryExitCreateRequestSchema.static;
+export type Access = typeof AccessSchema.static;
+export type AccessCreate = typeof AccessCreateSchema.static;
+export type AccessUpdate = typeof AccessUpdateSchema.static;
+export type AccessResponse = typeof AccessResponseSchema.static;
+export type AccessForElement = typeof AccessForElementSchema.static;
+export type AccessPreview = typeof AccessPreviewSchema.static;
+export type AccessCreateRequest = typeof AccessCreateRequestSchema.static;
 export type ExitRequest = typeof ExitRequestSchema.static;
 
 // Tipos de constantes

@@ -6,12 +6,11 @@ import {
   REFRESH_TOKEN_EXP,
 } from "../config/constants";
 import { db } from "../db";
-import { AuthResponseSchema, loginBodySchema, RegistrationSchema, signupBodySchema } from "../models/auth";
-import { authPlugin } from "../plugins/auth";
+import { AuthResponseSchema, loginBodySchema, RegistrationSchema } from "../models/auth";
+import { authPlugin } from "../plugins";
 import { registrationService } from "../services/registration-service";
 import { getExpTimestamp } from "../utils/common";
-import { ConflictError, UnauthorizedError } from "../utils/error";
-import { reverseGeocodingAPI } from "../utils/geoapify";
+import { UnauthorizedError } from "../utils/error";
 
 export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
   .use(
@@ -32,7 +31,6 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
           "El correo electrónico o la contraseña que ingresaste son incorrectos",
         );
       }
-      console.log(user);
 
       // match password
       const matchPassword = await Bun.password.verify(
@@ -45,9 +43,26 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
         );
       }
 
+      // Get all employees for central app
+      const employeeRecords = await db.employee.find({ userId: user.id });
+      const firstEmployee = employeeRecords[0];
+      if(!firstEmployee) {
+        throw new UnauthorizedError(
+          "El usuario no tiene empleados asociados",
+        );
+      }
+      const tenant = firstEmployee.parkingId;
+      const employee = firstEmployee.id;
+      const role = firstEmployee.role;
+      const scope = 'app';
+
       // create access token
       const accessJWTToken = await jwt.sign({
         sub: user.id,
+        tenant,
+        employee,
+        role,
+        scope,
         exp: getExpTimestamp(ACCESS_TOKEN_EXP),
       });
       authToken.set({
@@ -70,7 +85,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Get user parkings
-      const userParkings = await db.parking.findParkingsByOwnerId(user.id);
+      const userParkings = await db.parking.findParkingsByUserId(user.id);
 
       return {
         auth: {
@@ -84,43 +99,6 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     {
       body: loginBodySchema,
       response: AuthResponseSchema,
-    },
-  )
-  .post(
-    "/sign-up",
-    async ({ body }) => {
-      // Verificar si el usuario ya existe
-      const existingUsers = await db.user.find({ email: body.email });
-      const existingUser = existingUsers[0];
-      
-      if (existingUser) {
-        throw new ConflictError(`Ya existe un usuario con el email ${body.email}`);
-      }
-
-      // hash password
-      const password = await Bun.password.hash(body.password);
-
-      // fetch user location from lat & lon
-      let location: any;
-      if (body.location) {
-        const [lat, lon] = body.location;
-        location = await reverseGeocodingAPI(lat, lon);
-      }
-      console.log(location);
-      const user = await db.user.create({
-        ...body,
-        password,
-        //   location,
-      });
-      return {
-        message: "Cuenta creada exitosamente",
-        data: {
-          user,
-        },
-      };
-    },
-    {
-      body: signupBodySchema,
     },
   )
   .post(
@@ -145,9 +123,25 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       if (!user) {
         throw new UnauthorizedError("Token de actualización inválido");
       }
+
+      // Get employee info
+      const employeeRecords = await db.employee.find({ userId: user.id });
+      const firstEmployee = employeeRecords[0];
+      if(!firstEmployee) {
+        throw new UnauthorizedError("El usuario no tiene empleados asociados");
+      }
+      const tenant = firstEmployee.parkingId;
+      const employee = firstEmployee.id;
+      const role = firstEmployee.role;
+      const scope = 'app';
+
       // create new access token
       const accessJWTToken = await jwt.sign({
         sub: user.id,
+        tenant,
+        employee,
+        role,
+        scope,
         exp: getExpTimestamp(ACCESS_TOKEN_EXP),
       });
       authToken.set({
@@ -170,7 +164,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Get user parkings
-      const userParkings = await db.parking.findParkingsByOwnerId(user.id);
+      const userParkings = await db.parking.findParkingsByUserId(user.id);
 
       return {
         auth: {
@@ -183,15 +177,25 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     },
   )
   .post(
-    "/register-complete",
+    "/sign-up",
     async ({ body, jwt, cookie: { authToken, refreshToken }, set }) => {
       console.log(body);
       // Realizar el registro completo
       const result = await registrationService.registerComplete(body);
 
+      // Get employee info
+      const tenant = result.employee.parkingId;
+      const employee = result.employee.id;
+      const role = result.employee.role;
+      const scope = 'app';
+
       // Crear tokens de autenticación
       const accessJWTToken = await jwt.sign({
         sub: result.user.id,
+        tenant,
+        employee,
+        role,
+        scope,
         exp: getExpTimestamp(ACCESS_TOKEN_EXP),
       });
       
@@ -199,9 +203,6 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
         sub: result.user.id,
         exp: getExpTimestamp(REFRESH_TOKEN_EXP),
       });
-
-      
-
       // Configurar cookies
       authToken.set({
         value: accessJWTToken,
@@ -217,10 +218,8 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
         path: "/",
       });
 
-      console.log({accessJWTToken, refreshJWTToken, result});
-
       // Obtener los parkings del usuario
-      const userParkings = await db.parking.findParkingsByOwnerId(result.user.id);
+      const userParkings = await db.parking.findParkingsByUserId(result.user.id);
 
       return {
         auth: {
@@ -260,15 +259,8 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     if (!user) {
       throw new UnauthorizedError("Usuario no autenticado");
     }
-
     // Get user parkings
-    const userParkings = await db.parking.findParkingsByOwnerId(user.id);
-
-    // Generate a fresh token
-    const accessJWTToken = await jwt.sign({
-      sub: user.id,
-      exp: getExpTimestamp(ACCESS_TOKEN_EXP),
-    });
+    const userParkings = await db.parking.findParkingsByUserId(user.id);
 
     return {
       user: user,

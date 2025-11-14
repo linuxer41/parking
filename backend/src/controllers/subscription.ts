@@ -7,11 +7,11 @@ import {
   SubscriptionRenewalRequestSchema,
   SUBSCRIPTION_STATUS
 } from "../models/subscription";
-import { accessPlugin } from "../plugins/access";
+import { authPlugin } from "../plugins/access";
 import { BadRequestError, NotFoundError } from "../utils/error";
 
 export const subscriptionController = new Elysia({ prefix: "/subscription", tags: ["subscription"] })
-  .use(accessPlugin)
+  .use(authPlugin)
   
   // ===== ENDPOINTS PRINCIPALES =====
   
@@ -85,15 +85,8 @@ export const subscriptionController = new Elysia({ prefix: "/subscription", tags
   })
   
   // Crear una nueva suscripción
-  .post("/", async ({ body, headers }) => {
-    const parkingId = headers["parking-id"];
-    const employeeId = headers["employee-id"];
-    
-    if (!parkingId || !employeeId) {
-      throw new BadRequestError("Se requiere parking-id y employee-id en headers");
-    }
-    
-    const subscription = await db.subscription.create(body, parkingId, employeeId);
+  .post("/", async ({ body, parking, employee }) => {
+    const subscription = await db.subscription.create(body, parking.id, employee.id);
     return subscription;
   }, {
     body: SubscriptionCreateRequestSchema,
@@ -109,14 +102,7 @@ export const subscriptionController = new Elysia({ prefix: "/subscription", tags
   })
   
   // Renovar una suscripción
-  .post("/:id/renew", async ({ params, body, headers }) => {
-    const parkingId = headers["parking-id"];
-    const employeeId = headers["employee-id"];
-    
-    if (!parkingId || !employeeId) {
-      throw new BadRequestError("Se requiere parking-id y employee-id en headers");
-    }
-    
+  .post("/:id/renew", async ({ params, body, parking, employee }) => {
     const subscription = await db.subscription.renew(params.id, body);
     return subscription;
   }, {

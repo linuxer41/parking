@@ -12,7 +12,7 @@ class AppConfig {
   /// API endpoints
   static Map<String, String> apiEndpoints = {
     'booking': '/booking',
-    'entryExit': '/entry-exit',
+    'access': '/entry-exit',
     'subscription': '/subscription',
     'parking': '/parking',
     'vehicle': '/vehicle',

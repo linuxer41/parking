@@ -34,8 +34,8 @@ export const ElementActivitySchema = t.Object({
 
 // ===== ESQUEMA DE OCUPACIÓN UNIFICADA =====
 export const ElementOccupancySchema = t.Object({
-  // Prioridad: EntryExit > Booking > Subscription
-  entryExit: t.Nullable(t.Object({
+  // Prioridad: Access > Booking > Subscription
+  access: t.Nullable(t.Object({
     id: t.String(),
     number: t.Number(),
     entryTime: t.Union([t.String(), t.Date()]),
