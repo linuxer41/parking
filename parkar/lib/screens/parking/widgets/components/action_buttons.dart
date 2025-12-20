@@ -97,7 +97,7 @@ class SecondaryActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         ),
         child: isLoading
             ? SizedBox(
@@ -107,14 +107,19 @@ class SecondaryActionButton extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary,
                 ),
               )
-            : Row(
+            : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 16),
-                    const SizedBox(width: 8),
+                    Icon(icon, size: 14),
+                    const SizedBox(height: 1),
                   ],
-                  Text(label, style: const TextStyle(fontSize: 13)),
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
       ),

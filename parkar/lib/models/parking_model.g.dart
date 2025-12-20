@@ -462,9 +462,9 @@ ParkingPreviewModel _$ParkingPreviewModelFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       address: json['address'] as String?,
       logoUrl: json['logoUrl'] as String?,
-      params: ParkingParamsModel.fromJson(
-        json['params'] as Map<String, dynamic>,
-      ),
+      params: json['params'] == null
+          ? null
+          : ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ParkingPreviewModelToJson(

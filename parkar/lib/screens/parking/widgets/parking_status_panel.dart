@@ -6,8 +6,15 @@ import '../models/parking_spot.dart';
 /// Panel inferior reutilizable con información del estado del parking
 class ParkingStatusPanel extends StatelessWidget {
   final ParkingState state;
+  final double? cashTotal;
+  final VoidCallback? onCashTap;
 
-  const ParkingStatusPanel({super.key, required this.state});
+  const ParkingStatusPanel({
+    super.key,
+    required this.state,
+    this.cashTotal,
+    this.onCashTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +137,21 @@ class ParkingStatusPanel extends StatelessWidget {
               theme: theme,
               colorScheme: colorScheme,
             ),
+
+            // Separador vertical
+            if (cashTotal != null) Container(height: 40, width: 1, color: colorScheme.outlineVariant),
+
+            // Total de Caja (solo si hay datos)
+            if (cashTotal != null)
+              _buildStatusItem(
+                icon: Icons.attach_money,
+                iconColor: Colors.green,
+                label: 'Caja',
+                value: '\$${cashTotal!.toStringAsFixed(0)}',
+                theme: theme,
+                colorScheme: colorScheme,
+                onTap: onCashTap,
+              ),
           ],
         ),
       ),
@@ -144,50 +166,55 @@ class ParkingStatusPanel extends StatelessWidget {
     required String value,
     required ThemeData theme,
     required ColorScheme colorScheme,
+    VoidCallback? onTap,
   }) {
     return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Icono con fondo circular suave
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: iconColor.withValues(alpha: 0.3),
-                width: 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icono con fondo circular suave
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: iconColor.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(height: 8),
+
+            // Valor principal
+            Text(
+              value,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: theme.brightness == Brightness.dark
+                    ? Colors.white
+                    : colorScheme.onSurface,
               ),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 4),
 
-          // Valor principal
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: theme.brightness == Brightness.dark
-                  ? Colors.white
-                  : colorScheme.onSurface,
+            // Etiqueta
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-
-          // Etiqueta
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

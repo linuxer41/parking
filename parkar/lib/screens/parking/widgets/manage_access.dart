@@ -2,33 +2,34 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../models/booking_model.dart';
-import '../../../models/employee_model.dart';
+import '../../../models/access_model.dart';
 import '../../../models/parking_model.dart';
 import '../../../models/vehicle_model.dart';
-import '../../../services/booking_service.dart';
+import '../../../services/access_service.dart';
 import '../../../services/print_service.dart';
 import '../../../state/app_state_container.dart';
+import '../../../widgets/print_method_dialog.dart';
 import '../models/parking_spot.dart';
 import 'components/index.dart';
 
 /// Modal para registrar salida de vehículos
 class ManageAccess extends StatefulWidget {
   final ParkingSpot spot;
+  final VoidCallback? onExitSuccess;
 
-  const ManageAccess({super.key, required this.spot});
+  const ManageAccess({super.key, required this.spot, this.onExitSuccess});
 
   @override
   State<ManageAccess> createState() => _ManageAccessState();
 
   /// Mostrar el modal como un bottom sheet
-  static Future<void> show(BuildContext context, ParkingSpot spot) async {
+  static Future<void> show(BuildContext context, ParkingSpot spot, {VoidCallback? onExitSuccess}) async {
     // Verificar que el spot tenga un acceso asociado
     if (spot.entry == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
-            'Error: Este espacio no tiene un vehículo registrado',
+            'Error: No hay información de vehículo para este acceso',
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -40,7 +41,7 @@ class ManageAccess extends StatefulWidget {
 
     ManageLayout.show(
       context: context,
-      child: ManageAccess(spot: spot),
+      child: ManageAccess(spot: spot, onExitSuccess: onExitSuccess),
     );
   }
 }
@@ -115,6 +116,11 @@ class _ManageAccessState extends State<ManageAccess> {
 
   @override
   Widget build(BuildContext context) {
+    // If entry is null, show empty (should not happen as modal closes)
+    if (widget.spot.entry == null) {
+      return Container();
+    }
+
     // Contenido principal
     final content = SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -147,21 +153,40 @@ class _ManageAccessState extends State<ManageAccess> {
       ),
     );
 
-    // Botones de acción
-    final actions = [
-      SecondaryActionButton(
-        label: 'Ver Ticket',
-        icon: Icons.receipt_outlined,
-        onPressed: _printTicket,
-        isLoading: isLoading,
-      ),
-      PrimaryActionButton(
-        label: 'Registrar Salida',
-        icon: Icons.logout,
-        onPressed: _registerExit,
-        isLoading: isLoading,
-      ),
-    ];
+    // Botones de acción con distribución personalizada
+    final actions = Row(
+      children: [
+        Expanded(
+          flex: 1, // 25% - Ticket Entrada
+          child: SecondaryActionButton(
+            label: 'Entrada',
+            icon: Icons.receipt_outlined,
+            onPressed: _printEntryTicket,
+            isLoading: isLoading,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 1, // 25% - Ticket Salida
+          child: SecondaryActionButton(
+            label: 'Salida',
+            icon: Icons.receipt_outlined,
+            onPressed: _printExitTicket,
+            isLoading: isLoading,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2, // 50% - Registrar Salida
+          child: PrimaryActionButton(
+            label: 'Registrar Salida',
+            icon: Icons.logout,
+            onPressed: _registerExit,
+            isLoading: isLoading,
+          ),
+        ),
+      ],
+    );
 
     return ManageLayout(
       title: 'Registrar Salida',
@@ -192,16 +217,16 @@ class _ManageAccessState extends State<ManageAccess> {
         return;
       }
 
-      final bookingService = AppStateContainer.di(
+      final accessService = AppStateContainer.di(
         context,
-      ).resolve<BookingService>();
+      ).resolve<AccessService>();
 
-      final booking = await bookingService.getBooking(
+      final access = await accessService.getAccess(
         widget.spot.entry!.id,
       );
-      if (booking == null) {
+      if (access == null) {
         setState(() {
-          errorMessage = 'No se encontró el booking';
+          errorMessage = 'No se encontró el acceso';
           isLoading = false;
         });
         return;
@@ -219,10 +244,7 @@ class _ManageAccessState extends State<ManageAccess> {
       } else {
         // Para acceso normal, calcular tarifa
         try {
-          finalCost = await bookingService.calculateExitFeeLegacy(
-            parkingId,
-            booking.id,
-          );
+          finalCost = await accessService.calculateExitFee(access.id);
         } catch (e) {
           debugPrint('Error al calcular tarifa: $e');
           // Usar la tarifa estimada como fallback
@@ -231,31 +253,21 @@ class _ManageAccessState extends State<ManageAccess> {
       }
 
       // Registrar salida en la API
-      final updatedAccess = await bookingService.registerExitLegacy(
-        parkingId: parkingId,
-        bookingId: booking.id,
+      final updatedAccess = await accessService.registerExit(
+        entryId: access.id,
         amount: finalCost,
       );
 
       // Actualizar el spot con los datos devueltos por la API
       _updateSpotWithExitData(updatedAccess);
 
-      // Imprimir ticket de salida
+      // Imprimir ticket de salida usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
 
-      // Asegurarse de que startDate no sea nulo
-      DateTime entryTime;
-      try {
-        entryTime = booking.startDate;
-      } catch (e) {
-        // Si hay un error de parsing, usar un valor por defecto
-        entryTime = DateTime.now().subtract(const Duration(hours: 1));
-      }
-
       await printService.printExitTicket(
-        booking: booking,
+        booking: updatedAccess,
         context: context,
         isSimpleMode:
             appState.currentParking?.operationMode == ParkingOperationMode.list,
@@ -266,8 +278,11 @@ class _ManageAccessState extends State<ManageAccess> {
         // Cerrar el diálogo
         Navigator.pop(context);
 
+        // Actualizar el spot con los datos devueltos por la API
+        _updateSpotWithExitData(updatedAccess);
+
         // Mostrar confirmación
-        String message = 'Vehículo ${booking.vehicle.plate} ha salido';
+        String message = 'Vehículo ${updatedAccess.vehicle.plate} ha salido';
         if (isSubscription) {
           message += ' (Suscripción)';
         } else if (isReservation) {
@@ -284,6 +299,9 @@ class _ManageAccessState extends State<ManageAccess> {
             ),
           ),
         );
+
+        // Llamar callback de éxito
+        widget.onExitSuccess?.call();
       }
     } catch (e) {
       setState(() {
@@ -305,9 +323,9 @@ class _ManageAccessState extends State<ManageAccess> {
   }
 
   // Función para actualizar el spot con datos de salida
-  void _updateSpotWithExitData(BookingModel updatedAccess) {
+  void _updateSpotWithExitData(AccessModel updatedAccess) {
     // Si el acceso tiene fecha de salida, marcar el spot como disponible
-    if (updatedAccess.endDate != null) {
+    if (updatedAccess.exitTime != null) {
       widget.spot.isOccupied = false;
       widget.spot.entry = null;
       widget.spot.status = 'available';
@@ -315,10 +333,10 @@ class _ManageAccessState extends State<ManageAccess> {
       // Si no hay fecha de salida, actualizar con los datos del acceso
       final entryInfo = ElementOccupancyInfoModel(
         id: updatedAccess.id,
-        vehiclePlate: updatedAccess.vehicle.plate ?? '',
+        vehiclePlate: updatedAccess.vehicle.plate,
         ownerName: updatedAccess.vehicle.ownerName ?? '',
         ownerPhone: updatedAccess.vehicle.ownerPhone ?? '',
-        startDate: updatedAccess.startDate?.toIso8601String() ?? '',
+        startDate: updatedAccess.entryTime.toIso8601String(),
       );
 
       widget.spot.entry = entryInfo;
@@ -327,22 +345,49 @@ class _ManageAccessState extends State<ManageAccess> {
     }
   }
 
-  // Método para imprimir ticket
-  Future<void> _printTicket() async {
+  // Método para imprimir ticket de entrada
+  Future<void> _printEntryTicket() async {
     final printService = AppStateContainer.di(context).resolve<PrintService>();
-    final bookingService = AppStateContainer.di(
+    final accessService = AppStateContainer.di(
       context,
-    ).resolve<BookingService>();
+    ).resolve<AccessService>();
     final appState = AppStateContainer.of(context);
-    final booking = await bookingService.getBooking(
+    final access = await accessService.getAccess(
       widget.spot.entry!.id,
     );
 
-    printService.printExitTicket(
-      booking: booking,
-      context: context,
-      isSimpleMode:
-          appState.currentParking?.operationMode == ParkingOperationMode.list,
+    if (access != null) {
+      // Mostrar PDF del ticket de entrada
+      printService.printEntryTicket(
+        booking: access,
+        context: context,
+        isSimpleMode:
+            appState.currentParking?.operationMode == ParkingOperationMode.list,
+        forceView: true,
+      );
+    }
+  }
+
+  // Método para imprimir ticket de salida
+  Future<void> _printExitTicket() async {
+    final printService = AppStateContainer.di(context).resolve<PrintService>();
+    final accessService = AppStateContainer.di(
+      context,
+    ).resolve<AccessService>();
+    final appState = AppStateContainer.of(context);
+    final access = await accessService.getAccess(
+      widget.spot.entry!.id,
     );
+
+    if (access != null) {
+      // Mostrar PDF del ticket de salida (preview)
+      printService.printExitTicket(
+        booking: access,
+        context: context,
+        isSimpleMode:
+            appState.currentParking?.operationMode == ParkingOperationMode.list,
+        forceView: true,
+      );
+    }
   }
 }

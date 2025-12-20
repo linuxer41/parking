@@ -1,10 +1,11 @@
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { 
+import {
   AccessCreateRequestSchema,
-  AccessUpdateSchema, 
+  AccessUpdateSchema,
   AccessResponseSchema,
   ExitRequestSchema,
+  FeeUpdateRequestSchema,
   ACCESS_STATUS
 } from "../models/access";
 import { authPlugin } from "../plugins/access";
@@ -16,37 +17,43 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
   // ===== ENDPOINTS PRINCIPALES =====
   
   // Listar accesos con filtros
-  .get("/", async ({ query }) => {
-    const { 
-      parkingId, 
-      employeeId, 
-      vehicleId, 
-      spotId, 
-      status, 
+  .get("/", async ({ query, parking }) => {
+    const {
+      employeeId,
+      vehicleId,
+      vehiclePlate,
+      spotId,
+      status,
       startDate,
-      endDate 
+      endDate,
+      inParking
     } = query;
-    
-    const filters: any = {};
-    if (parkingId) filters.parkingId = parkingId;
+
+    const filters: any = {
+      parkingId: parking.id
+    };
     if (employeeId) filters.employeeId = employeeId;
     if (vehicleId) filters.vehicleId = vehicleId;
+    if (vehiclePlate) filters.vehiclePlate = vehiclePlate;
     if (spotId) filters.spotId = spotId;
     if (status) filters.status = status;
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
-    
+    if (inParking !== undefined) filters.inParking = inParking === true;
+    console.log({filters});
+
     const accesss = await db.access.find(filters);
     return accesss;
   }, {
     query: t.Object({
-      parkingId: t.Optional(t.String()),
       employeeId: t.Optional(t.String()),
       vehicleId: t.Optional(t.String()),
+      vehiclePlate: t.Optional(t.String()),
       spotId: t.Optional(t.String()),
       status: t.Optional(t.String()),
       startDate: t.Optional(t.String()),
       endDate: t.Optional(t.String()),
+      inParking: t.Optional(t.Boolean()),
     }),
     detail: {
       summary: "Obtener todos los accesos",
@@ -97,12 +104,7 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
   
   // Registrar salida de un vehículo
   .post("/:id/exit", async ({ params, body, employee }) => {
-    const exitData = {
-      ...body,
-      exitEmployeeId: employee.id
-    };
-
-    const access = await db.access.registerExit(params.id, exitData);
+    const access = await db.access.registerExit(params.id, employee.id, body);
     return access;
   }, {
     body: ExitRequestSchema,
@@ -117,7 +119,54 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
       500: t.String(),
     },
   })
-  
+
+  // Calcular tarifa actual de un acceso
+  .get("/:id/fee", async ({ params }) => {
+    const { currentFee, access } = await db.access.calculateCurrentFee(params.id);
+    return {
+      accessId: access.id,
+      currentFee,
+      entryTime: access.entryTime,
+      parkingId: access.parkingId,
+      vehiclePlate: access.vehicle.plate,
+    };
+  }, {
+    detail: {
+      summary: "Calcular tarifa actual de un acceso",
+      description: "Calcula el costo actual hasta el momento de la consulta para un acceso específico.",
+    },
+    response: {
+      200: t.Object({
+        accessId: t.String(),
+        currentFee: t.Number(),
+        entryTime: t.Union([t.String(), t.Date()]),
+        parkingId: t.String(),
+        vehiclePlate: t.String(),
+      }),
+      400: t.String(),
+      404: t.String(),
+      500: t.String(),
+    },
+  })
+
+  // Actualizar tarifa de un acceso
+  .patch("/:id/fee", async ({ params, body }) => {
+    const access = await db.access.updateFee(params.id, body);
+    return access;
+  }, {
+    body: FeeUpdateRequestSchema,
+    detail: {
+      summary: "Actualizar tarifa de un acceso",
+      description: "Actualiza el monto a pagar de un acceso existente.",
+    },
+    response: {
+      200: AccessResponseSchema,
+      400: t.String(),
+      404: t.String(),
+      500: t.String(),
+    },
+  })
+
   // Actualizar un acceso
   .patch("/:id", async ({ params, body }) => {
     const access = await db.access.update(params.id, body);

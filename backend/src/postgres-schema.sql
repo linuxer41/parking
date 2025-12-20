@@ -38,6 +38,7 @@ CREATE TABLE t_parking (
   "address" text,
   "location" jsonb not null default '{}',
   "logoUrl" text,
+  "isOpen" boolean not null default true,
   "status" text not null default 'active',
   "ownerId" uuid not null references t_user(id) on delete cascade,
   "params" jsonb not null default '{}', -- Configuración del estacionamiento

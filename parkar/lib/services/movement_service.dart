@@ -42,6 +42,13 @@ class MovementService extends BaseService {
     );
   }
 
+  Future<List<MovementModel>> getMovementsByCashRegister(String cashRegisterId) async {
+    return get<List<MovementModel>>(
+      endpoint: '/cash-register/$cashRegisterId',
+      parser: (json) => parseModelList(json, MovementModel.fromJson),
+    );
+  }
+
   Future<MovementModel> getMovement(String id) async {
     return get<MovementModel>(
       endpoint: '/$id',

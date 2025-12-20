@@ -12,12 +12,14 @@ class PdfViewer extends StatelessWidget {
   final Uint8List pdfData;
   final String title;
   final String filename;
+  final VoidCallback? onPrintPressed;
 
   const PdfViewer({
     super.key,
     required this.pdfData,
     required this.title,
     required this.filename,
+    this.onPrintPressed,
   });
 
   /// Mostrar el visualizador como un modal
@@ -26,11 +28,13 @@ class PdfViewer extends StatelessWidget {
     required Uint8List pdfData,
     required String title,
     required String filename,
+    VoidCallback? onPrintPressed,
   }) async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useRootNavigator: true,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
         decoration: BoxDecoration(
@@ -43,7 +47,7 @@ class PdfViewer extends StatelessWidget {
             BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8),
           ],
         ),
-        child: PdfViewer(pdfData: pdfData, title: title, filename: filename),
+        child: PdfViewer(pdfData: pdfData, title: title, filename: filename, onPrintPressed: onPrintPressed),
       ),
     );
   }
@@ -270,6 +274,10 @@ class PdfViewer extends StatelessWidget {
 
   // Imprimir el PDF
   Future<void> _printPdf(BuildContext context) async {
+    if (onPrintPressed != null) {
+      onPrintPressed!();
+      return;
+    }
     try {
       await Printing.layoutPdf(onLayout: (format) => pdfData, name: filename);
     } catch (e) {

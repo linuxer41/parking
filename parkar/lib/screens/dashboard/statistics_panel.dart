@@ -37,11 +37,6 @@ class StatisticsPanel extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Actividad reciente
-              _buildRecentActivitySection(context),
-
-              const SizedBox(height: 24),
-
               // Botones de acción
               _buildActionButtons(context),
             ],
@@ -82,7 +77,7 @@ class StatisticsPanel extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                'Caja del Día',
+                'Resumen Diario',
                 style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface,

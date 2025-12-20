@@ -154,6 +154,7 @@ export async function findParkingsByUserId(ownerId: string): Promise<ParkingResp
     p.location,
     p."operationMode",
     p.status,
+    p."isOpen",
     CASE WHEN p."ownerId" = $1 THEN true ELSE false END as "isOwner",
     true as "isActive",
     ps."areaCount"::INTEGER as "areaCount",

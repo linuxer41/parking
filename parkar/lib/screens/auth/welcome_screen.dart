@@ -72,7 +72,7 @@ class WelcomeScreen extends StatelessWidget {
           // Título y descripción
           Text(
             'Parkar',
-            style: textTheme.headlineSmall?.copyWith(
+            style: textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: colorScheme.onPrimaryContainer,
             ),

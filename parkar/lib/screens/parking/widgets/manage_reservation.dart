@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/booking_service.dart';
 import '../../../services/access_service.dart';
 import '../../../state/app_state_container.dart';
+import '../../../models/access_model.dart';
 import '../../../models/booking_model.dart';
 import '../../../models/parking_model.dart';
 import '../../../models/employee_model.dart';
@@ -9,6 +10,7 @@ import '../../../models/vehicle_model.dart';
 import '../../../models/parking_model.dart';
 import '../models/parking_spot.dart';
 import '../../../services/print_service.dart';
+import '../../../widgets/print_method_dialog.dart';
 import 'components/index.dart';
 
 /// Modal para manejar spots con reserva
@@ -146,20 +148,13 @@ class _ManageReservationState extends State<ManageReservation> {
         ),
       );
 
-      // Imprimir ticket de entrada
+      // Imprimir ticket de entrada usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
-      final bookingService = AppStateContainer.di(
-        context,
-      ).resolve<BookingService>();
-      final booking = await bookingService.getBooking(reservation.id);
-      if (booking == null) {
-        throw Exception('No se encontró el booking');
-      }
       final appState = AppStateContainer.of(context);
       await printService.printEntryTicket(
-        booking: booking,
+        booking: entry,
         context: context,
         isSimpleMode:
             appState.currentParking?.operationMode == ParkingOperationMode.list,
@@ -250,14 +245,14 @@ class _ManageReservationState extends State<ManageReservation> {
   }
 
   // Función para actualizar el spot con datos de acceso
-  void _updateSpotWithAccessData(BookingModel access) {
+  void _updateSpotWithAccessData(AccessModel access) {
     final entryInfo = ElementOccupancyInfoModel(
       id: access.id,
-      vehiclePlate: access.vehicle.plate ?? '',
+      vehiclePlate: access.vehicle.plate,
       ownerName: access.vehicle.ownerName ?? '',
       ownerPhone: access.vehicle.ownerPhone ?? '',
-      startDate: access.startDate?.toIso8601String() ?? '',
-      endDate: access.endDate?.toIso8601String(),
+      startDate: access.entryTime.toIso8601String(),
+      endDate: access.exitTime?.toIso8601String(),
       amount: access.amount,
     );
 
@@ -267,27 +262,20 @@ class _ManageReservationState extends State<ManageReservation> {
   }
 
   // Método para imprimir ticket
-  void _printTicket() {
+  Future<void> _printTicket() async {
     final printService = AppStateContainer.di(context).resolve<PrintService>();
     final appState = AppStateContainer.of(context);
     final reservation = widget.spot.booking;
 
     if (reservation == null) return;
 
-    // Obtener fecha de reserva
-    DateTime reservationDate;
-    try {
-      reservationDate = DateTime.parse(reservation.startDate);
-    } catch (e) {
-      reservationDate = DateTime.now();
-    }
-
-    // Imprimir ticket de reserva
+    // Siempre mostrar PDF para "Ver Ticket"
     printService.printReservationTicket(
       booking: reservation as BookingModel,
       context: context,
       isSimpleMode:
           appState.currentParking?.operationMode == ParkingOperationMode.list,
+      forceView: true,
     );
   }
 }

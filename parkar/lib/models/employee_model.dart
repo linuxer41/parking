@@ -63,14 +63,14 @@ class EmployeeUpdateModel extends JsonConvertible<EmployeeUpdateModel> {
 class EmployeePreviewModel extends JsonConvertible<EmployeePreviewModel> {
   final String id;
   final String name;
-  final String role;
+  final String? role;
   final String? email;
   final String? phone;
 
   EmployeePreviewModel({
     required this.id,
     required this.name,
-    required this.role,
+    this.role,
     this.email,
     this.phone,
   });

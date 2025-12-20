@@ -51,7 +51,7 @@ EmployeePreviewModel _$EmployeePreviewModelFromJson(
 ) => EmployeePreviewModel(
   id: json['id'] as String,
   name: json['name'] as String,
-  role: json['role'] as String,
+  role: json['role'] as String?,
   email: json['email'] as String?,
   phone: json['phone'] as String?,
 );

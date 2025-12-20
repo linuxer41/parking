@@ -47,8 +47,10 @@ void main() async {
 
   AppConfig.init(
     // apiBaseUrl: 'http://localhost:3002',
-    apiBaseUrl: 'http://192.168.100.8:3002',
+    // apiBaseUrl: 'http://192.168.100.8:3002',
     // apiBaseUrl: 'http://192.168.1.13:3002',
+    apiBaseUrl: 'http://192.168.1.7:3002',
+    enableWebSocket: false, // Disable WebSocket as it's not available
     apiTimeout: 30,
     apiEndpoints: {
       'auth': '/auth',
@@ -57,13 +59,11 @@ void main() async {
       'parking': '/parkings',
       'vehicle': '/vehicles',
       'booking': '/booking',
-      'access': '/entry-exit',
+      'access': '/access',
       'subscription': '/subscriptions',
       'exit': '/exits',
       'cashRegister': '/cash_registers',
       'movement': '/movements',
-      'reservation': '/reservations',
-      'access': '/accesses',
     },
   );
 

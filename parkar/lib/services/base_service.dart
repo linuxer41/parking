@@ -257,15 +257,25 @@ class BaseService {
       };
     }
 
+    // Extract error message from nested structure if present
+    String errorMessage = 'Unknown error';
+    Map<String, dynamic> errorDetails = {};
+
+    if (errorData.containsKey('error') && errorData['error'] is Map<String, dynamic>) {
+      final nestedError = errorData['error'] as Map<String, dynamic>;
+      errorMessage = nestedError['message'] as String? ?? errorMessage;
+      errorDetails = nestedError;
+    } else {
+      errorMessage = errorData['message'] as String? ?? errorMessage;
+      errorDetails = errorData['errors'] as Map<String, dynamic>? ?? {'error': errorData};
+    }
+
     // Special handling for 422 validation errors
     if (response.statusCode == 422) {
       final exception = ApiException(
         statusCode: response.statusCode,
-        message:
-            errorData['summary'] as String? ??
-            errorData['message'] as String? ??
-            'Validation error',
-        errors: errorData,
+        message: errorDetails['summary'] as String? ?? errorMessage,
+        errors: errorDetails,
         isValidationError: true,
       );
       _logError('Validation error response', exception);
@@ -274,9 +284,8 @@ class BaseService {
 
     final exception = ApiException(
       statusCode: response.statusCode,
-      message: errorData['message'] as String? ?? 'Unknown error',
-      errors:
-          errorData['errors'] as Map<String, dynamic>? ?? {'error': errorData},
+      message: errorMessage,
+      errors: errorDetails,
     );
 
     _logError('API error response', exception);

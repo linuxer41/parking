@@ -6,6 +6,8 @@ import 'package:system_theme/system_theme.dart';
 import '../models/employee_model.dart';
 import '../models/parking_model.dart';
 import '../models/user_model.dart';
+import '../services/print_service.dart';
+import '../services/print_service.dart'; // For PrintSettings
 
 class AppState extends ChangeNotifier {
   // Token and user state
@@ -23,10 +25,18 @@ class AppState extends ChangeNotifier {
   static const String _localeLanguageKey = 'app_theme_locale_language';
   static const String _localeCountryKey = 'app_theme_locale_country';
 
+  // Printing preferences
+  static const String _processingModeKey = 'processing_mode';
+  static const String _printMethodKey = 'print_method';
+  static const String _printerTypeKey = 'printer_type';
+
   Color? _color;
   ThemeMode _mode = ThemeMode.light;
   TextDirection _textDirection = TextDirection.ltr;
   Locale? _locale;
+
+  // Printing preferences
+  PrintSettings _printSettings = PrintSettings(); // Default settings
 
   // User state getters
   UserModel? get currentUser => _currentUser;
@@ -62,6 +72,36 @@ class AppState extends ChangeNotifier {
   set locale(Locale? locale) {
     _locale = locale;
     _saveLocale();
+    notifyListeners();
+  }
+
+  // Printing preferences getters and setters
+  PrintSettings get printSettings => _printSettings;
+  set printSettings(PrintSettings settings) {
+    _printSettings = settings;
+    _savePrintSettings();
+    notifyListeners();
+  }
+
+  // For compatibility
+  ProcessingMode get processingMode => _printSettings.processingMode;
+  set processingMode(ProcessingMode mode) {
+    _printSettings.processingMode = mode;
+    _savePrintSettings();
+    notifyListeners();
+  }
+
+  PrintMethod get printMethod => _printSettings.printMethod;
+  set printMethod(PrintMethod method) {
+    _printSettings.printMethod = method;
+    _savePrintSettings();
+    notifyListeners();
+  }
+
+  PrinterType get printerType => _printSettings.printerType;
+  set printerType(PrinterType type) {
+    _printSettings.printerType = type;
+    _savePrintSettings();
     notifyListeners();
   }
 
@@ -101,6 +141,17 @@ class AppState extends ChangeNotifier {
     if (language != null) {
       _locale = Locale(language, country);
     }
+
+    // Load printing preferences
+    final processingModeIndex = prefs.getInt(_processingModeKey);
+    final printMethodIndex = prefs.getInt(_printMethodKey);
+    final printerTypeIndex = prefs.getInt(_printerTypeKey);
+
+    _printSettings = PrintSettings(
+      processingMode: processingModeIndex != null ? ProcessingMode.values[processingModeIndex] : ProcessingMode.viewPdf,
+      printMethod: printMethodIndex != null ? PrintMethod.values[printMethodIndex] : PrintMethod.native,
+      printerType: printerTypeIndex != null ? PrinterType.values[printerTypeIndex] : PrinterType.generic,
+    );
 
     notifyListeners();
   }
@@ -150,6 +201,13 @@ class AppState extends ChangeNotifier {
       await prefs.remove(_localeLanguageKey);
       await prefs.remove(_localeCountryKey);
     }
+  }
+
+  Future<void> _savePrintSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_processingModeKey, _printSettings.processingMode.index);
+    await prefs.setInt(_printMethodKey, _printSettings.printMethod.index);
+    await prefs.setInt(_printerTypeKey, _printSettings.printerType.index);
   }
 
   // User state setters

@@ -30,6 +30,8 @@ export const db = {
     find: accessCrud.findAccesss,
     findById: accessCrud.getAccessById,
     update: accessCrud.updateAccess,
+    updateFee: accessCrud.updateFee,
+    calculateCurrentFee: accessCrud.calculateCurrentFee,
     delete: accessCrud.deleteAccess,
     registerExit: accessCrud.registerExit,
     getActiveForSpot: accessCrud.getActiveAccesssForSpot,
@@ -91,6 +93,7 @@ export const db = {
     findById: employeeCrud.findEmployeeById,
     update: employeeCrud.updateEmployee,
     delete: employeeCrud.deleteEmployee,
+    changePassword: employeeCrud.changeEmployeePassword,
   },
 
   // ===== USER =====

@@ -48,7 +48,7 @@ class _CustomInputExamplesState extends State<CustomInputExamples> {
           children: [
             Text(
               'Campos de Entrada Personalizados',
-              style: theme.textTheme.headlineSmall?.copyWith(
+              style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.primary,
               ),
@@ -193,7 +193,7 @@ class _CustomInputExamplesState extends State<CustomInputExamples> {
             // Ejemplos con CustomFormInputField (con validación)
             Text(
               'Campos con Validación (CustomFormInputField)',
-              style: theme.textTheme.headlineSmall?.copyWith(
+              style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.primary,
               ),

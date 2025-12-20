@@ -8,7 +8,6 @@ import '../../widgets/custom_address_input.dart';
 
 import '../../widgets/custom_operation_mode_selector.dart';
 import '../../widgets/page_layout.dart';
-import '../dashboard/employees_screen.dart';
 import '../parking/parking_screen.dart';
 
 /// Pantalla para mostrar los detalles completos de un estacionamiento
@@ -30,7 +29,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
   ParkingModel? _parking;
-  String? _error;
 
   @override
   void initState() {
@@ -48,7 +46,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
   Future<void> _loadParkingDetails() async {
     setState(() {
       _isLoading = true;
-      _error = null;
     });
 
     try {
@@ -66,9 +63,21 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Error al cargar detalles: ${e.toString()}';
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar detalles: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            action: SnackBarAction(
+              label: 'Cerrar',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
       }
     }
   }
@@ -110,50 +119,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
       );
     }
 
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: colorScheme.error),
-              const SizedBox(height: 16),
-              Text(
-                'Error al cargar',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _refreshParkingDetails,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     if (_parking == null) {
       return Center(
@@ -204,6 +169,11 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
       padding: const EdgeInsets.all(24.0),
       children: [
         // Sección de información general
+        _buildSectionHeader(
+          context,
+          'Información General',
+          Icons.info_outline,
+        ),
         Card(
           margin: const EdgeInsets.only(bottom: 24),
           elevation: 0,
@@ -283,13 +253,13 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
           ),
         ),
 
-        // Sección de empleados
+        // Sección de parámetros del parking
         _buildSectionHeader(
           context,
-          'Empleados',
-          Icons.people_outline,
-          onAction: () => _navigateToEmployees(),
-          actionLabel: 'Gestionar',
+          'Parámetros del Parking',
+          Icons.settings_outlined,
+          onAction: () => _showParkingParametersDialog(),
+          actionLabel: 'Editar',
         ),
         Card(
           margin: const EdgeInsets.only(bottom: 24),
@@ -302,86 +272,46 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Información de empleados
+                // País
+                _buildCountryInfoRow(context),
+                const SizedBox(height: 16),
+
+                // Zona horaria
+                _buildInfoRowWithIcon(
+                  context,
+                  'Zona horaria',
+                  _parking!.params.timeZone ?? 'No especificada',
+                  Icons.schedule_outlined,
+                ),
+                const SizedBox(height: 16),
+
+                // Moneda y decimales
                 Row(
                   children: [
-                    Icon(Icons.people, size: 24, color: colorScheme.primary),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Personal del Estacionamiento',
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${_parking!.employees?.length ?? 0} empleados registrados',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                      child: _buildInfoRowWithIcon(
+                        context,
+                        'Moneda',
+                        _parking!.params.currency,
+                        Icons.currency_exchange_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildInfoRowWithIcon(
+                        context,
+                        'Decimales',
+                        _parking!.params.decimalPlaces.toString(),
+                        Icons.numbers_outlined,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                // Lista de empleados (máximo 3 para mostrar)
-                if (_parking!.employees != null &&
-                    _parking!.employees!.isNotEmpty) ...[
-                  ...(_parking!.employees!
-                      .take(3)
-                      .map(
-                        (employee) => _buildEmployeeItem(context, employee),
-                      )),
-                  if (_parking!.employees!.length > 3)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        'Y ${_parking!.employees!.length - 3} empleados más...',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ),
-                ] else ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 20,
-                          color: colorScheme.outline,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'No hay empleados registrados',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
         ),
+
 
         // Botón de layout solo si el modo de operación es map
         if (_parking?.operationMode == ParkingOperationMode.map)
@@ -722,73 +652,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     return String.fromCharCodes(codePoints);
   }
 
-  // Método para construir item de empleado
-  Widget _buildEmployeeItem(BuildContext context, EmployeeModel employee) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          // Avatar del empleado
-          CircleAvatar(
-            backgroundColor: colorScheme.primaryContainer,
-            radius: 20,
-            child: Text(
-              employee.name.substring(0, 1).toUpperCase(),
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Información del empleado
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  employee.name,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    employee.role,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Método para construir filas de información con iconos
   Widget _buildInfoRowWithIcon(
@@ -835,18 +698,555 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     );
   }
 
-  // Navegar a la pantalla de empleados
-  void _navigateToEmployees() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EmployeesScreen(
-          parking: _parking!,
-          onSave: () => _refreshParkingDetails(),
+  Widget _buildCountrySelector(BuildContext context, String? selectedCountryCode, ValueChanged<String?> onChanged) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final countries = [
+      {'code': 'US', 'name': 'Estados Unidos'},
+      {'code': 'MX', 'name': 'México'},
+      {'code': 'ES', 'name': 'España'},
+      {'code': 'AR', 'name': 'Argentina'},
+      {'code': 'BR', 'name': 'Brasil'},
+      {'code': 'CO', 'name': 'Colombia'},
+      {'code': 'PE', 'name': 'Perú'},
+      {'code': 'CL', 'name': 'Chile'},
+      {'code': 'VE', 'name': 'Venezuela'},
+      {'code': 'EC', 'name': 'Ecuador'},
+      {'code': 'BO', 'name': 'Bolivia'},
+      {'code': 'PY', 'name': 'Paraguay'},
+      {'code': 'UY', 'name': 'Uruguay'},
+      {'code': 'GT', 'name': 'Guatemala'},
+      {'code': 'HN', 'name': 'Honduras'},
+      {'code': 'SV', 'name': 'El Salvador'},
+      {'code': 'NI', 'name': 'Nicaragua'},
+      {'code': 'CR', 'name': 'Costa Rica'},
+      {'code': 'PA', 'name': 'Panamá'},
+      {'code': 'CU', 'name': 'Cuba'},
+      {'code': 'DO', 'name': 'República Dominicana'},
+      {'code': 'PR', 'name': 'Puerto Rico'},
+      {'code': 'CA', 'name': 'Canadá'},
+      {'code': 'FR', 'name': 'Francia'},
+      {'code': 'DE', 'name': 'Alemania'},
+      {'code': 'IT', 'name': 'Italia'},
+      {'code': 'GB', 'name': 'Reino Unido'},
+      {'code': 'JP', 'name': 'Japón'},
+      {'code': 'CN', 'name': 'China'},
+      {'code': 'KR', 'name': 'Corea del Sur'},
+      {'code': 'AU', 'name': 'Australia'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'País',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedCountryCode != null &&
+                      countries.any((c) => c['code'] == selectedCountryCode)
+                  ? selectedCountryCode
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.flag_outlined,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar país',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: countries.map((country) {
+                return DropdownMenuItem<String>(
+                  value: country['code'],
+                  child: Text(
+                    '${country['code']} - ${country['name']}',
+                    style: textTheme.bodyMedium,
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeZoneSelector(BuildContext context, String? selectedTimeZone, ValueChanged<String?> onChanged) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final timeZones = [
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+      'America/Mexico_City',
+      'America/Sao_Paulo',
+      'America/La_Paz',
+      'America/Bogota',
+      'America/Lima',
+      'America/Caracas',
+      'America/Guayaquil',
+      'America/Asuncion',
+      'America/Montevideo',
+      'America/Guatemala',
+      'America/Tegucigalpa',
+      'America/El_Salvador',
+      'America/Managua',
+      'America/Costa_Rica',
+      'America/Panama',
+      'America/Havana',
+      'America/Santo_Domingo',
+      'America/Puerto_Rico',
+      'America/Toronto',
+      'Europe/London',
+      'Europe/Paris',
+      'Europe/Berlin',
+      'Europe/Madrid',
+      'Europe/Rome',
+      'Europe/Moscow',
+      'Asia/Tokyo',
+      'Asia/Shanghai',
+      'Asia/Seoul',
+      'Asia/Singapore',
+      'Asia/Hong_Kong',
+      'Asia/Bangkok',
+      'Australia/Sydney',
+      'Australia/Melbourne',
+      'Pacific/Auckland',
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Zona horaria',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedTimeZone != null && timeZones.contains(selectedTimeZone)
+                  ? selectedTimeZone
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.schedule,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar zona horaria',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: timeZones.map((timeZone) {
+                return DropdownMenuItem<String>(
+                  value: timeZone,
+                  child: Text(timeZone, style: textTheme.bodyMedium),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencySelector(BuildContext context, String? selectedCurrency, ValueChanged<String?> onChanged) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final currencies = [
+      {'code': 'USD', 'name': 'Dólar estadounidense', 'symbol': '\$'},
+      {'code': 'EUR', 'name': 'Euro', 'symbol': '€'},
+      {'code': 'GBP', 'name': 'Libra esterlina', 'symbol': '£'},
+      {'code': 'JPY', 'name': 'Yen japonés', 'symbol': '¥'},
+      {'code': 'CAD', 'name': 'Dólar canadiense', 'symbol': 'C\$'},
+      {'code': 'AUD', 'name': 'Dólar australiano', 'symbol': 'A\$'},
+      {'code': 'CHF', 'name': 'Franco suizo', 'symbol': 'CHF'},
+      {'code': 'CNY', 'name': 'Yuan chino', 'symbol': '¥'},
+      {'code': 'SEK', 'name': 'Corona sueca', 'symbol': 'kr'},
+      {'code': 'NZD', 'name': 'Dólar neozelandés', 'symbol': 'NZ\$'},
+      {'code': 'MXN', 'name': 'Peso mexicano', 'symbol': '\$'},
+      {'code': 'SGD', 'name': 'Dólar singapurense', 'symbol': 'S\$'},
+      {'code': 'HKD', 'name': 'Dólar hongkonés', 'symbol': 'HK\$'},
+      {'code': 'NOK', 'name': 'Corona noruega', 'symbol': 'kr'},
+      {'code': 'KRW', 'name': 'Won surcoreano', 'symbol': '₩'},
+      {'code': 'TRY', 'name': 'Lira turca', 'symbol': '₺'},
+      {'code': 'RUB', 'name': 'Rublo ruso', 'symbol': '₽'},
+      {'code': 'INR', 'name': 'Rupia india', 'symbol': '₹'},
+      {'code': 'BRL', 'name': 'Real brasileño', 'symbol': 'R\$'},
+      {'code': 'ZAR', 'name': 'Rand sudafricano', 'symbol': 'R'},
+      {'code': 'ARS', 'name': 'Peso argentino', 'symbol': '\$'},
+      {'code': 'CLP', 'name': 'Peso chileno', 'symbol': '\$'},
+      {'code': 'COP', 'name': 'Peso colombiano', 'symbol': '\$'},
+      {'code': 'PEN', 'name': 'Sol peruano', 'symbol': 'S/'},
+      {'code': 'BOB', 'name': 'Boliviano', 'symbol': 'Bs'},
+      {'code': 'PYG', 'name': 'Guaraní paraguayo', 'symbol': '₲'},
+      {'code': 'UYU', 'name': 'Peso uruguayo', 'symbol': '\$'},
+      {'code': 'VES', 'name': 'Bolívar venezolano', 'symbol': 'Bs'},
+      {'code': 'CRC', 'name': 'Colón costarricense', 'symbol': '₡'},
+      {'code': 'GTQ', 'name': 'Quetzal guatemalteco', 'symbol': 'Q'},
+      {'code': 'HNL', 'name': 'Lempira hondureña', 'symbol': 'L'},
+      {'code': 'NIO', 'name': 'Córdoba nicaragüense', 'symbol': 'C\$'},
+      {'code': 'PAB', 'name': 'Balboa panameño', 'symbol': 'B/.'},
+      {'code': 'SVC', 'name': 'Colón salvadoreño', 'symbol': '\$'},
+      {'code': 'DOP', 'name': 'Peso dominicano', 'symbol': 'RD\$'},
+      {'code': 'HTG', 'name': 'Gourde haitiano', 'symbol': 'G'},
+      {'code': 'JMD', 'name': 'Dólar jamaiquino', 'symbol': 'J\$'},
+      {'code': 'TTD', 'name': 'Dólar trinitense', 'symbol': 'TT\$'},
+      {'code': 'XCD', 'name': 'Dólar del Caribe Oriental', 'symbol': 'EC\$'},
+      {'code': 'BSD', 'name': 'Dólar bahameño', 'symbol': 'B\$'},
+      {'code': 'BBD', 'name': 'Dólar barbadense', 'symbol': 'Bds\$'},
+      {'code': 'BZD', 'name': 'Dólar beliceño', 'symbol': 'BZ\$'},
+      {'code': 'KYD', 'name': 'Dólar de las Islas Caimán', 'symbol': 'CI\$'},
+      {'code': 'FJD', 'name': 'Dólar fiyiano', 'symbol': 'FJ\$'},
+      {'code': 'GYD', 'name': 'Dólar guyanés', 'symbol': 'G\$'},
+      {'code': 'SRD', 'name': 'Dólar surinamés', 'symbol': 'SR\$'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Moneda',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedCurrency != null &&
+                      currencies.any((c) => c['code'] == selectedCurrency)
+                  ? selectedCurrency
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.currency_exchange,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar moneda',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: currencies.map((currency) {
+                return DropdownMenuItem<String>(
+                  value: currency['code'],
+                  child: Text(
+                    '${currency['code']} - ${currency['name']} (${currency['symbol']})',
+                    style: textTheme.bodyMedium,
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? hintText,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        prefixIcon: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      keyboardType: keyboardType,
+      style: textTheme.bodyMedium,
+    );
+  }
+
+  // Mostrar diálogo de parámetros del parking
+  void _showParkingParametersDialog() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Controladores para los campos
+    String? selectedCurrency = _parking!.params.currency;
+    final decimalPlacesController = TextEditingController(text: _parking!.params.decimalPlaces.toString());
+    String? selectedTimeZone = _parking!.params.timeZone;
+    String? selectedCountryCode = _parking!.params.countryCode;
+    bool isLoading = false;
+    String? error;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      useRootNavigator: true,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Título
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'Parámetros del Parking',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const Divider(),
+
+                  if (error != null)
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.errorContainer.withValues(alpha: 127),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              error!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else ...[
+                    _buildCountrySelector(dialogContext, selectedCountryCode, (value) {
+                      setState(() => selectedCountryCode = value);
+                    }),
+                    _buildTimeZoneSelector(dialogContext, selectedTimeZone, (value) {
+                      setState(() => selectedTimeZone = value);
+                    }),
+                    _buildCurrencySelector(dialogContext, selectedCurrency, (value) {
+                      setState(() => selectedCurrency = value);
+                    }),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _buildTextField(
+                        controller: decimalPlacesController,
+                        label: 'Decimales',
+                        icon: Icons.numbers,
+                        keyboardType: TextInputType.number,
+                        hintText: 'Ej: 2',
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  // Botones de acción
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                        child: Text(
+                          'Cancelar',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: isLoading ? null : () async {
+                          // Validar campos requeridos
+                          if (selectedCurrency == null || selectedCurrency!.isEmpty || decimalPlacesController.text.isEmpty) {
+                            setState(() {
+                              error = 'Por favor completa los campos requeridos';
+                            });
+                            return;
+                          }
+
+                          // Validar decimales
+                          final decimalPlaces = int.tryParse(decimalPlacesController.text);
+                          if (decimalPlaces == null || decimalPlaces < 0 || decimalPlaces > 4) {
+                            setState(() {
+                              error = 'Los decimales deben ser un número entre 0 y 4';
+                            });
+                            return;
+                          }
+
+                          setState(() {
+                            isLoading = true;
+                            error = null;
+                          });
+
+                          try {
+                            // Crear modelo de actualización de parámetros
+                            final updatedParams = ParkingParamsModel(
+                              theme: _parking!.params.theme, // Mantener el tema actual
+                              currency: selectedCurrency!,
+                              timeZone: selectedTimeZone?.isNotEmpty == true ? selectedTimeZone! : '',
+                              countryCode: selectedCountryCode?.isNotEmpty == true ? selectedCountryCode! : '',
+                              decimalPlaces: decimalPlaces,
+                              slogan: _parking!.params.slogan, // Mantener el slogan actual
+                            );
+
+                            // Actualizar parámetros en el parking
+                            await _parkingService.updateParking(
+                              _parking!.id.toString(),
+                              ParkingUpdateModel(params: updatedParams),
+                            );
+
+                            if (mounted) {
+                              Navigator.of(dialogContext).pop();
+                              await _refreshParkingDetails();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Parámetros actualizados correctamente'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setState(() {
+                              error = 'Error al actualizar parámetros: ${e.toString()}';
+                              isLoading = false;
+                            });
+                          }
+                        },
+                        child: isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Guardar'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+
 
   // Navegar a la pantalla de diseño
   void _navigateToDesign() {
@@ -906,6 +1306,8 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
   late TextEditingController emailController;
   late TextEditingController phoneController;
   late TextEditingController sloganController;
+  late TextEditingController latitudeController;
+  late TextEditingController longitudeController;
   late bool isActive;
   late ParkingOperationMode operationMode;
   bool _isLoading = false;
@@ -923,6 +1325,12 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
     sloganController = TextEditingController(
       text: widget.parking.params.slogan ?? '',
     );
+    latitudeController = TextEditingController(
+      text: widget.parking.location?.lat?.toString() ?? '',
+    );
+    longitudeController = TextEditingController(
+      text: widget.parking.location?.lng?.toString() ?? '',
+    );
 
     isActive = widget.parking.isActive ?? true;
     operationMode = widget.parking.operationMode ?? ParkingOperationMode.map;
@@ -935,6 +1343,8 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
     emailController.dispose();
     phoneController.dispose();
     sloganController.dispose();
+    latitudeController.dispose();
+    longitudeController.dispose();
 
     super.dispose();
   }
@@ -968,39 +1378,6 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
                         children: [
                           const SizedBox(height: 24),
 
-                          // Mensaje de error si existe
-                          if (_error != null) ...[
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 24),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: colorScheme.errorContainer,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: colorScheme.error.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: colorScheme.error,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      _error!,
-                                      style: textTheme.bodyMedium?.copyWith(
-                                        color: colorScheme.error,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
 
                           // Campo de nombre del aparcamiento
                           _buildModernTextField(
@@ -1019,6 +1396,8 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
                           // Campo de dirección
                           CustomAddressInput(
                             addressController: addressController,
+                            latitudeController: latitudeController,
+                            longitudeController: longitudeController,
                             labelText: 'Dirección',
                             hintText:
                                 'Ingresa la dirección del estacionamiento',
@@ -1028,6 +1407,31 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Campos de coordenadas
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _buildModernTextField(
+                                  controller: latitudeController,
+                                  label: 'Latitud',
+                                  icon: Icons.location_on_outlined,
+                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildModernTextField(
+                                  controller: longitudeController,
+                                  label: 'Longitud',
+                                  icon: Icons.location_on_outlined,
+                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 20),
 
@@ -1287,6 +1691,16 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
         context,
       ).resolve<ParkingService>();
 
+      // Crear el modelo de ubicación actualizado
+      ParkingLocationModel? location;
+      if (latitudeController.text.isNotEmpty && longitudeController.text.isNotEmpty) {
+        final lat = double.tryParse(latitudeController.text);
+        final lng = double.tryParse(longitudeController.text);
+        if (lat != null && lng != null) {
+          location = ParkingLocationModel(lat: lat, lng: lng);
+        }
+      }
+
       // Crear el modelo de parámetros actualizado
       final updatedParams = ParkingParamsModel(
         theme: widget.parking.params.theme,
@@ -1302,6 +1716,7 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
         ParkingUpdateModel(
           name: nameController.text,
           address: addressController.text,
+          location: location,
           isOpen: isActive,
           operationMode: operationMode,
           params: updatedParams,
@@ -1325,9 +1740,21 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Error al actualizar: ${e.toString()}';
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            action: SnackBarAction(
+              label: 'Cerrar',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
       }
     }
   }

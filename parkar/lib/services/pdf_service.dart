@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:parkar/models/booking_model.dart';
+import 'package:parkar/models/access_model.dart';
+import 'package:parkar/models/subscription_model.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
@@ -178,11 +180,10 @@ class PdfService {
   }
 
   // Método para estandarizar los tipos de acceso
-    String _standardizeAccessType(BookingType? accessType) {
-    if (accessType == BookingType.access) return 'Normal';
+  String _standardizeAccessType(String? accessType) {
     if (accessType == null) return 'Normal';
 
-    final lowercaseType = accessType.name.toLowerCase();
+    final lowercaseType = accessType.toLowerCase();
     if (lowercaseType.contains('reserv')) {
       return 'Reserva';
     } else if (lowercaseType.contains('suscri') ||
@@ -195,43 +196,31 @@ class PdfService {
 
   // Generar ticket de entrada
   Future<Uint8List> generateEntryTicket({
-    required BookingModel booking,
+    required AccessModel booking,
   }) async {
     // Generar número de ticket único basado en timestamp
     final ticketNumber =
         'E${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
-    // Estandarizar el tipo de acceso
-    final standardAccessType = _standardizeAccessType(booking.type);
-
-    // Información del vehículo
+    // Información básica del vehículo (solo facturación)
     final vehicleInfo = <String, String>{
       'Placa': booking.vehicle.plate.isNotEmpty ? booking.vehicle.plate.toUpperCase() : '--',
       'Tipo': booking.vehicle.type.isNotEmpty ? _formatVehicleType(booking.vehicle.type) : '--',
       'Color': booking.vehicle.color?.isNotEmpty == true ? booking.vehicle.color! : '--',
-      'Acceso': standardAccessType,
     };
 
     // Solo agregar información del espacio si no está vacío
-    if (booking.spot?.name.isNotEmpty == true) {
-      vehicleInfo['Espacio'] = booking.spot?.name ?? '';
+    if (booking.spotId != null && booking.spotId!.isNotEmpty) {
+      vehicleInfo['Espacio'] = booking.spotId!;
     }
-
-    // Información del propietario (siempre mostrar, usar "--" para valores nulos)
-    final ownerInfo = <String, String>{
-      'Nombre': booking.vehicle.ownerName?.isNotEmpty == true ? booking.vehicle.ownerName! : '--',
-      'Documento': booking.vehicle.ownerDocument?.isNotEmpty == true ? booking.vehicle.ownerDocument! : '--',
-      'Teléfono': booking.vehicle.ownerPhone?.isNotEmpty == true ? booking.vehicle.ownerPhone! : '--',
-    };
 
     return _createUnifiedTicket(
       title: 'TICKET DE ENTRADA',
       parkingName: booking.parking.name,
       parkingAddress: booking.parking.address ?? '',
       ticketNumber: ticketNumber,
-      dateTime: booking.startDate,
+      dateTime: booking.entryTime,
       vehicleInfo: vehicleInfo,
-      ownerInfo: ownerInfo,
       footerMessage:
           'CONSERVE ESTE TICKET\nRequerido para la salida del vehículo',
     );
@@ -255,8 +244,8 @@ class PdfService {
     };
 
     // Solo agregar información del espacio si no está vacío
-    if (booking.spot?.name.isNotEmpty == true) {
-      vehicleInfo['Espacio'] = booking.spot?.name ?? '';
+    if (booking.spotId?.isNotEmpty == true) {
+      vehicleInfo['Espacio'] = booking.spotId!;
     }
 
     // Información del propietario (siempre mostrar, usar "--" para valores nulos)
@@ -281,7 +270,7 @@ class PdfService {
 
   // Generar recibo de suscripción
   Future<Uint8List> generateSubscriptionReceipt({
-    required BookingModel booking,
+    required SubscriptionModel booking,
   }) async {
     // Generar número de ticket único basado en timestamp
     final ticketNumber =
@@ -326,34 +315,32 @@ class PdfService {
 
   // Generar ticket de salida
   Future<Uint8List> generateExitTicket({
-    required BookingModel booking,
+    required AccessModel booking,
   }) async {
     // Generar número de ticket único basado en timestamp
     final ticketNumber =
         'S${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     // Estandarizar el tipo de acceso
-    final standardAccessType = _standardizeAccessType(booking.type);
+    final standardAccessType = _standardizeAccessType('access'); // Always 'access' for exits
 
     // Información del vehículo y estancia
     final vehicleInfo = <String, String>{
       'Placa': booking.vehicle.plate.isNotEmpty ? booking.vehicle.plate.toUpperCase() : '--',
       'Acceso': standardAccessType,
-      'Entrada': DateFormat('dd/MM/yyyy HH:mm').format(booking.startDate),
-      'Salida': DateFormat('dd/MM/yyyy HH:mm').format(booking.endDate ?? DateTime.now()),
+      'Entrada': DateFormat('dd/MM/yyyy HH:mm').format(booking.entryTime),
+      'Salida': DateFormat('dd/MM/yyyy HH:mm').format(booking.exitTime ?? DateTime.now()),
       'Duración': _formatDuration(booking.duration ?? Duration.zero),
     };
 
     // Solo agregar información del espacio si no está vacío
-    if (booking.spot?.name.isNotEmpty == true) {
-      vehicleInfo['Espacio'] = booking.spot?.name ?? '';
+    if (booking.spotId?.isNotEmpty == true) {
+      vehicleInfo['Espacio'] = booking.spotId!;
     }
 
     // Información de pago
     final paymentInfo = {
-      'Tarifa': standardAccessType == 'Suscripción'
-          ? 'Sin cargo'
-          : '\$${booking.amount.toStringAsFixed(2)}',
+      'Tarifa': '\$${booking.amount.toStringAsFixed(2)}',
     };
 
     // Añadir empleado (siempre mostrar, usar "--" si no está disponible)
@@ -364,7 +351,7 @@ class PdfService {
       parkingName: booking.parking.name,
       parkingAddress: booking.parking.address ?? '',
       ticketNumber: ticketNumber,
-      dateTime: booking.endDate ?? DateTime.now(),
+      dateTime: booking.exitTime ?? DateTime.now(),
       vehicleInfo: vehicleInfo,
       paymentInfo: paymentInfo,
       footerMessage:
@@ -410,5 +397,54 @@ class PdfService {
     } else {
       return '${minutes.toString().padLeft(2, '0')} m';
     }
+  }
+
+  // Generar PDF de prueba
+  Future<Uint8List> generateTestPrint() async {
+    final pdf = pw.Document();
+
+    // Cargar fuentes
+    final font = pw.Font.helvetica();
+    final fontBold = pw.Font.helveticaBold();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: const PdfPageFormat(
+          80 * PdfPageFormat.mm,
+          100 * PdfPageFormat.mm,
+          marginAll: 5,
+        ),
+        build: (pw.Context context) {
+          return pw.Container(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Text(
+                  'PRUEBA DE IMPRESIÓN',
+                  style: pw.TextStyle(font: fontBold, fontSize: 14),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+                  style: pw.TextStyle(font: font, fontSize: 10),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Impresión Nativa OK',
+                  style: pw.TextStyle(font: fontBold, fontSize: 12),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  '© ${DateTime.now().year} ParKar',
+                  style: pw.TextStyle(font: font, fontSize: 8),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
   }
 }

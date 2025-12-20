@@ -4,13 +4,15 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
+import '../../models/parking_model.dart';
 
 import 'parking_detail_screen.dart';
 import 'parking_rates_screen.dart';
 import 'statistics_panel.dart';
 import 'reports_screen.dart';
-import 'settings_screen.dart';
-import 'favor_card_screen.dart';
+import 'employees_screen.dart';
+import 'manage_subscription.dart';
+import '../cash_register/cash_register_screen.dart';
 
 // Definición de rutas para el panel de control
 class DashboardRoute {
@@ -124,6 +126,12 @@ class _DashboardScreenState extends State<DashboardScreen>
             },
           ),
           DashboardRoute(
+            id: 'employees',
+            title: 'Empleados',
+            icon: Icons.people_rounded,
+            builder: (context) => const EmployeesScreen(),
+          ),
+          DashboardRoute(
             id: 'parkingRates',
             title: 'Tarifas y Precios',
             icon: Icons.attach_money_rounded,
@@ -168,16 +176,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         title: 'Configuración',
         routes: [
           DashboardRoute(
-            id: 'settings',
-            title: 'Ajustes',
-            icon: Icons.settings_rounded,
-            builder: (context) => const SettingsScreen(),
+            id: 'cashRegister',
+            title: 'Caja Registradora',
+            icon: Icons.attach_money_rounded,
+            builder: (context) => const CashRegisterScreen(),
           ),
           DashboardRoute(
-            id: 'favorCard',
-            title: 'Tarjeta por Favor',
-            icon: Icons.credit_card_rounded,
-            builder: (context) => const FavorCardScreen(),
+            id: 'manageSubscriptionCard',
+            title: 'Suscripción',
+            icon: Icons.subscriptions_rounded,
+            builder: (context) => const ManageSubscriptionScreen(),
           ),
         ],
       ),
@@ -309,7 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                   const SizedBox(height: 24),
 
-                  // Caja del Día
+                  // Dashboard Financiero
                   if (_dashboardData != null) _buildFinancialSummary(context),
 
                   const SizedBox(height: 100), // Espacio extra al final
@@ -324,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         appBar: AppBar(
           title: Text(
             'Panel de Control',
-            style: textTheme.headlineSmall?.copyWith(
+            style: textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               letterSpacing: -0.5,
             ),
@@ -428,7 +436,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(width: 8),
           Text(
             _getCurrentPageTitle() ?? '',
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               letterSpacing: -0.5,
             ),
@@ -539,7 +547,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // Método para construir la caja del día
+  // Método para construir el dashboard financiero unificado
   Widget _buildFinancialSummary(BuildContext context) {
     if (_dashboardData == null) return const SizedBox.shrink();
 
@@ -553,17 +561,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         _dashboardData!['financialData'] as Map<String, dynamic>;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colorScheme.surface,
-            colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
@@ -571,156 +572,122 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header de la caja del día
+          // Header compacto
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+              Icon(Icons.local_parking, color: colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Estado del Parqueo',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
                 ),
-                child: Icon(
-                  Icons.trending_up,
-                  color: colorScheme.primary,
-                  size: 24,
+              ),
+              const Spacer(),
+              Text(
+                '${DateTime.now().day}/${DateTime.now().month}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // KPIs principales orientados al servicio
+          Row(
+            children: [
+              Expanded(
+                child: _buildKPICard(
+                  context,
+                  'Vehículos Hoy',
+                  '${(financialData['dailyRevenue'] / financialData['averageTicket']).round()}',
+                  Icons.directions_car,
+                  Colors.blue,
+                  'registrados',
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Caja del Día',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      'Estado actual de las ganancias de hoy',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.green.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.trending_up,
-                      color: Colors.green,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '+12%',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-
-          // Métricas principales
-          GridView.count(
-            crossAxisCount: isSmallScreen ? 2 : 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 20,
-            crossAxisSpacing: 20,
-            childAspectRatio: isSmallScreen ? 1.3 : 1.5,
-            children: [
-              _buildModernMetricCard(
-                context,
-                'Caja del Día',
-                '\$${financialData['dailyRevenue'].toStringAsFixed(0)}',
-                Icons.point_of_sale,
-                Colors.green,
-                'Ganancias de hoy',
-              ),
-              _buildModernMetricCard(
-                context,
-                'Vehículos Hoy',
-                '${(financialData['dailyRevenue'] / financialData['averageTicket']).round()}',
-                Icons.directions_car,
-                Colors.blue,
-                'Atendidos hasta ahora',
-              ),
-              _buildModernMetricCard(
-                context,
-                'Horas Promedio',
-                '${(financialData['averageTicket'] / 5).toStringAsFixed(1)}h',
-                Icons.timer,
-                Colors.orange,
-                'Tiempo promedio',
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-
-          // Información adicional
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Información Útil',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildInfoRow(
+                child: _buildKPICard(
                   context,
-                  Icons.trending_up,
+                  'Ingresos del Día',
+                  '\$${financialData['dailyRevenue'].toStringAsFixed(0)}',
+                  Icons.attach_money,
                   Colors.green,
-                  'El día va mejor que ayer (+${(financialData['dailyRevenue'] * 0.12).toStringAsFixed(0)}%)',
+                  'recaudado',
                 ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  context,
-                  Icons.access_time,
-                  Colors.blue,
-                  'Promedio por hora: \$${(financialData['dailyRevenue'] / 24).toStringAsFixed(0)}',
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  context,
-                  Icons.local_parking,
-                  Colors.orange,
-                  'Ocupación actual: ${(financialData['dailyRevenue'] / financialData['averageTicket'] / 120 * 100).toStringAsFixed(0)}%',
+              ),
+              if (!isSmallScreen) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildKPICard(
+                    context,
+                    'Ocupación Actual',
+                    '${(_dashboardData!['summary']['currentOccupancy'] as double).toStringAsFixed(0)}%',
+                    Icons.local_parking,
+                    Colors.orange,
+                    'del parqueo',
+                  ),
                 ),
               ],
+            ],
+          ),
+
+          if (isSmallScreen) ...[
+            const SizedBox(height: 16),
+            _buildKPICard(
+              context,
+              'Ocupación Actual',
+              '${(_dashboardData!['summary']['currentOccupancy'] as double).toStringAsFixed(0)}%',
+              Icons.local_parking,
+              Colors.orange,
+              'del parqueo',
             ),
+          ],
+
+          const SizedBox(height: 24),
+
+          // Métricas adicionales orientadas al servicio
+          GridView.count(
+            crossAxisCount: isSmallScreen ? 2 : 4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.4,
+            children: [
+              _buildMetricItem(
+                context,
+                'Espacios Totales',
+                '${_dashboardData!['summary']['totalSpots']}',
+                Icons.local_parking,
+                Colors.blue,
+              ),
+              _buildMetricItem(
+                context,
+                'Espacios Ocupados',
+                '${_dashboardData!['summary']['occupiedSpots']}',
+                Icons.directions_car,
+                Colors.orange,
+              ),
+              _buildMetricItem(
+                context,
+                'Tiempo Promedio',
+                '${_dashboardData!['summary']['averageTime'].toStringAsFixed(1)}h',
+                Icons.schedule,
+                Colors.green,
+              ),
+              _buildMetricItem(
+                context,
+                'Rotación Diaria',
+                '${_dashboardData!['summary']['dailyRotation'].toStringAsFixed(1)}',
+                Icons.refresh,
+                Colors.purple,
+              ),
+            ],
           ),
         ],
       ),
@@ -743,17 +710,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,7 +735,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 16),
           Text(
             value,
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: colorScheme.onSurface,
             ),
@@ -831,6 +791,293 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ),
       ],
+    );
+  }
+
+  // Widget para mostrar una métrica financiera compacta
+  Widget _buildCompactMetricCard(
+    BuildContext context,
+    String value,
+    IconData icon,
+    Color color,
+    String title,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              const Spacer(),
+              Icon(Icons.trending_up, color: Colors.green, size: 14),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget para mostrar una fila de información compacta
+  Widget _buildCompactInfoRow(
+    BuildContext context,
+    IconData icon,
+    Color color,
+    String value,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Icon(icon, color: color, size: 14),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget para mostrar una fila de información con etiqueta
+  Widget _buildLabeledInfoRow(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget para KPI principal
+  Widget _buildKPICard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    String subtitle,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const Spacer(),
+              Icon(Icons.trending_up, color: Colors.green, size: 16),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: colorScheme.onSurface,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.green,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget para ítem de métrica adicional
+  Widget _buildMetricItem(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              const Spacer(),
+              Icon(Icons.arrow_upward, color: color, size: 14),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1014,20 +1261,20 @@ class _DashboardScreenState extends State<DashboardScreen>
                         },
                       },
                       {
-                        'title': 'Configuración',
-                        'subtitle': 'Ajustes',
-                        'icon': Icons.settings_rounded,
-                        'color': Colors.orange,
+                        'title': 'Empleados',
+                        'subtitle': 'Gestionar',
+                        'icon': Icons.people_rounded,
+                        'color': Colors.teal,
                         'onTap': () {
                           // En pantallas grandes, usar el diseño de dos columnas
                           final size = MediaQuery.of(context).size;
                           if (size.width > 900) {
                             _navigateToRoute(
                               DashboardRoute(
-                                id: 'settings',
-                                title: 'Ajustes',
-                                icon: Icons.settings_rounded,
-                                builder: (context) => const SettingsScreen(),
+                                id: 'employees',
+                                title: 'Empleados',
+                                icon: Icons.people_rounded,
+                                builder: (context) => const EmployeesScreen(),
                               ),
                             );
                           } else {
@@ -1035,16 +1282,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const SettingsScreen(),
+                                builder: (context) => const EmployeesScreen(),
                               ),
                             );
                           }
                         },
                       },
                       {
-                        'title': 'Tarjeta',
-                        'subtitle': 'Por Favor',
-                        'icon': Icons.credit_card_rounded,
+                        'title': 'Suscripción',
+                        'subtitle': 'Administrar',
+                        'icon': Icons.subscriptions_rounded,
                         'color': Colors.purple,
                         'onTap': () {
                           // En pantallas grandes, usar el diseño de dos columnas
@@ -1052,10 +1299,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                           if (size.width > 900) {
                             _navigateToRoute(
                               DashboardRoute(
-                                id: 'favorCard',
-                                title: 'Tarjeta por Favor',
-                                icon: Icons.credit_card_rounded,
-                                builder: (context) => const FavorCardScreen(),
+                                id: 'manageSubscriptionCard',
+                                title: 'Suscripción',
+                                icon: Icons.subscriptions_rounded,
+                                builder: (context) =>
+                                    const ManageSubscriptionScreen(),
                               ),
                             );
                           } else {
@@ -1063,7 +1311,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const FavorCardScreen(),
+                                builder: (context) =>
+                                    const ManageSubscriptionScreen(),
                               ),
                             );
                           }

@@ -1,55 +1,55 @@
 import '../config/app_config.dart';
-import '../models/booking_model.dart';
+import '../models/subscription_model.dart';
 import 'base_service.dart';
 
 class SubscriptionService extends BaseService {
   SubscriptionService()
-    : super(path: AppConfig.apiEndpoints['subscription'] ?? '/subscription');
+     : super(path: AppConfig.apiEndpoints['subscription'] ?? '/subscription');
 
-  Future<BookingModel> createSubscription(
+  Future<SubscriptionModel> createSubscription(
     SubscriptionCreateModel subscription,
   ) async {
-    return post<BookingModel>(
+    return post<SubscriptionModel>(
       endpoint: '',
       body: subscription.toJson(),
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, SubscriptionModel.fromJson),
     );
   }
 
-  Future<BookingModel> renewSubscription(
+  Future<SubscriptionModel> renewSubscription(
     String subscriptionId, {
-    String? period,
+    SubscriptionPeriod? period,
     double? amount,
     String? notes,
   }) async {
     final data = <String, dynamic>{};
-    
-    if (period != null) data['period'] = period;
+
+    if (period != null) data['period'] = period.name;
     if (amount != null) data['amount'] = amount;
     if (notes != null) data['notes'] = notes;
 
-    return post<BookingModel>(
+    return post<SubscriptionModel>(
       endpoint: '/$subscriptionId/renew',
       body: data,
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, SubscriptionModel.fromJson),
     );
   }
 
-  Future<BookingModel> getSubscription(String id) async {
-    return get<BookingModel>(
+  Future<SubscriptionModel> getSubscription(String id) async {
+    return get<SubscriptionModel>(
       endpoint: '/$id',
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, SubscriptionModel.fromJson),
     );
   }
 
-  Future<BookingModel> updateSubscription(
+  Future<SubscriptionModel> updateSubscription(
     String id,
     Map<String, dynamic> data,
   ) async {
-    return patch<BookingModel>(
+    return patch<SubscriptionModel>(
       endpoint: '/$id',
       body: data,
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, SubscriptionModel.fromJson),
     );
   }
 
@@ -57,19 +57,19 @@ class SubscriptionService extends BaseService {
     return delete<void>(endpoint: '/$id', parser: (_) => null);
   }
 
-  Future<List<BookingModel>> getSubscriptionsByParking(String parkingId) async {
-    return get<List<BookingModel>>(
+  Future<List<SubscriptionModel>> getSubscriptionsByParking(String parkingId) async {
+    return get<List<SubscriptionModel>>(
       endpoint: '',
       additionalHeaders: {'parkingId': parkingId},
-      parser: (json) => parseModelList(json, BookingModel.fromJson),
+      parser: (json) => parseModelList(json, SubscriptionModel.fromJson),
     );
   }
 
-  Future<List<BookingModel>> getSubscriptionsByVehicle(String vehicleId) async {
-    return get<List<BookingModel>>(
+  Future<List<SubscriptionModel>> getSubscriptionsByVehicle(String vehicleId) async {
+    return get<List<SubscriptionModel>>(
       endpoint: '',
       additionalHeaders: {'vehicleId': vehicleId},
-      parser: (json) => parseModelList(json, BookingModel.fromJson),
+      parser: (json) => parseModelList(json, SubscriptionModel.fromJson),
     );
   }
 
@@ -79,7 +79,7 @@ class SubscriptionService extends BaseService {
     String? endDate,
   }) async {
     final queryParams = <String, String>{};
-    
+
     if (startDate != null) queryParams['startDate'] = startDate;
     if (endDate != null) queryParams['endDate'] = endDate;
 

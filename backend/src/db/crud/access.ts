@@ -1,8 +1,9 @@
 import { pool, withTransaction } from "../connection";
-import { Access, AccessCreate, AccessUpdate, AccessCreateRequest, ExitRequest, ACCESS_STATUS } from "../../models/access";
+import { Access, AccessCreate, AccessUpdate, AccessCreateRequest, ExitRequest, FeeUpdateRequest, ACCESS_STATUS } from "../../models/access";
 import { BadRequestError } from "../../utils/error";
 import { getSchemaValidator } from "elysia";
 import { VehicleCreateSchema } from "../../models/vehicle";
+import { calculateParkingFee } from "../../utils/common";
 import { randomUUID } from "crypto";
 
 // ===== FUNCIONES AUXILIARES =====
@@ -39,10 +40,12 @@ const findAccesss = async (filters: {
   parkingId?: string;
   employeeId?: string;
   vehicleId?: string;
+  vehiclePlate?: string;
   spotId?: string;
   status?: string;
   startDate?: string;
   endDate?: string;
+  inParking?: boolean;
 } = {}): Promise<Access[]> => {
   const conditions: string[] = [];
   const values: any[] = [];
@@ -68,6 +71,11 @@ const findAccesss = async (filters: {
     values.push(filters.vehicleId);
   }
 
+  if (filters.vehiclePlate) {
+    conditions.push(`v."plate" ILIKE $${paramIndex++}`);
+    values.push(`%${filters.vehiclePlate}%`);
+  }
+
   if (filters.spotId) {
     conditions.push(`ee."spotId" = $${paramIndex++}`);
     values.push(filters.spotId);
@@ -86,6 +94,9 @@ const findAccesss = async (filters: {
   if (filters.endDate) {
     conditions.push(`ee."entryTime" <= $${paramIndex++}`);
     values.push(filters.endDate);
+  }
+  if (filters.inParking) {
+    conditions.push(`ee."exitTime" IS NULL`);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -109,12 +120,14 @@ const findAccesss = async (filters: {
         'email', u."email",
         'phone', u."phone"
       ) as employee,
-      json_build_object(
-        'id', ee."exitEmployeeId",
-        'name', eu."name",
-        'email', eu."email",
-        'phone', eu."phone"
-      ) as exitEmployee,
+      (
+        case when ee."exitEmployeeId" is null then null else json_build_object(
+          'id', ee."exitEmployeeId",
+          'name', eu."name",
+          'email', eu."email",
+          'phone', eu."phone"
+        ) end
+      ) as "exitEmployee",
       json_build_object(
         'id', ee."vehicleId",
         'plate', v."plate",
@@ -126,12 +139,12 @@ const findAccesss = async (filters: {
         'isSubscribed', v."isSubscribed"
       ) as vehicle
     FROM t_access ee
-    LEFT JOIN t_vehicle v ON ee.vehicleId = v.id
-    LEFT JOIN t_parking p ON ee.parkingId = p.id
-    LEFT JOIN t_employee e ON ee.employeeId = e.id
-    LEFT JOIN t_user u ON e.userId = u.id
-    LEFT JOIN t_employee exit_e ON ee.exitEmployeeId = exit_e.id
-    LEFT JOIN t_user eu ON exit_e.userId = eu.id
+    LEFT JOIN t_vehicle v ON ee."vehicleId" = v.id
+    LEFT JOIN t_parking p ON ee."parkingId" = p.id
+    LEFT JOIN t_employee e ON ee."employeeId" = e.id
+    LEFT JOIN t_user u ON e."userId" = u.id
+    LEFT JOIN t_employee exit_e ON ee."exitEmployeeId" = exit_e.id
+    LEFT JOIN t_user eu ON exit_e."userId" = eu.id
     ${whereClause}
     ORDER BY ee."entryTime" DESC
   `, values);
@@ -224,8 +237,8 @@ const createAccess = async (data: AccessCreateRequest, parkingId: string, employ
 /**
  * Registrar salida de un vehículo
  */
-const registerExit = async (id: string, data: ExitRequest): Promise<Access> => {
-  const { exitEmployeeId, amount, notes } = data;
+const registerExit = async (id: string, exitEmployeeId: string, data: Omit<ExitRequest, 'exitEmployeeId'>): Promise<Access> => {
+  const { amount, notes } = data;
 
   const updates: string[] = [];
   const values: any[] = [];
@@ -261,6 +274,30 @@ const registerExit = async (id: string, data: ExitRequest): Promise<Access> => {
     WHERE "id" = $${paramIndex}
     RETURNING *
   `, values);
+
+  if (result.rows.length === 0) {
+    throw new BadRequestError("Acceso no encontrado");
+  }
+
+  const updatedAccess = await getAccessById(id);
+  if (!updatedAccess) {
+    throw new BadRequestError("Error al obtener el acceso actualizado");
+  }
+  return updatedAccess;
+};
+
+/**
+ * Actualizar la tarifa de un acceso
+ */
+const updateFee = async (id: string, data: FeeUpdateRequest): Promise<Access> => {
+  const { amount } = data;
+
+  const result = await pool.query(`
+    UPDATE t_access
+    SET "amount" = $1, "updatedAt" = $2
+    WHERE "id" = $3
+    RETURNING *
+  `, [amount, new Date().toISOString(), id]);
 
   if (result.rows.length === 0) {
     throw new BadRequestError("Acceso no encontrado");
@@ -390,9 +427,39 @@ const getAccessStats = async (parkingId: string, startDate?: string, endDate?: s
   };
 };
 
+/**
+ * Calculate the current fee for an access
+ */
+const calculateCurrentFee = async (id: string): Promise<{ currentFee: number; access: Access }> => {
+  const access = await getAccessById(id);
+  if (!access) {
+    throw new BadRequestError("Acceso no encontrado");
+  }
+
+  // Get parking rates
+  const parkingResult = await pool.query(`
+    SELECT rates FROM t_parking WHERE id = $1
+  `, [access.parkingId]);
+
+  if (parkingResult.rows.length === 0) {
+    throw new BadRequestError("Estacionamiento no encontrado");
+  }
+
+  const rates = parkingResult.rows[0].rates;
+
+  // Get vehicle category (assuming it's stored in the vehicle table or can be derived)
+  // For now, default to car category (3)
+  const vehicleCategory = 3;
+
+  const currentFee = calculateParkingFee(access.entryTime as string, rates, vehicleCategory);
+
+  return { currentFee, access };
+};
+
 export const accessCrud = {
   createAccess,
   registerExit,
+  updateFee,
   findAccesss,
   getAccessById,
   updateAccess,
@@ -401,4 +468,5 @@ export const accessCrud = {
   getActiveAccesssForVehicle,
   getAccessStats,
   generateAccessNumber,
+  calculateCurrentFee,
 };

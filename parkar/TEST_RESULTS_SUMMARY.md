@@ -60,7 +60,7 @@ Todas las pruebas de API han pasado exitosamente. El sistema está completamente
   - `getBookingsPaginated()` - Lista paginada
 
 ### ✅ AccessService
-- **Endpoint**: `/entry-exit`
+- **Endpoint**: `/access`
 - **Métodos principales**:
   - `createEntry()` - Crear acceso
   - `registerEntry()` - Registrar entrada

@@ -1,48 +1,92 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/employee_model.dart';
 import '../../models/parking_model.dart';
 import '../../services/parking_service.dart';
+import '../../services/employee_service.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/page_layout.dart';
 
 /// Pantalla para gestionar empleados del estacionamiento
 class EmployeesScreen extends StatefulWidget {
-  final ParkingModel parking;
-  final VoidCallback onSave;
-
-  const EmployeesScreen({
-    super.key,
-    required this.parking,
-    required this.onSave,
-  });
+  const EmployeesScreen({super.key});
 
   @override
   State<EmployeesScreen> createState() => _EmployeesScreenState();
 }
 
 class _EmployeesScreenState extends State<EmployeesScreen> {
-  bool _isLoading = false;
-  String? _error;
-  late List<EmployeeModel> _employees;
   late ParkingService _parkingService;
+  late EmployeeService _employeeService;
+  bool _isLoading = true;
+  ParkingModel? _parking;
+  late List<EmployeeModel> _employees;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _employees = List.from(widget.parking.employees ?? []);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+    _employeeService = EmployeeService();
+    _loadParkingDetails();
+  }
+
+  // Cargar los detalles del estacionamiento
+  Future<void> _loadParkingDetails() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final appState = AppStateContainer.of(context);
+      final currentParking = appState.currentParking;
+
+      if (currentParking == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _error = 'No hay estacionamiento seleccionado';
+          });
+        }
+        return;
+      }
+
+      // Load full parking data like parking detail screen does
+      final parking = await _parkingService.getParkingById(currentParking.id).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('Tiempo de espera agotado'),
+      );
+
+      if (mounted) {
+        setState(() {
+          _parking = parking;
+          _employees = List.from(parking.employees ?? []);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Error al cargar datos del estacionamiento: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return PageLayout(
       title: 'Gestión de Empleados',
-      body: _buildEmployeesContent(),
+      body: _buildMainContent(),
       actions: [
         TextButton.icon(
           onPressed: _addEmployee,
@@ -64,6 +108,52 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         const SizedBox(width: 16),
       ],
     );
+  }
+
+  Widget _buildMainContent() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                'Error al cargar empleados',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _loadParkingDetails,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return _buildEmployeesContent();
   }
 
   Widget _buildEmployeesContent() {
@@ -378,44 +468,75 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
-    final roleController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    String? selectedRole;
+
+    final roles = [
+      {'value': 'owner', 'label': 'Propietario'},
+      {'value': 'Administrador', 'label': 'Administrador'},
+      {'value': 'Supervisor', 'label': 'Supervisor'},
+      {'value': 'Operador', 'label': 'Operador'},
+      {'value': 'Cajero', 'label': 'Cajero'},
+      {'value': 'Guardia', 'label': 'Guardia de Seguridad'},
+    ];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
         title: Text(
           'Añadir Empleado',
           style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDialogTextField(
-              controller: nameController,
-              label: 'Nombre del empleado',
-              icon: Icons.person_outline,
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDialogTextField(
+                  controller: nameController,
+                  label: 'Nombre del empleado',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogTextField(
+                  controller: emailController,
+                  label: 'Email',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogTextField(
+                  controller: phoneController,
+                  label: 'Teléfono (opcional)',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                _buildRoleSelector(
+                  selectedRole: selectedRole,
+                  roles: roles,
+                  onChanged: (value) => selectedRole = value,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogTextField(
+                  controller: passwordController,
+                  label: 'Contraseña',
+                  icon: Icons.lock_outline,
+                  obscureText: true,
+                ),
+                const SizedBox(height: 16),
+                _buildDialogTextField(
+                  controller: confirmPasswordController,
+                  label: 'Confirmar Contraseña',
+                  icon: Icons.lock_outline,
+                  obscureText: true,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildDialogTextField(
-              controller: emailController,
-              label: 'Email (opcional)',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            _buildDialogTextField(
-              controller: phoneController,
-              label: 'Teléfono (opcional)',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 16),
-            _buildDialogTextField(
-              controller: roleController,
-              label: 'Rol',
-              icon: Icons.work_outline,
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -423,16 +544,67 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () {
-              // Implementar lógica para añadir empleado
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Funcionalidad en desarrollo'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: colorScheme.primary,
-                ),
-              );
+            onPressed: () async {
+              // Validar campos requeridos
+              if (nameController.text.isEmpty ||
+                  emailController.text.isEmpty ||
+                  selectedRole == null ||
+                  passwordController.text.isEmpty ||
+                  confirmPasswordController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Por favor complete todos los campos requeridos'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              if (passwordController.text != confirmPasswordController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Las contraseñas no coinciden'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              // Crear empleado con API real
+              try {
+                final employeeData = {
+                  'parkingId': _parking?.id,
+                  'name': nameController.text.trim(),
+                  'email': emailController.text.trim(),
+                  'phone': phoneController.text.isNotEmpty ? phoneController.text.trim() : null,
+                  'role': selectedRole,
+                  'password': passwordController.text,
+                };
+
+                await _employeeService.createEmployee(employeeData);
+
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  await _loadParkingDetails(); // Recargar lista
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Empleado creado exitosamente'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al crear empleado: $e'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Añadir'),
           ),
@@ -446,6 +618,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     required String label,
     required IconData icon,
     TextInputType? keyboardType,
+    bool obscureText = false,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -459,7 +632,77 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
       keyboardType: keyboardType,
+      obscureText: obscureText,
       style: textTheme.bodyMedium,
+    );
+  }
+
+  Widget _buildRoleSelector({
+    required String? selectedRole,
+    required List<Map<String, String>> roles,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Rol',
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: colorScheme.outline.withValues(alpha: 60),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: selectedRole,
+            decoration: InputDecoration(
+              prefixIcon: Icon(
+                Icons.work_outline,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            hint: Text(
+              'Seleccionar rol',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            items: roles.map((role) {
+              return DropdownMenuItem<String>(
+                value: role['value'],
+                child: Text(
+                  role['label']!,
+                  style: textTheme.bodyMedium,
+                ),
+              );
+            }).toList(),
+            onChanged: onChanged,
+            dropdownColor: colorScheme.surface,
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -468,68 +711,241 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    final roleController = TextEditingController(text: employee.role);
+    String? selectedRole = employee.role;
+    bool changePassword = false;
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmNewPasswordController = TextEditingController();
+
+    final roles = [
+      {'value': 'owner', 'label': 'Propietario'},
+      {'value': 'Administrador', 'label': 'Administrador'},
+      {'value': 'Supervisor', 'label': 'Supervisor'},
+      {'value': 'Operador', 'label': 'Operador'},
+      {'value': 'Cajero', 'label': 'Cajero'},
+      {'value': 'Guardia', 'label': 'Guardia de Seguridad'},
+    ];
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Editar Empleado',
-          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Empleado: ${employee.name}',
-              style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+          title: Text(
+            'Editar Empleado',
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Información del empleado (solo lectura)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Información del Empleado',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          employee.name,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        if (employee.email != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            employee.email!,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        if (employee.phone != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            employee.phone!,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Selector de rol (editable)
+                  _buildRoleSelector(
+                    selectedRole: selectedRole,
+                    roles: roles,
+                    onChanged: (value) => selectedRole = value,
+                  ),
+                  const SizedBox(height: 16),
+                  // Opción para cambiar contraseña
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Cambiar Contraseña',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            Switch(
+                              value: changePassword,
+                              onChanged: (value) {
+                                setState(() {
+                                  changePassword = value;
+                                });
+                              },
+                              activeColor: colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                        if (changePassword) ...[
+                          const SizedBox(height: 16),
+                          _buildDialogTextField(
+                            controller: currentPasswordController,
+                            label: 'Contraseña Actual',
+                            icon: Icons.lock_outline,
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildDialogTextField(
+                            controller: newPasswordController,
+                            label: 'Nueva Contraseña',
+                            icon: Icons.lock_outline,
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildDialogTextField(
+                            controller: confirmNewPasswordController,
+                            label: 'Confirmar Nueva Contraseña',
+                            icon: Icons.lock_outline,
+                            obscureText: true,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            if (employee.email != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Email: ${employee.email}',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            if (employee.phone != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Teléfono: ${employee.phone}',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            _buildDialogTextField(
-              controller: roleController,
-              label: 'Rol',
-              icon: Icons.work_outline,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                // Validar campos requeridos
+                if (selectedRole == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Por favor seleccione un rol'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Validar cambio de contraseña si está activado
+                if (changePassword) {
+                  if (currentPasswordController.text.isEmpty ||
+                      newPasswordController.text.isEmpty ||
+                      confirmNewPasswordController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Por favor complete todos los campos de contraseña'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (newPasswordController.text != confirmNewPasswordController.text) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Las nuevas contraseñas no coinciden'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                }
+
+                try {
+                  // Actualizar datos del empleado
+                  final updateData = <String, dynamic>{};
+                  if (selectedRole != employee.role) {
+                    updateData['role'] = selectedRole;
+                  }
+
+                  if (updateData.isNotEmpty) {
+                    await _employeeService.updateEmployee(employee.id, updateData);
+                  }
+
+                  // Cambiar contraseña si está activado
+                  if (changePassword) {
+                    await _employeeService.changeEmployeePassword(employee.id, {
+                      'currentPassword': currentPasswordController.text,
+                      'newPassword': newPasswordController.text,
+                    });
+                  }
+
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    await _loadParkingDetails(); // Recargar lista
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Empleado actualizado exitosamente'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al actualizar empleado: $e'),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Actualizar'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              // Implementar lógica para actualizar empleado
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Funcionalidad en desarrollo'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: colorScheme.primary,
-                ),
-              );
-            },
-            child: const Text('Actualizar'),
-          ),
-        ],
       ),
     );
   }
@@ -572,16 +988,33 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () {
-              // Implementar lógica para eliminar empleado
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Funcionalidad en desarrollo'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: colorScheme.primary,
-                ),
-              );
+            onPressed: () async {
+              try {
+                await _employeeService.deleteEmployee(employee.id);
+
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  await _loadParkingDetails(); // Recargar lista
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Empleado eliminado exitosamente'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al eliminar empleado: $e'),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.error,

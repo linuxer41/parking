@@ -432,6 +432,11 @@ export const ParkingSchema = t.Composite([
       description: "Estado del estacionamiento",
       required: true,
     }),
+    isOpen: t.Optional(
+      t.Boolean({
+        description: "Indica si el estacionamiento está abierto",
+      }),
+    ),
     ownerId: t.String({
       description: "ID del usuario propietario del estacionamiento",
       required: true,
@@ -453,21 +458,21 @@ export const ParkingSchema = t.Composite([
 
 // ===== ESQUEMA DE RESPUESTA DE PARKING =====
 export const ParkingResponseSchema = t.Composite([
-  t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "params", "rates", "operationMode"]),
+  t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]),
   t.Pick(ParkingDynamicSchema, ["isOwner", "areaCount", "totalSpots", "occupiedSpots", "availableSpots"]),
 ], {
   description: "Esquema de respuesta para operaciones de Parking",
 });
 
 export const ParkingDetailedResponseSchema = t.Composite([
-  t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "params", "rates", "operationMode"]),
+  t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]),
   ParkingDynamicSchema,
 ], {
   description: "Esquema de respuesta para operaciones de Parking",
 });
 
 // ===== ESQUEMA DE CREACIÓN DE PARKING =====
-export const ParkingCreateSchema = t.Pick(ParkingSchema, ["id", "createdAt", "name", "email", "phone", "address", "location", "operationMode", "logoUrl", "status", "ownerId", "params", "rates"], {
+export const ParkingCreateSchema = t.Pick(ParkingSchema, ["id", "createdAt", "name", "email", "phone", "address", "location", "operationMode", "logoUrl", "status", "isOpen", "ownerId", "params", "rates"], {
   description: "Esquema para la creación de un Parking",
 });
 
@@ -477,12 +482,12 @@ export const ParkingCreateRequestSchema = t.Pick(ParkingSchema, ["name", "addres
 });
 
 // ===== ESQUEMA DE ACTUALIZACIÓN DE PARKING =====
-export const ParkingUpdateSchema = t.Partial(t.Pick(ParkingSchema, ["updatedAt", "name", "email", "phone", "address", "location", "logoUrl", "status", "params", "rates", "operationMode"]), {
+export const ParkingUpdateSchema = t.Partial(t.Pick(ParkingSchema, ["updatedAt", "name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]), {
   description: "Esquema para la actualización de un Parking",
 });
 
 // ===== ESQUEMA DE REQUEST DE ACTUALIZACIÓN DE PARKING =====
-export const ParkingUpdateRequestSchema = t.Partial(t.Pick(ParkingSchema, ["name", "email", "phone", "address", "location", "logoUrl", "status", "params", "rates", "operationMode"]), {
+export const ParkingUpdateRequestSchema = t.Partial(t.Pick(ParkingSchema, ["name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]), {
   description: "Esquema de request para actualizar un Parking",
 });
 

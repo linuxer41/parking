@@ -6,17 +6,20 @@ class AppConfig {
   /// WebSocket endpoint
   static String wsEndpoint = '';
 
+  /// Enable WebSocket for real-time updates
+  static bool enableWebSocket = true;
+
   /// API timeout in seconds
   static int apiTimeout = 30;
 
   /// API endpoints
   static Map<String, String> apiEndpoints = {
     'booking': '/booking',
-    'access': '/entry-exit',
+    'access': '/access',
     'subscription': '/subscription',
     'parking': '/parking',
     'vehicle': '/vehicle',
-    'employee': '/employee',
+    'employee': '/employees',
     'user': '/user',
     'auth': '/auth',
     'cashRegister': '/cash-register',
@@ -32,6 +35,7 @@ class AppConfig {
   static void init({
     required String apiBaseUrl,
     String? wsEndpoint,
+    bool enableWebSocket = true,
     required int apiTimeout,
     Map<String, String>? apiEndpoints,
     bool debugMode = false,
@@ -39,6 +43,7 @@ class AppConfig {
   }) {
     AppConfig.apiBaseUrl = apiBaseUrl;
     AppConfig.wsEndpoint = wsEndpoint ?? apiBaseUrl.replaceAll('http', 'ws');
+    AppConfig.enableWebSocket = enableWebSocket;
     AppConfig.apiTimeout = apiTimeout;
     AppConfig.apiEndpoints = apiEndpoints ?? AppConfig.apiEndpoints;
     AppConfig.debugMode = debugMode;

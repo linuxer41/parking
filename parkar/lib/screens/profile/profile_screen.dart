@@ -9,6 +9,7 @@ import 'help_screen.dart';
 import 'language_screen.dart';
 import 'notifications_settings_screen.dart';
 import 'theme_screen.dart';
+import '../settings/bluetooth_printer_settings.dart';
 
 // Definición de rutas para el panel de control
 class ControlPanelRoute {
@@ -41,11 +42,7 @@ class ProfilePanel extends StatefulWidget {
   final UserModel user;
   final VoidCallback onLogout;
 
-  const ProfilePanel({
-    super.key,
-    required this.user,
-    required this.onLogout,
-  });
+  const ProfilePanel({super.key, required this.user, required this.onLogout});
 
   @override
   State<ProfilePanel> createState() => _ProfilePanelState();
@@ -128,6 +125,12 @@ class _ProfilePanelState extends State<ProfilePanel> {
       ControlPanelSection(
         title: 'Preferencias',
         routes: [
+          ControlPanelRoute(
+            id: 'printing',
+            title: 'Configuración de impresión',
+            icon: Icons.print_outlined,
+            builder: (context) => const BluetoothPrinterSettings(),
+          ),
           ControlPanelRoute(
             id: 'theme',
             title: 'Personalizar tema',
@@ -259,7 +262,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
         appBar: AppBar(
           title: Text(
             'Perfil',
-            style: textTheme.headlineSmall?.copyWith(
+            style: textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               letterSpacing: -0.5,
             ),
@@ -362,7 +365,7 @@ class _ProfilePanelState extends State<ProfilePanel> {
           const SizedBox(width: 8),
           Text(
             _getCurrentPageTitle() ?? '',
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               letterSpacing: -0.5,
             ),

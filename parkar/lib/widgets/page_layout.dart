@@ -58,9 +58,9 @@ class PageLayout extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           title,
-          style: textTheme.headlineSmall?.copyWith(
+          style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            letterSpacing: -0.5,
+            // letterSpacing: -0.5,
           ),
         ),
         backgroundColor: colorScheme.surface,

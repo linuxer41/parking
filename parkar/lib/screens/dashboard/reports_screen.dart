@@ -48,7 +48,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -61,13 +61,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           Text(
             'Configuración del Reporte',
-            style: theme.textTheme.titleLarge?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
-          
+          const SizedBox(height: 12),
+
           Row(
             children: [
               // Selector de tipo de reporte
@@ -82,7 +82,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         color: colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       value: _selectedReportType,
                       decoration: InputDecoration(
@@ -90,8 +90,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          horizontal: 12,
+                          vertical: 8,
                         ),
                       ),
                       items: const [
@@ -122,8 +122,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ),
               
-              const SizedBox(width: 16),
-              
+              const SizedBox(width: 12),
+
               // Selector de fecha
               Expanded(
                 child: Column(
@@ -136,13 +136,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         color: colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     InkWell(
                       onTap: () => _selectDate(context),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          horizontal: 12,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
                           border: Border.all(

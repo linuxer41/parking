@@ -49,8 +49,8 @@ Esta actualización implementa los cambios necesarios para que la aplicación Fl
 #### `lib/services/access_service.dart`
 
 **Endpoints actualizados:**
-- `/entry-exits` → `/entry-exit`
-- `/entry-exits/{id}` → `/entry-exit/{id}`
+- `/entry-exits` → `/access`
+- `/entry-exits/{id}` → `/access/{id}`
 
 **Mejoras:**
 - `registerExit()`: Agregado parámetro `notes` opcional
@@ -73,7 +73,7 @@ Esta actualización implementa los cambios necesarios para que la aplicación Fl
 ```dart
 static Map<String, String> apiEndpoints = {
   'booking': '/booking',
-  'access': '/entry-exit', 
+  'access': '/access', 
   'subscription': '/subscription',
   'parking': '/parking',
   'vehicle': '/vehicle',
@@ -224,7 +224,7 @@ curl -X POST http://localhost:3002/booking \
   }'
 
 # Crear acceso
-curl -X POST http://localhost:3002/entry-exit \
+curl -X POST http://localhost:3002/access \
   -H "Authorization: Bearer <token>" \
   -H "parking-id: <parking_id>" \
   -H "employee-id: <employee_id>" \

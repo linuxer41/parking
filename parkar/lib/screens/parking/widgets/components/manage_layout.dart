@@ -21,8 +21,8 @@ class ManageLayout extends StatelessWidget {
   /// Contenido principal del modal
   final Widget content;
 
-  /// Botones de acción en la parte inferior
-  final List<Widget> actions;
+  /// Botones de acción en la parte inferior (puede ser una lista o un widget personalizado)
+  final dynamic actions;
 
   /// Widget opcional para mostrar en la parte superior derecha (ej: botón de cancelar)
   final Widget? headerAction;
@@ -142,14 +142,16 @@ class ManageLayout extends StatelessWidget {
             // Botones de acción
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Row(
-                children: [
-                  for (int i = 0; i < actions.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 8),
-                    Expanded(child: actions[i]),
-                  ],
-                ],
-              ),
+              child: actions is List<Widget>
+                  ? Row(
+                      children: [
+                        for (int i = 0; i < actions.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 8),
+                          Expanded(child: actions[i]),
+                        ],
+                      ],
+                    )
+                  : actions as Widget,
             ),
           ],
         ),

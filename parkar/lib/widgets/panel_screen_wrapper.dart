@@ -85,7 +85,7 @@ class PanelScreenWrapper extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: textTheme.headlineSmall?.copyWith(
+                      style: textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.5,
                       ),

@@ -6,66 +6,56 @@ import 'vehicle_model.dart';
 
 part 'booking_model.g.dart';
 
-// Enum para tipos de booking
-enum BookingType {
-  @JsonValue('reservation')
-  reservation,
-  @JsonValue('subscription')
-  subscription,
-  @JsonValue('access')
-  access,
-}
-
-// Enum para periodos de suscripción
-enum SubscriptionPeriod {
-  @JsonValue('weekly')
-  weekly,
-  @JsonValue('monthly')
-  monthly,
-  @JsonValue('yearly')
-  yearly,
+// Enum para estados de reserva
+enum ReservationStatus {
+  @JsonValue('pending')
+  pending,
+  @JsonValue('active')
+  active,
+  @JsonValue('completed')
+  completed,
+  @JsonValue('cancelled')
+  cancelled,
+  @JsonValue('expired')
+  expired,
 }
 
 @JsonSerializable()
 class BookingModel extends JsonConvertible<BookingModel> {
   final String id;
-  final BookingType type;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
   final int number;
-  final String employeeId;
+  final String parkingId;
   final ParkingPreviewModel parking;
+  final String employeeId;
   final EmployeePreviewModel employee;
   final String vehicleId;
   final VehiclePreviewModel vehicle;
-  final SpotPreviewModel? spot;
+  final String? spotId;
   final DateTime startDate;
   final DateTime? endDate;
-  final String status;
   final double amount;
-  final String? parentId;
-  final String? exitEmployeeId;
-  final EmployeePreviewModel? exitEmployee;
-  final bool isActive;
-  final SubscriptionPeriod? period;
+  final ReservationStatus status;
+  final String? notes;
 
   BookingModel({
     required this.id,
-    required this.type,
+    required this.createdAt,
+    this.updatedAt,
     required this.number,
-    required this.employeeId,
+    required this.parkingId,
     required this.parking,
+    required this.employeeId,
     required this.employee,
     required this.vehicleId,
     required this.vehicle,
-    this.spot,
+    this.spotId,
     required this.startDate,
     this.endDate,
-    required this.status,
     required this.amount,
-    this.parentId,
-    this.exitEmployeeId,
-    this.exitEmployee,
-    required this.isActive,
-    this.period,
+    required this.status,
+    this.notes,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) =>
@@ -75,61 +65,43 @@ class BookingModel extends JsonConvertible<BookingModel> {
   Map<String, dynamic> toJson() => _$BookingModelToJson(this);
 
   // Métodos de conveniencia
-  bool get isReservation => type == BookingType.reservation;
-  bool get isSubscription => type == BookingType.subscription;
-  bool get isAccess => type == BookingType.access;
+  bool get isPending => status == ReservationStatus.pending;
+  bool get isActive => status == ReservationStatus.active;
+  bool get isCompleted => status == ReservationStatus.completed;
+  bool get isCancelled => status == ReservationStatus.cancelled;
+  bool get isExpired => status == ReservationStatus.expired;
 
-  // Para compatibilidad con modelos anteriores
-  DateTime get startTime => startDate;
-  DateTime? get dateTime => startDate;
-  String get entryEmployeeId => employeeId;
-  EmployeePreviewModel get entryEmployee => employee;
-
-  // Calcular duración para accesos
+  // Calcular duración
   Duration? get duration {
     if (endDate == null) return null;
     return endDate!.difference(startDate);
   }
 
-  // Formatear duración
-  String get formattedDuration {
-    final endTime = endDate ?? DateTime.now();
-    final duration = endTime.difference(startTime);
-    return _formatDuration(duration);
+  // Verificar si está expirada
+  bool get isExpiredNow {
+    if (endDate == null) return false;
+    return DateTime.now().isAfter(endDate!);
   }
 
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    final seconds = duration.inSeconds % 60;
-
-    if (hours > 0) {
-      return '${hours}h ${minutes.toString().padLeft(2, '0')}m ${seconds.toString().padLeft(2, '0')}s';
-    } else if (minutes > 0) {
-      return '${minutes}m ${seconds.toString().padLeft(2, '0')}s';
-    } else {
-      return '${seconds}s';
-    }
+  // Días restantes
+  int? get daysRemaining {
+    if (endDate == null) return null;
+    return endDate!.difference(DateTime.now()).inDays;
   }
 }
 
 @JsonSerializable()
 class BookingCreateModel extends JsonConvertible<BookingCreateModel> {
-  final BookingType type;
   final String employeeId;
   final String vehicleId;
   final String? spotId;
   final DateTime startDate;
   final DateTime? endDate;
-  final String status;
+  final ReservationStatus status;
   final double amount;
-  final String? parentId;
-  final String? exitEmployeeId;
-  final bool? isActive;
-  final SubscriptionPeriod? period;
+  final String? notes;
 
   BookingCreateModel({
-    required this.type,
     required this.employeeId,
     required this.vehicleId,
     this.spotId,
@@ -137,10 +109,7 @@ class BookingCreateModel extends JsonConvertible<BookingCreateModel> {
     this.endDate,
     required this.status,
     required this.amount,
-    this.parentId,
-    this.exitEmployeeId,
-    this.isActive,
-    this.period,
+    this.notes,
   });
 
   factory BookingCreateModel.fromJson(Map<String, dynamic> json) =>
@@ -158,12 +127,9 @@ class BookingUpdateModel extends JsonConvertible<BookingUpdateModel> {
   final String? spotId;
   final DateTime? startDate;
   final DateTime? endDate;
-  final String? status;
+  final ReservationStatus? status;
   final double? amount;
-  final String? parentId;
-  final String? exitEmployeeId;
-  final bool? isActive;
-  final SubscriptionPeriod? period;
+  final String? notes;
 
   BookingUpdateModel({
     this.number,
@@ -174,10 +140,7 @@ class BookingUpdateModel extends JsonConvertible<BookingUpdateModel> {
     this.endDate,
     this.status,
     this.amount,
-    this.parentId,
-    this.exitEmployeeId,
-    this.isActive,
-    this.period,
+    this.notes,
   });
 
   factory BookingUpdateModel.fromJson(Map<String, dynamic> json) =>
@@ -190,21 +153,18 @@ class BookingUpdateModel extends JsonConvertible<BookingUpdateModel> {
 @JsonSerializable()
 class BookingPreviewModel extends JsonConvertible<BookingPreviewModel> {
   final String id;
-  final BookingType type;
   final int number;
   final String employeeId;
   final String vehicleId;
   final String? spotId;
   final DateTime startDate;
   final DateTime? endDate;
-  final String status;
+  final ReservationStatus status;
   final double amount;
-  final bool? isActive;
-  final SubscriptionPeriod? period;
+  final String? notes;
 
   BookingPreviewModel({
     required this.id,
-    required this.type,
     required this.number,
     required this.employeeId,
     required this.vehicleId,
@@ -213,8 +173,7 @@ class BookingPreviewModel extends JsonConvertible<BookingPreviewModel> {
     this.endDate,
     required this.status,
     required this.amount,
-    this.isActive,
-    this.period,
+    this.notes,
   });
 
   factory BookingPreviewModel.fromJson(Map<String, dynamic> json) =>
@@ -227,27 +186,25 @@ class BookingPreviewModel extends JsonConvertible<BookingPreviewModel> {
 @JsonSerializable()
 class BookingForElementModel extends JsonConvertible<BookingForElementModel> {
   final String id;
-  final BookingType type;
   final int number;
   final EmployeePreviewModel employee;
   final VehiclePreviewModel vehicle;
   final DateTime startDate;
   final DateTime? endDate;
   final double amount;
-  final bool? isActive;
-  final SubscriptionPeriod? period;
+  final ReservationStatus status;
+  final String? notes;
 
   BookingForElementModel({
     required this.id,
-    required this.type,
     required this.number,
     required this.employee,
     required this.vehicle,
     required this.startDate,
     this.endDate,
     required this.amount,
-    this.isActive,
-    this.period,
+    required this.status,
+    this.notes,
   });
 
   factory BookingForElementModel.fromJson(Map<String, dynamic> json) =>
@@ -261,7 +218,6 @@ class BookingForElementModel extends JsonConvertible<BookingForElementModel> {
 @JsonSerializable()
 class BookingCreateFromFormModel
     extends JsonConvertible<BookingCreateFromFormModel> {
-  final BookingType type;
   final String? ownerName;
   final String? ownerPhone;
   final String? vehicleType;
@@ -272,11 +228,10 @@ class BookingCreateFromFormModel
   final String startDate; // Puede ser String o DateTime
   final double amount;
   final String vehiclePlate;
-  final int? durationHours;
-  final SubscriptionPeriod? period;
+  final int duration;
+  final String? notes;
 
   BookingCreateFromFormModel({
-    required this.type,
     this.ownerName,
     this.ownerPhone,
     this.vehicleType,
@@ -287,8 +242,8 @@ class BookingCreateFromFormModel
     required this.startDate,
     required this.amount,
     required this.vehiclePlate,
-    this.durationHours,
-    this.period,
+    required this.duration,
+    this.notes,
   });
 
   factory BookingCreateFromFormModel.fromJson(Map<String, dynamic> json) =>
@@ -296,36 +251,6 @@ class BookingCreateFromFormModel
 
   @override
   Map<String, dynamic> toJson() => _$BookingCreateFromFormModelToJson(this);
-}
-
-// Modelos específicos para cada tipo de booking
-@JsonSerializable()
-class AccessCreateModel extends JsonConvertible<AccessCreateModel> {
-  final String vehiclePlate;
-  final String? vehicleType;
-  final String? vehicleColor;
-  final String? ownerName;
-  final String? ownerDocument;
-  final String? ownerPhone;
-  final String? spotId;
-  final String? notes;
-
-  AccessCreateModel({
-    required this.vehiclePlate,
-    this.vehicleType,
-    this.vehicleColor,
-    this.ownerName,
-    this.ownerDocument,
-    this.ownerPhone,
-    this.spotId,
-    this.notes,
-  });
-
-  factory AccessCreateModel.fromJson(Map<String, dynamic> json) =>
-      _$AccessCreateModelFromJson(json);
-
-  @override
-  Map<String, dynamic> toJson() => _$AccessCreateModelToJson(this);
 }
 
 @JsonSerializable()
@@ -359,39 +284,4 @@ class ReservationCreateModel extends JsonConvertible<ReservationCreateModel> {
 
   @override
   Map<String, dynamic> toJson() => _$ReservationCreateModelToJson(this);
-}
-
-@JsonSerializable()
-class SubscriptionCreateModel extends JsonConvertible<SubscriptionCreateModel> {
-  final String vehiclePlate;
-  final String? vehicleType;
-  final String? vehicleColor;
-  final String? ownerName;
-  final String? ownerDocument;
-  final String? ownerPhone;
-  final String? spotId;
-  final String startDate;
-  final String period;
-  final double amount;
-  final String? notes;
-
-  SubscriptionCreateModel({
-    required this.vehiclePlate,
-    this.vehicleType,
-    this.vehicleColor,
-    this.ownerName,
-    this.ownerDocument,
-    this.ownerPhone,
-    this.spotId,
-    required this.startDate,
-    required this.period,
-    required this.amount,
-    this.notes,
-  });
-
-  factory SubscriptionCreateModel.fromJson(Map<String, dynamic> json) =>
-      _$SubscriptionCreateModelFromJson(json);
-
-  @override
-  Map<String, dynamic> toJson() => _$SubscriptionCreateModelToJson(this);
 }

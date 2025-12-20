@@ -1,17 +1,27 @@
 // Remove unused imports
-// import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/scheduler.dart';
+import 'package:vector_math/vector_math.dart' as vector_math;
 
 // import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:parkar/models/parking_model.dart';
 import 'package:parkar/services/parking_service.dart';
+import 'package:parkar/models/parking_model.dart';
 // import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 // generateId
 import 'package:uuid/uuid.dart';
+import 'package:parkar/state/app_state_container.dart';
 
+import '../../models/access_model.dart';
+import '../../models/cash_register_model.dart';
+import '../../models/movement_model.dart';
+import '../../services/access_service.dart';
+import '../../services/cash_register_service.dart';
+import '../../services/movement_service.dart';
 import '../../services/parking_realtime_service.dart';
 import '../../services/vehicle_service.dart';
 // Se ha eliminado la importación del servicio de tiempo real
@@ -32,10 +42,12 @@ import 'widgets/register_occupancy.dart';
 import 'widgets/manage_access.dart';
 import 'widgets/manage_reservation.dart';
 import 'widgets/manage_subscription.dart';
+import 'widgets/access_list_table.dart';
 import 'widgets/vehicle_list_table.dart';
 import 'widgets/parking_info_panel.dart';
 import 'widgets/parking_status_panel.dart';
 import '../../widgets/custom_snackbar.dart';
+import '../cash_register/cash_register_screen.dart';
 
 const uuid = Uuid();
 
@@ -69,7 +81,7 @@ class _ParkingScreenState extends State<ParkingScreen>
   final AppState _appState = ServiceLocator().getAppState();
 
   // Servicio de parqueo
-  late ParkingService _parkingService;
+  ParkingService? _parkingService;
 
   // Datos detallados del estacionamiento
   ParkingModel? _detailedParking;
@@ -80,12 +92,31 @@ class _ParkingScreenState extends State<ParkingScreen>
   // Lista de spots ocupados para modo list
   List<ParkingSpot> _occupiedSpots = [];
 
+  // Lista de accesos para modo list
+  List<AccessModel> _accesses = [];
+
+  // Datos de caja registradora
+  CashRegisterModel? _currentCashRegister;
+  List<MovementModel> _movements = [];
+  double _totalCash = 0.0;
+
   // Controlador para búsqueda
   final TextEditingController _searchController = TextEditingController();
   List<ParkingSpot> _filteredSpots = [];
 
+  // Timer para debounce de búsqueda
+  Timer? _searchDebounceTimer;
+
   // Variable para evitar cargas repetidas del mismo parking
   String? _lastLoadedParkingId;
+
+  // Variables para parámetros del parking
+  late TextEditingController _currencyController;
+  late TextEditingController _decimalPlacesController;
+  String? _selectedTimeZone;
+  String? _selectedCountryCode;
+  bool _isLoadingParkingParams = false;
+  String? _parkingParamsError;
 
   // Funciones de acción para la tabla de vehículos
   void _handleAccessAction(ParkingSpot spot) {
@@ -103,6 +134,10 @@ class _ParkingScreenState extends State<ParkingScreen>
   @override
   void initState() {
     super.initState();
+
+    // Inicializar controladores para parámetros del parking
+    _currencyController = TextEditingController(text: 'USD');
+    _decimalPlacesController = TextEditingController(text: '2');
 
     // Inicializar el estado del parkeo
     _parkingState = ParkingState();
@@ -145,28 +180,9 @@ class _ParkingScreenState extends State<ParkingScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Inicializar el servicio de parqueo
-    _parkingService = AppStateContainer.di(context).resolve<ParkingService>();
-
-    // Initialize the realtime service
-    final realtimeService = ParkingRealtimeService();
-
-    // Set up the callback for spot updates
-    realtimeService.onSpotUpdate = (spotId, accessId) {
-      // Handle spot update here
-      // For example, update the UI to reflect the new spot status
-      setState(() {
-        // Update your state based on the spotId and accessId
-        debugPrint('Spot $spotId updated with accessId: $accessId');
-
-        // Here you would update the parking state with the new spot status
-        // For example, find the spot in _parkingState and update its accessId
-      });
-    };
-
-    // Start monitoring the current parking if available
-    if (_appState.currentParking != null) {
-      realtimeService.startMonitoring(_appState.currentParking!.id);
+    // Inicializar servicio si no está inicializado
+    if (_parkingService == null) {
+      _parkingService = ParkingService();
     }
 
     // Cargar datos iniciales solo si no se han cargado antes
@@ -194,17 +210,25 @@ class _ParkingScreenState extends State<ParkingScreen>
     // Eliminar el listener del AppState
     _appState.removeListener(_handleAppStateChange);
 
+    // WebSocket monitoring disabled
     // Stop monitoring when the screen is disposed
-    final realtimeService = AppStateContainer.di(
-      context,
-    ).resolve<ParkingRealtimeService>();
-    realtimeService.stopMonitoring();
+    // final realtimeService = AppStateContainer.di(
+    //   context,
+    // ).resolve<ParkingRealtimeService>();
+    // realtimeService.stopMonitoring();
 
     // Dispose de las animaciones
     _backgroundAnimationController.dispose();
 
     // Dispose del controlador de búsqueda
     _searchController.dispose();
+
+    // Dispose de controladores de parámetros
+    _currencyController.dispose();
+    _decimalPlacesController.dispose();
+
+    // Cancelar timer de debounce
+    _searchDebounceTimer?.cancel();
 
     super.dispose();
   }
@@ -232,7 +256,7 @@ class _ParkingScreenState extends State<ParkingScreen>
 
     try {
       // Cargar el parking detallado
-      _detailedParking = await _parkingService.getParkingById(parkingId);
+      _detailedParking = await _parkingService!.getParkingById(parkingId);
       _lastLoadedParkingId = parkingId;
 
       // Cargar áreas
@@ -260,15 +284,16 @@ class _ParkingScreenState extends State<ParkingScreen>
         _parkingState.clear();
       }
 
-      // Cargar spots ocupados si está en modo list
-      final operationMode =
-          _detailedParking?.operationMode ??
-          _appState.currentParking?.operationMode ??
-          ParkingOperationMode.map;
-
-      if (operationMode == ParkingOperationMode.list) {
-        _loadOccupiedSpots();
+      // Cargar accesos solo para modo lista
+      if (_detailedParking?.operationMode == ParkingOperationMode.list) {
+        await _loadVehiclesInParking();
       }
+
+      // Cargar parámetros del parking
+      _loadParkingParameters();
+
+      // Cargar datos de caja registradora
+      await _loadCashRegisterData();
     } catch (e) {
       debugPrint('Error al cargar el parking: $e');
       _parkingState.clear();
@@ -278,7 +303,9 @@ class _ParkingScreenState extends State<ParkingScreen>
 
       // Mostrar mensaje de error
       if (mounted) {
-        _showErrorMessage('Error al cargar el estacionamiento: $e');
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _showErrorMessage('Error al cargar el estacionamiento: $e');
+        });
       }
     } finally {
       if (mounted) {
@@ -289,36 +316,341 @@ class _ParkingScreenState extends State<ParkingScreen>
     }
   }
 
-  // Método simplificado para cargar spots ocupados
-  void _loadOccupiedSpots() {
-    _occupiedSpots = _parkingState.spots
-        .where((element) => element is ParkingSpot && element.isOccupied)
-        .cast<ParkingSpot>()
-        .toList();
-    _filteredSpots = List.from(_occupiedSpots);
-    debugPrint('Spots ocupados: ${_occupiedSpots.length}');
+  // Método para cargar vehículos en el estacionamiento
+  Future<void> _loadVehiclesInParking() async {
+
+    // Cargar accesos desde API
+    final parkingId = _appState.currentParking?.id;
+    if (parkingId != null) {
+      try {
+        final accessService = AppStateContainer.di(
+          context,
+        ).resolve<AccessService>();
+        _accesses = await accessService.getAccesssByParking(parkingId);
+        debugPrint('Accesos cargados: ${_accesses.length}');
+      } catch (e) {
+        debugPrint('Error al cargar accesos: $e');
+        _accesses = [];
+      }
+    }
+
+    debugPrint('Vehículos en estacionamiento: ${_occupiedSpots.length}');
   }
 
-  // Método para buscar vehículos
+  // Cargar parámetros del parking actual
+  Future<void> _loadParkingParameters() async {
+    if (_detailedParking == null) {
+      setState(() {
+        _parkingParamsError = 'No hay estacionamiento seleccionado';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingParkingParams = true;
+      _parkingParamsError = null;
+    });
+
+    try {
+      // Los parámetros ya están en _detailedParking
+      if (mounted) {
+        setState(() {
+          _currencyController.text = _detailedParking!.params.currency;
+          _decimalPlacesController.text = _detailedParking!.params.decimalPlaces.toString();
+          _selectedTimeZone = _detailedParking!.params.timeZone;
+          _selectedCountryCode = _detailedParking!.params.countryCode;
+          _isLoadingParkingParams = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _parkingParamsError = 'Error al cargar parámetros: ${e.toString()}';
+          _isLoadingParkingParams = false;
+        });
+      }
+    }
+  }
+
+  // Cargar datos de caja registradora
+  Future<void> _loadCashRegisterData() async {
+    if (_appState.currentParking == null) return;
+
+    try {
+      final cashRegisterService = CashRegisterService();
+      final movementService = MovementService();
+      final parkingId = _appState.currentParking!.id;
+
+      // Get current open cash register
+      final cashRegisters = await cashRegisterService.getCashRegistersByParking(parkingId);
+      _currentCashRegister = cashRegisters.where((cr) => cr.status == 'open').firstOrNull;
+
+      if (_currentCashRegister != null) {
+        // Load movements for the current cash register
+        _movements = await movementService.getMovementsByCashRegister(_currentCashRegister!.id);
+
+        // Calculate total cash (sum of income movements)
+        _totalCash = _movements
+            .where((m) => m.type == 'income')
+            .fold(0.0, (sum, m) => sum + m.amount);
+      } else {
+        _movements = [];
+        _totalCash = 0.0;
+      }
+    } catch (e) {
+      debugPrint('Error al cargar datos de caja: $e');
+      _currentCashRegister = null;
+      _movements = [];
+      _totalCash = 0.0;
+    }
+  }
+
+  // Guardar parámetros del parking
+  Future<void> _saveParkingParameters() async {
+    if (_detailedParking == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay estacionamiento seleccionado'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validar campos requeridos
+    if (_currencyController.text.isEmpty || _decimalPlacesController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor completa los campos requeridos'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validar decimales
+    final decimalPlaces = int.tryParse(_decimalPlacesController.text);
+    if (decimalPlaces == null || decimalPlaces < 0 || decimalPlaces > 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Los decimales deben ser un número entre 0 y 4'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoadingParkingParams = true;
+      _parkingParamsError = null;
+    });
+
+    try {
+      // Crear modelo de actualización de parámetros
+      final updatedParams = ParkingParamsModel(
+        theme: _detailedParking!.params.theme, // Mantener el tema actual
+        currency: _currencyController.text.trim(),
+        timeZone: _selectedTimeZone?.isNotEmpty == true ? _selectedTimeZone! : '',
+        countryCode: _selectedCountryCode?.isNotEmpty == true ? _selectedCountryCode! : '',
+        decimalPlaces: decimalPlaces,
+        slogan: _detailedParking!.params.slogan, // Mantener el slogan actual
+      );
+
+      // Actualizar parámetros en el parking
+      await _parkingService!.updateParking(
+        _detailedParking!.id.toString(),
+        ParkingUpdateModel(params: updatedParams),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Parámetros actualizados correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _loadParkingParameters(); // Recargar datos
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _parkingParamsError = 'Error al actualizar parámetros: ${e.toString()}';
+          _isLoadingParkingParams = false;
+        });
+      }
+    }
+  }
+
+  // Mostrar diálogo de parámetros del parking
+  void _showParkingParametersDialog() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      useRootNavigator: true,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Título
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    'Parámetros del Parking',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const Divider(),
+
+                if (_parkingParamsError != null)
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.errorContainer.withValues(alpha: 127),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _parkingParamsError!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (_isLoadingParkingParams)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else ...[
+                  _buildCountrySelector(dialogContext),
+                  _buildTimeZoneSelector(dialogContext),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _currencyController,
+                            label: 'Moneda',
+                            icon: Icons.currency_exchange,
+                            hintText: 'Ej: USD, EUR',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _decimalPlacesController,
+                            label: 'Decimales',
+                            icon: Icons.numbers,
+                            keyboardType: TextInputType.number,
+                            hintText: 'Ej: 2',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                // Botones de acción
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                      },
+                      child: Text(
+                        'Cancelar',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _isLoadingParkingParams ? null : () async {
+                        Navigator.of(dialogContext).pop();
+                        await _saveParkingParameters();
+                      },
+                      child: _isLoadingParkingParams
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Guardar'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Método para buscar vehículos con debounce
   void _searchVehicle(String query) {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearchVehicle(query);
+    });
+  }
+
+  // Método para realizar la búsqueda de vehículos
+  Future<void> _performSearchVehicle(String query) async {
     final operationMode =
         _detailedParking?.operationMode ??
         _appState.currentParking?.operationMode ??
         ParkingOperationMode.map;
 
     if (operationMode == ParkingOperationMode.list) {
-      // Modo list: filtrar la lista local
+      // Modo list: filtrar accesos existentes
+      final filteredAccesses = query.isEmpty
+          ? _accesses
+          : _accesses
+                .where(
+                  (a) => a.vehicle.plate.toLowerCase().contains(
+                    query.toLowerCase(),
+                  ),
+                )
+                .toList();
+
       setState(() {
-        if (query.isEmpty) {
-          _filteredSpots = List.from(_occupiedSpots);
-        } else {
-          _filteredSpots = _occupiedSpots.where((spot) {
-            final vehiclePlate = spot.entry?.vehiclePlate;
-            return vehiclePlate?.toLowerCase().contains(query.toLowerCase()) ==
-                true;
-          }).toList();
-        }
+        _accesses = filteredAccesses;
       });
+
+      // Si no se encontraron resultados, mostrar mensaje
+      if (filteredAccesses.isEmpty && query.isNotEmpty) {
+        _showErrorMessage('No se encontró vehículo con placa: $query');
+      }
     } else {
       // Modo map: buscar en el canvas y enfocar el elemento
       _searchAndFocusInVisualMode(query);
@@ -337,8 +669,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     for (final element in _parkingState.spots) {
       if (element is ParkingSpot && element.isOccupied) {
         final vehiclePlate = element.entry?.vehiclePlate;
-        if (vehiclePlate?.toLowerCase().contains(query.toLowerCase()) ==
-            true) {
+        if (vehiclePlate?.toLowerCase().contains(query.toLowerCase()) == true) {
           foundSpot = element;
           break;
         }
@@ -348,9 +679,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     if (foundSpot != null) {
       _parkingState.highlightElement(foundSpot.id);
       _parkingState.centerOnElement(foundSpot.position);
-      _showInfoMessage(
-        'Vehículo encontrado: ${foundSpot.entry?.vehiclePlate}',
-      );
+      _showInfoMessage('Vehículo encontrado: ${foundSpot.entry?.vehiclePlate}');
     } else {
       _parkingState.clearHighlight();
       _showErrorMessage('No se encontró vehículo con placa: $query');
@@ -557,34 +886,71 @@ class _ParkingScreenState extends State<ParkingScreen>
                                       elevation: 1,
                                     ),
                                     onPressed: () =>
-                                        _showVisualEntryDialog(context),
+                                        _showVisualEntryDialog(context, initialPlate: _searchController.text.isNotEmpty ? _searchController.text : null),
                                   ),
                                 ),
                               ),
 
-                              // Tabla de spots ocupados con scroll interno
+                              // Tabla de accesos con scroll interno
                               Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20.0,
-                                    vertical: 16.0,
-                                  ),
-                                  child: VehicleListTable(
-                                    occupiedSpots: _filteredSpots,
-                                    onRefresh: () async {
-                                      _loadOccupiedSpots();
-                                      setState(() {});
-                                    },
-                                    isLoading: _isLoading,
-                                    onAccessAction: _handleAccessAction,
-                                    onReservationAction:
-                                        _handleReservationAction,
-                                    onSubscriptionAction:
-                                        _handleSubscriptionAction,
-                                    isSimpleMode:
-                                        operationMode ==
-                                        ParkingOperationMode.list,
-                                  ),
+                                child: AccessListTable(
+                                  accesses: _accesses,
+                                  onRefresh: () async {
+                                    await _loadVehiclesInParking();
+                                    setState(() {});
+                                  },
+                                  isLoading: _isLoading,
+                                  onAccessAction: (access) {
+                                    // Para el modo list, necesitamos encontrar el spot correspondiente
+                                    // o crear un spot temporal para el diálogo
+                                    ParkingSpot? spot;
+                                    try {
+                                      spot =
+                                          _parkingState.spots.firstWhere(
+                                                (s) =>
+                                                    s is ParkingSpot &&
+                                                    (s as ParkingSpot).id ==
+                                                        access.spotId,
+                                              )
+                                              as ParkingSpot;
+                                    } catch (_) {
+                                      spot = null;
+                                    }
+
+                                    if (spot == null) {
+                                      // Crear un spot temporal con la información del acceso
+                                      spot = ParkingSpot(
+                                        id:
+                                            access.spotId ??
+                                            'temp_${access.id}',
+                                        position: vector_math.Vector2(0, 0),
+                                        type: SpotType.vehicle,
+                                        label: access.vehicle.plate,
+                                      );
+
+                                      // Poblar la información de ocupación desde el acceso
+                                      spot.entry = ElementOccupancyInfoModel(
+                                        id: access.id,
+                                        vehiclePlate: access.vehicle.plate,
+                                        ownerName:
+                                            access.vehicle.ownerName ?? '',
+                                        ownerPhone:
+                                            access.vehicle.ownerPhone ?? '',
+                                        startDate: access.entryTime
+                                            .toIso8601String(),
+                                        endDate: access.exitTime
+                                            ?.toIso8601String(),
+                                        amount: access.amount,
+                                      );
+                                      spot.isOccupied = true;
+                                      spot.status = 'occupied';
+                                    }
+
+                                    ManageAccess.show(context, spot, onExitSuccess: () => _loadVehiclesInParking());
+                                  },
+                                  isSimpleMode:
+                                      operationMode ==
+                                      ParkingOperationMode.list,
                                 ),
                               ),
                             ],
@@ -797,6 +1163,8 @@ class _ParkingScreenState extends State<ParkingScreen>
       onSearchChanged: _searchVehicle,
       onEditAreaName: _showEditAreaNameDialog,
       onAddArea: _showAddAreaDialog,
+      isSimpleMode: isSimpleMode,
+      onSettingsPressed: _showParkingParametersDialog,
     );
   }
 
@@ -981,7 +1349,19 @@ class _ParkingScreenState extends State<ParkingScreen>
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
-    return ParkingStatusPanel(state: state);
+    return ParkingStatusPanel(
+      state: state,
+      cashTotal: _totalCash > 0 ? _totalCash : null,
+      onCashTap: _navigateToCashRegister,
+    );
+  }
+
+  // Navegar a la pantalla de caja registradora
+  void _navigateToCashRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CashRegisterScreen()),
+    );
   }
 
   // Método para mostrar mensajes de error con botón de cerrar
@@ -1067,7 +1447,7 @@ class _ParkingScreenState extends State<ParkingScreen>
   }
 
   // Mostrar diálogo de entrada usando el mismo del modo map
-  void _showVisualEntryDialog(BuildContext context) {
+  void _showVisualEntryDialog(BuildContext context, {String? initialPlate}) {
     // Buscar el primer spot disponible
     final availableSpot = _findFirstAvailableSpot();
 
@@ -1078,7 +1458,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     }
 
     // Mostrar el mismo diálogo que usa el modo map con el spot disponible
-    RegisterOccupancy.show(context, availableSpot);
+    RegisterOccupancy.show(context, availableSpot, onEntrySuccess: () { _searchController.clear(); _loadVehiclesInParking(); }, initialPlate: initialPlate);
   }
 
   // Mostrar diálogo de salida usando el mismo del modo map
@@ -1099,7 +1479,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     }
 
     // Mostrar el mismo diálogo que usa el modo map con el spot disponible
-    RegisterOccupancy.show(context, availableSpot);
+    RegisterOccupancy.show(context, availableSpot, onEntrySuccess: () => _loadVehiclesInParking());
   }
 
   // Mostrar diálogo de suscripción usando el mismo del modo map
@@ -1114,7 +1494,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     }
 
     // Mostrar el mismo diálogo que usa el modo map con el spot disponible
-    RegisterOccupancy.show(context, availableSpot);
+    RegisterOccupancy.show(context, availableSpot, onEntrySuccess: () => _loadVehiclesInParking());
   }
 
   // Diálogo de búsqueda de vehículo para salida
@@ -1239,6 +1619,254 @@ class _ParkingScreenState extends State<ParkingScreen>
 
       _showErrorMessage('Error al buscar vehículo: $e');
     }
+  }
+
+  Widget _buildCountrySelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final countries = [
+      {'code': 'US', 'name': 'Estados Unidos'},
+      {'code': 'MX', 'name': 'México'},
+      {'code': 'ES', 'name': 'España'},
+      {'code': 'AR', 'name': 'Argentina'},
+      {'code': 'BR', 'name': 'Brasil'},
+      {'code': 'CO', 'name': 'Colombia'},
+      {'code': 'PE', 'name': 'Perú'},
+      {'code': 'CL', 'name': 'Chile'},
+      {'code': 'VE', 'name': 'Venezuela'},
+      {'code': 'EC', 'name': 'Ecuador'},
+      {'code': 'BO', 'name': 'Bolivia'},
+      {'code': 'PY', 'name': 'Paraguay'},
+      {'code': 'UY', 'name': 'Uruguay'},
+      {'code': 'GT', 'name': 'Guatemala'},
+      {'code': 'HN', 'name': 'Honduras'},
+      {'code': 'SV', 'name': 'El Salvador'},
+      {'code': 'NI', 'name': 'Nicaragua'},
+      {'code': 'CR', 'name': 'Costa Rica'},
+      {'code': 'PA', 'name': 'Panamá'},
+      {'code': 'CU', 'name': 'Cuba'},
+      {'code': 'DO', 'name': 'República Dominicana'},
+      {'code': 'PR', 'name': 'Puerto Rico'},
+      {'code': 'CA', 'name': 'Canadá'},
+      {'code': 'FR', 'name': 'Francia'},
+      {'code': 'DE', 'name': 'Alemania'},
+      {'code': 'IT', 'name': 'Italia'},
+      {'code': 'GB', 'name': 'Reino Unido'},
+      {'code': 'JP', 'name': 'Japón'},
+      {'code': 'CN', 'name': 'China'},
+      {'code': 'KR', 'name': 'Corea del Sur'},
+      {'code': 'AU', 'name': 'Australia'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'País',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: _selectedCountryCode != null &&
+                      countries.any((c) => c['code'] == _selectedCountryCode)
+                  ? _selectedCountryCode
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.flag_outlined,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar país',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: countries.map((country) {
+                return DropdownMenuItem<String>(
+                  value: country['code'],
+                  child: Text(
+                    '${country['code']} - ${country['name']}',
+                    style: textTheme.bodyMedium,
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCountryCode = value;
+                });
+              },
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeZoneSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final timeZones = [
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+      'America/Mexico_City',
+      'America/Sao_Paulo',
+      'America/La_Paz',
+      'America/Bogota',
+      'America/Lima',
+      'America/Caracas',
+      'America/Guayaquil',
+      'America/Asuncion',
+      'America/Montevideo',
+      'America/Guatemala',
+      'America/Tegucigalpa',
+      'America/El_Salvador',
+      'America/Managua',
+      'America/Costa_Rica',
+      'America/Panama',
+      'America/Havana',
+      'America/Santo_Domingo',
+      'America/Puerto_Rico',
+      'America/Toronto',
+      'Europe/London',
+      'Europe/Paris',
+      'Europe/Berlin',
+      'Europe/Madrid',
+      'Europe/Rome',
+      'Europe/Moscow',
+      'Asia/Tokyo',
+      'Asia/Shanghai',
+      'Asia/Seoul',
+      'Asia/Singapore',
+      'Asia/Hong_Kong',
+      'Asia/Bangkok',
+      'Australia/Sydney',
+      'Australia/Melbourne',
+      'Pacific/Auckland',
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Zona horaria',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: _selectedTimeZone != null && timeZones.contains(_selectedTimeZone)
+                  ? _selectedTimeZone
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.schedule,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar zona horaria',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: timeZones.map((timeZone) {
+                return DropdownMenuItem<String>(
+                  value: timeZone,
+                  child: Text(timeZone, style: textTheme.bodyMedium),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedTimeZone = value;
+                });
+              },
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? hintText,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        prefixIcon: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      keyboardType: keyboardType,
+      style: textTheme.bodyMedium,
+    );
   }
 }
 

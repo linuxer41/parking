@@ -1,7 +1,7 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
 import { authPlugin } from "../plugins/access";
-import { EmployeeSchema, Employee, EmployeeCreateSchema, EmployeeUpdateSchema } from "../models/employee";
+import { EmployeeSchema, Employee, EmployeeCreateSchema, EmployeeUpdateSchema, EmployeeCreateRequestSchema, EmployeeUpdateRequestSchema, EmployeePasswordChangeRequestSchema } from "../models/employee";
 import { NotFoundError } from "../utils/error";
 
 export const employeeController = new Elysia({
@@ -17,7 +17,7 @@ export const employeeController = new Elysia({
   .get(
     "/",
     async ({ query }) => {
-      const res = await db.employee.findEmployees({});
+      const res = await db.employee.find({});
       return res as Employee[];
     },
     {
@@ -45,11 +45,11 @@ export const employeeController = new Elysia({
   .post(
     "/",
     async ({ body }) => {
-      const res = await db.employee.createEmployee(body);
+      const res = await db.employee.create(body);
       return res as Employee;
     },
     {
-      body: EmployeeCreateSchema,
+      body: EmployeeCreateRequestSchema,
       detail: {
         summary: "Crear un nuevo employee",
         description:
@@ -65,7 +65,7 @@ export const employeeController = new Elysia({
   .get(
     "/:id",
     async ({ params }) => {
-      const res = await db.employee.findEmployeeById(params.id);
+      const res = await db.employee.findById(params.id);
       if (!res) {
         throw new NotFoundError("Empleado no encontrado");
       }
@@ -83,14 +83,14 @@ export const employeeController = new Elysia({
       },
     },
   )
-  .patch(
+  .put(
     "/:id",
     async ({ params, body }) => {
-      const res = await db.employee.updateEmployee(params.id, body);
+      const res = await db.employee.update(params.id, body);
       return res as Employee;
     },
     {
-      body: EmployeeUpdateSchema,
+      body: EmployeeUpdateRequestSchema,
       detail: {
         summary: "Actualizar un employee",
         description:
@@ -103,10 +103,30 @@ export const employeeController = new Elysia({
       },
     },
   )
+  .put(
+    "/:id/password",
+    async ({ params, body }) => {
+      await db.employee.changePassword(params.id, body.currentPassword, body.newPassword);
+      return { message: "Contraseña actualizada exitosamente" };
+    },
+    {
+      body: EmployeePasswordChangeRequestSchema,
+      detail: {
+        summary: "Cambiar contraseña de un employee",
+        description:
+          "Cambia la contraseña de un employee existente.",
+      },
+      response: {
+        200: t.Object({ message: t.String() }),
+        400: t.String(),
+        500: t.String(),
+      },
+    },
+  )
   .delete(
     "/:id",
     async ({ params }) => {
-      const res = await db.employee.deleteEmployee(params.id);
+      const res = await db.employee.delete(params.id);
       return res as Employee;
     },
     {

@@ -8,10 +8,13 @@ import '../../../services/vehicle_service.dart';
 import '../../../state/app_state_container.dart';
 import '../../../state/app_state.dart';
 import '../../../models/booking_model.dart';
+import '../../../models/access_model.dart';
+import '../../../models/subscription_model.dart';
 import '../../../models/parking_model.dart';
 import '../../../models/employee_model.dart';
 import '../models/parking_spot.dart';
 import '../../../services/print_service.dart';
+import '../../../widgets/print_method_dialog.dart';
 import 'components/index.dart';
 import '../../../models/vehicle_model.dart';
 import '../../../widgets/custom_snackbar.dart';
@@ -29,19 +32,21 @@ class ValidationException implements Exception {
 /// Modal para registrar entrada de vehículos
 class RegisterOccupancy extends StatefulWidget {
   final ParkingSpot? spot;
+  final VoidCallback? onEntrySuccess;
+  final String? initialPlate;
 
-  const RegisterOccupancy({super.key, this.spot});
+  const RegisterOccupancy({super.key, this.spot, this.onEntrySuccess, this.initialPlate});
 
   @override
   State<RegisterOccupancy> createState() => _RegisterOccupancyState();
 
   /// Mostrar el modal como un bottom sheet
-  static Future<void> show(BuildContext context, ParkingSpot? spot) async {
+  static Future<void> show(BuildContext context, ParkingSpot? spot, {VoidCallback? onEntrySuccess, String? initialPlate}) async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => RegisterOccupancy(spot: spot),
+      builder: (context) => RegisterOccupancy(spot: spot, onEntrySuccess: onEntrySuccess, initialPlate: initialPlate),
     );
   }
 }
@@ -86,6 +91,11 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
   }
 
   void _setDefaultValues() {
+    // Establecer placa inicial si se proporciona
+    if (widget.initialPlate != null) {
+      plateController.text = widget.initialPlate!;
+    }
+
     // Establecer fecha actual como valor por defecto para reservas
     final now = DateTime.now();
     final formattedDate =
@@ -405,7 +415,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       final accessService = AppStateContainer.di(
         context,
       ).resolve<AccessService>();
-      BookingModel entry;
+      AccessModel entry;
 
       // Determinar el tipo de entrada a registrar
       if (vehicle.subscription != null) {
@@ -446,7 +456,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
         ),
       );
 
-      // Imprimir ticket de entrada
+      // Imprimir ticket de entrada usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
@@ -456,6 +466,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
         isSimpleMode:
             appState.currentParking?.operationMode == ParkingOperationMode.list,
       );
+
+      // Llamar callback de éxito
+      widget.onEntrySuccess?.call();
     } catch (e) {
       setState(() {
         errorMessage = 'Error: $e';
@@ -498,6 +511,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
 
       // Imprimir ticket de entrada
       await _printEntryTicket(entry, appState);
+
+      // Llamar callback de éxito
+      widget.onEntrySuccess?.call();
     } catch (e) {
       _handleEntryError(e);
     }
@@ -586,8 +602,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
   }
 
   /// Imprime el ticket de entrada
-  Future<void> _printEntryTicket(BookingModel entry, AppState appState) async {
+  Future<void> _printEntryTicket(AccessModel entry, AppState appState) async {
     try {
+      // Imprimir ticket de entrada usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
@@ -652,11 +669,10 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
         context,
       ).resolve<BookingService>();
       final bookingModel = BookingCreateModel(
-        type: BookingType.reservation,
         employeeId: appState.currentUser?.id ?? '',
         vehicleId: '', // Se creará automáticamente
         startDate: DateTime.parse(reservationModel.startDate),
-        status: 'active',
+        status: ReservationStatus.active,
         amount: 0.0, // Se calculará automáticamente
       );
 
@@ -817,6 +833,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     AppState appState,
   ) async {
     try {
+      // Imprimir ticket de reserva usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
@@ -951,9 +968,18 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       final spotId = _determineSpotId(operationMode);
 
       // Crear modelo de suscripción
-      final subscriptionModel = _createSubscriptionModel(
+      final subscriptionModel = SubscriptionCreateModel(
+        vehiclePlate: plateController.text.trim().toUpperCase(),
+        vehicleType: vehicleType,
+        vehicleColor: _getValidatedColor(),
+        ownerName: _getValidatedSubscriptionOwnerName(),
+        ownerDocument: _getValidatedSubscriptionDocument(),
+        ownerPhone: _getValidatedPhone(),
         spotId: spotId,
-        startDate: startDate,
+        startDate: startDate.toIso8601String(),
+        period: subscriptionType,
+        amount: amount,
+        notes: null,
       );
 
       // Crear suscripción en el sistema
@@ -977,7 +1003,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       _showSubscriptionSuccessMessage();
 
       // Imprimir recibo de suscripción
-      await _printSubscriptionReceipt(subscription, bookingService);
+      await _printSubscriptionReceipt(subscription);
     } catch (e) {
       _handleSubscriptionError(e);
     }
@@ -1023,25 +1049,6 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     }
   }
 
-  /// Crea el modelo de suscripción con validaciones
-  SubscriptionCreateModel _createSubscriptionModel({
-    required String? spotId,
-    required DateTime startDate,
-  }) {
-    final amount = _calculateSubscriptionAmount(subscriptionType, vehicleType);
-    return SubscriptionCreateModel(
-      ownerName: _getValidatedSubscriptionOwnerName(),
-      ownerPhone: _getValidatedPhone(),
-      vehicleType: vehicleType,
-      vehicleColor: _getValidatedColor(),
-      ownerDocument: _getValidatedSubscriptionDocument(),
-      spotId: spotId,
-      startDate: startDate.toIso8601String(),
-      vehiclePlate: plateController.text.trim().toUpperCase(),
-      period: subscriptionType.name,
-      amount: amount,
-    );
-  }
 
   /// Obtiene el nombre del propietario de suscripción validado
   String? _getValidatedSubscriptionOwnerName() {
@@ -1084,24 +1091,16 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
 
   /// Imprime el recibo de suscripción
   Future<void> _printSubscriptionReceipt(
-    BookingModel subscription,
-    BookingService bookingService,
+    SubscriptionModel subscription,
   ) async {
     try {
+      // Imprimir recibo de suscripción usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
 
-      // Obtener el booking completo para imprimir
-      final booking = await bookingService.getBooking(subscription.id);
-      if (booking == null) {
-        throw ValidationException(
-          'No se encontró la información de la suscripción',
-        );
-      }
-
       await printService.printSubscriptionReceipt(
-        booking: booking,
+        booking: subscription,
         context: context,
       );
     } catch (e) {
@@ -1192,15 +1191,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Campo de placa con botón de verificación
+        // Campo de placa
         _buildPlateField(
           plateController: plateController,
-          onVerifyPressed: () => _searchVehicle(
-            plateController,
-            ownerNameController,
-            documentController,
-            phoneController,
-          ),
           autofocus: true,
         ),
         const SizedBox(height: 16),
@@ -1224,15 +1217,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Campo de placa con botón de verificación
+        // Campo de placa
         _buildPlateField(
           plateController: plateController,
-          onVerifyPressed: () => _searchVehicle(
-            plateController,
-            ownerNameController,
-            documentController,
-            phoneController,
-          ),
         ),
         const SizedBox(height: 16),
 
@@ -1371,15 +1358,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Campo de placa con botón de verificación
+        // Campo de placa
         _buildPlateField(
           plateController: plateController,
-          onVerifyPressed: () => _searchVehicle(
-            plateController,
-            subscriptionNameController,
-            subscriptionDocumentController,
-            phoneController,
-          ),
         ),
         const SizedBox(height: 16),
 
@@ -2051,76 +2032,46 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     );
   }
 
-  // Widget reutilizable para el campo de placa con botón verificar
+  // Widget reutilizable para el campo de placa
   Widget _buildPlateField({
     required TextEditingController plateController,
-    required VoidCallback onVerifyPressed,
     bool autofocus = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: 44,
-              child: TextField(
-                controller: plateController,
-                autofocus: autofocus,
-                textCapitalization: TextCapitalization.characters,
-                decoration: InputDecoration(
-                  labelText: 'Placa *',
-                  hintText: 'ABC-123',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.directions_car, size: 16),
-                ),
-              ),
+      child: SizedBox(
+        height: 44,
+        child: TextField(
+          controller: plateController,
+          autofocus: autofocus,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            labelText: 'Placa *',
+            hintText: 'ABC-123',
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 10,
             ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            height: 44,
-            child: ElevatedButton.icon(
-              onPressed: onVerifyPressed,
-              icon: Icon(
-                Icons.search,
-                size: 16,
-                color: Theme.of(context).colorScheme.onPrimary,
-              ),
-              label: const Text('Verificar', style: TextStyle(fontSize: 12)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
             ),
+            prefixIcon: const Icon(Icons.directions_car, size: 16),
           ),
-        ],
+        ),
       ),
     );
   }
 
   // Función para actualizar el spot con datos de acceso
-  void _updateSpotWithAccessData(BookingModel access) {
+  void _updateSpotWithAccessData(AccessModel access) {
     // Crear el modelo de información de ocupación
     final entryInfo = ElementOccupancyInfoModel(
       id: access.id,
       vehiclePlate: access.vehicle.plate,
       ownerName: access.vehicle.ownerName ?? '',
       ownerPhone: access.vehicle.ownerPhone ?? '',
-      startDate: access.startDate.toIso8601String(),
+      startDate: access.entryTime.toIso8601String(),
     );
 
     // Actualizar el spot
@@ -2151,7 +2102,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
   }
 
   // Función para actualizar el spot con datos de suscripción
-  void _updateSpotWithSubscriptionData(BookingModel subscription) {
+  void _updateSpotWithSubscriptionData(SubscriptionModel subscription) {
     // Crear el modelo de información de ocupación
     final subscriptionInfo = ElementOccupancyInfoModel(
       id: subscription.id,

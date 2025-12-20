@@ -1,74 +1,60 @@
 import '../config/app_config.dart';
-import 'base_service.dart';
 import '../models/employee_model.dart';
+import 'base_service.dart';
 
 class EmployeeService extends BaseService {
   EmployeeService() : super(path: AppConfig.apiEndpoints['employee']!);
 
-  Future<EmployeeModel> getEmployee(String id) async {
-    return get<EmployeeModel>(
-      endpoint: '/$id',
-      parser: (json) => parseModel(json, EmployeeModel.fromJson),
-    );
-  }
-
-  Future<EmployeeModel> createEmployee(EmployeeCreateModel model) async {
+  Future<EmployeeModel> createEmployee(Map<String, dynamic> employeeData) async {
     return post<EmployeeModel>(
       endpoint: '',
-      body: model,
+      body: employeeData,
       parser: (json) => parseModel(json, EmployeeModel.fromJson),
     );
   }
 
-  Future<EmployeeModel> updateEmployee(
-    String id,
-    EmployeeUpdateModel model,
-  ) async {
-    return patch<EmployeeModel>(
-      endpoint: '/$id',
-      body: model,
+  Future<EmployeeModel> updateEmployee(String employeeId, Map<String, dynamic> employeeData) async {
+    return put<EmployeeModel>(
+      endpoint: '/$employeeId',
+      body: employeeData,
       parser: (json) => parseModel(json, EmployeeModel.fromJson),
     );
   }
 
-  Future<void> deleteEmployee(String id) async {
-    return delete<void>(endpoint: '/$id', parser: (_) => null);
+  Future<void> changeEmployeePassword(String employeeId, Map<String, dynamic> passwordData) async {
+    return put<void>(
+      endpoint: '/$employeeId/password',
+      body: passwordData,
+      parser: (_) => null,
+    );
   }
 
-  Future<List<EmployeeModel>> getEmployeesByCompany(String companyId) async {
+  Future<void> deleteEmployee(String employeeId) async {
+    return delete<void>(
+      endpoint: '/$employeeId',
+      parser: (_) => null,
+    );
+  }
+
+  Future<List<EmployeeModel>> getEmployees({String? parkingId, String? role}) async {
+    final queryParams = <String, String>{};
+    if (parkingId != null) queryParams['parkingId'] = parkingId;
+    if (role != null) queryParams['role'] = role;
+
+    final queryString = queryParams.isNotEmpty
+        ? '?${queryParams.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}'
+        : '';
+
     return get<List<EmployeeModel>>(
-      endpoint: '',
-      additionalHeaders: {'companyId': companyId},
+      endpoint: queryString,
       parser: (json) => parseModelList(json, EmployeeModel.fromJson),
     );
   }
 
-  Future<Map<String, dynamic>> getEmployeesPaginated({
-    int page = 1,
-    int limit = 10,
-    String? search,
-    String? companyId,
-  }) async {
-    final queryParams = <String, String>{
-      'page': page.toString(),
-      'limit': limit.toString(),
-    };
-
-    if (search != null && search.isNotEmpty) {
-      queryParams['search'] = search;
-    }
-
-    if (companyId != null && companyId.isNotEmpty) {
-      queryParams['companyId'] = companyId;
-    }
-
-    final queryString = queryParams.entries
-        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
-        .join('&');
-
-    return get<Map<String, dynamic>>(
-      endpoint: '/paginated?$queryString',
-      parser: (json) => parsePaginatedResponse(json, EmployeeModel.fromJson),
+  Future<EmployeeModel> getEmployeeById(String employeeId) async {
+    return get<EmployeeModel>(
+      endpoint: '/$employeeId',
+      parser: (json) => parseModel(json, EmployeeModel.fromJson),
     );
   }
 }

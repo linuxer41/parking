@@ -12,8 +12,8 @@ export const ParkingBasicSchema = t.Object({
 export const EmployeeBasicSchema = t.Object({
   id: t.String({ format: "uuid" }),
   name: t.String(),
-  email: t.String(),
-  phone: t.String(),
+  email: t.Nullable(t.String()),
+  phone: t.Nullable(t.String()),
 });
 
 // ===== TIPOS DE ACCESO =====
@@ -149,11 +149,6 @@ export const AccessCreateRequestSchema = t.Object({
 
 // ===== ESQUEMA DE SALIDA =====
 export const ExitRequestSchema = t.Object({
-  exitEmployeeId: t.String({
-    description: "ID del empleado que registra la salida",
-    required: true,
-    format: "uuid",
-  }),
   amount: t.Optional(t.Numeric({
     description: "Monto a pagar",
     required: false,
@@ -164,6 +159,16 @@ export const ExitRequestSchema = t.Object({
   })),
 }, {
   description: "Esquema para registrar la salida de un vehículo",
+});
+
+// ===== ESQUEMA DE ACTUALIZACIÓN DE TARIFA =====
+export const FeeUpdateRequestSchema = t.Object({
+  amount: t.Numeric({
+    description: "Nuevo monto a pagar",
+    required: true,
+  }),
+}, {
+  description: "Esquema para actualizar la tarifa de un acceso",
 });
 
 // ===== ESQUEMA DE ACTUALIZACIÓN =====
@@ -192,7 +197,7 @@ export const AccessResponseSchema = t.Object({
   ]),
   amount: t.Numeric(),
   number: t.Integer(),
-  notes: t.Optional(t.String()),
+  notes: t.Optional(t.Union([t.Null(), t.String()])),
   parking: ParkingBasicSchema,
   employee: EmployeeBasicSchema,
   exitEmployee: t.Union([t.Null(), EmployeeBasicSchema]),
@@ -220,6 +225,7 @@ export type AccessForElement = typeof AccessForElementSchema.static;
 export type AccessPreview = typeof AccessPreviewSchema.static;
 export type AccessCreateRequest = typeof AccessCreateRequestSchema.static;
 export type ExitRequest = typeof ExitRequestSchema.static;
+export type FeeUpdateRequest = typeof FeeUpdateRequestSchema.static;
 
 // Tipos de constantes
 export type AccessStatus = typeof ACCESS_STATUS[keyof typeof ACCESS_STATUS];

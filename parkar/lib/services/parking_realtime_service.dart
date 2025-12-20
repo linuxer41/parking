@@ -38,8 +38,14 @@ class ParkingRealtimeService with ChangeNotifier {
 
     _currentParkingId = parkingId;
 
-    // Connect to WebSocket
-    _connectWebSocket(parkingId);
+    // Connect to WebSocket only if enabled
+    if (AppConfig.enableWebSocket) {
+      _connectWebSocket(parkingId);
+    } else {
+      debugPrint('WebSocket disabled, skipping real-time connection');
+      _isConnected = false;
+      notifyListeners();
+    }
   }
 
   /// Connect to WebSocket for real-time updates

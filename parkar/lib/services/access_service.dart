@@ -1,28 +1,27 @@
 import '../config/app_config.dart';
-import '../models/booking_model.dart';
+import '../models/access_model.dart';
 import 'base_service.dart';
 
 class AccessService extends BaseService {
-  AccessService()
-    : super(path: AppConfig.apiEndpoints['access'] ?? '/entry-exit');
+  AccessService() : super(path: AppConfig.apiEndpoints['access'] ?? '/access');
 
-  Future<BookingModel> createEntry(AccessCreateModel access) async {
-    return post<BookingModel>(
-      endpoint: '',
+  Future<AccessModel> createEntry(AccessCreateModel access) async {
+    return post<AccessModel>(
+      endpoint: '/entry',
       body: access.toJson(),
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, AccessModel.fromJson),
     );
   }
 
-  Future<BookingModel> registerEntry(String entryId) async {
-    return post<BookingModel>(
+  Future<AccessModel> registerEntry(String entryId) async {
+    return post<AccessModel>(
       endpoint: '/$entryId/entry',
       body: <String, dynamic>{},
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, AccessModel.fromJson),
     );
   }
 
-  Future<BookingModel> registerExit({
+  Future<AccessModel> registerExit({
     required String entryId,
     required double amount,
     String? notes,
@@ -33,28 +32,28 @@ class AccessService extends BaseService {
       data['notes'] = notes;
     }
 
-    return post<BookingModel>(
+    return post<AccessModel>(
       endpoint: '/$entryId/exit',
       body: data,
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, AccessModel.fromJson),
     );
   }
 
-  Future<BookingModel> getAccess(String id) async {
-    return get<BookingModel>(
+  Future<AccessModel> getAccess(String id) async {
+    return get<AccessModel>(
       endpoint: '/$id',
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, AccessModel.fromJson),
     );
   }
 
-  Future<BookingModel> updateAccess(
+  Future<AccessModel> updateAccess(
     String id,
     Map<String, dynamic> data,
   ) async {
-    return patch<BookingModel>(
+    return patch<AccessModel>(
       endpoint: '/$id',
       body: data,
-      parser: (json) => parseModel(json, BookingModel.fromJson),
+      parser: (json) => parseModel(json, AccessModel.fromJson),
     );
   }
 
@@ -62,11 +61,11 @@ class AccessService extends BaseService {
     return delete<void>(endpoint: '/$id', parser: (_) => null);
   }
 
-  Future<List<BookingModel>> getAccesssByParking(String parkingId) async {
-    return get<List<BookingModel>>(
-      endpoint: '',
+  Future<List<AccessModel>> getAccesssByParking(String parkingId) async {
+    return get<List<AccessModel>>(
+      endpoint: '?inParking=true',
       additionalHeaders: {'parkingId': parkingId},
-      parser: (json) => parseModelList(json, BookingModel.fromJson),
+      parser: (json) => parseModelList(json, AccessModel.fromJson),
     );
   }
 

@@ -16,6 +16,8 @@ class ParkingInfoPanel extends StatelessWidget {
   final bool showSearchField;
   final TextEditingController? searchController;
   final Function(String)? onSearchChanged;
+  final bool isSimpleMode;
+  final VoidCallback? onSettingsPressed;
 
   const ParkingInfoPanel({
     super.key,
@@ -28,6 +30,8 @@ class ParkingInfoPanel extends StatelessWidget {
     this.showSearchField = false,
     this.searchController,
     this.onSearchChanged,
+    this.isSimpleMode = false,
+    this.onSettingsPressed,
   });
 
   @override
@@ -108,7 +112,8 @@ class ParkingInfoPanel extends StatelessWidget {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Botón de editar
+                        // Botón de editar (solo visible si no es modo simple)
+                        if (!isSimpleMode)
                         Container(
                           decoration: BoxDecoration(
                             color: state.isEditMode
@@ -176,6 +181,38 @@ class ParkingInfoPanel extends StatelessWidget {
                                     Icons.check_rounded,
                                     size: 18,
                                     color: colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        // Botón de configuración
+                        if (onSettingsPressed != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: colorScheme.secondary.withValues(
+                                  alpha: 0.3,
+                                ),
+                                width: 1,
+                              ),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: onSettingsPressed,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Icon(
+                                    Icons.settings,
+                                    size: 18,
+                                    color: colorScheme.secondary,
                                   ),
                                 ),
                               ),
@@ -328,28 +365,22 @@ class ParkingInfoPanel extends StatelessWidget {
               onSearchChanged != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: colorScheme.outline.withValues(alpha: 0.3),
-                  ),
-                ),
+              child: SizedBox(
+                height: 44,
                 child: TextField(
                   controller: searchController,
                   decoration: InputDecoration(
-                    hintText: 'Buscar vehículo...',
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 14,
+                    labelText: 'Buscar vehículo',
+                    hintText: 'ABC-123',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
                     ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: colorScheme.onSurfaceVariant,
-                      size: 20,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    prefixIcon: const Icon(Icons.directions_car, size: 16),
                     suffixIcon: searchController!.text.isNotEmpty
                         ? IconButton(
                             icon: Icon(
@@ -368,15 +399,9 @@ class ParkingInfoPanel extends StatelessWidget {
                             ),
                           )
                         : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
                   ),
                   textCapitalization: TextCapitalization.characters,
                   onChanged: onSearchChanged,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
                 ),
               ),
             ),

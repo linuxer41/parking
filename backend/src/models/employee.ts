@@ -47,17 +47,53 @@ export const EmployeeCreateSchema = t.Pick(EmployeeSchema, ["id", "createdAt", "
 });
 
 // ===== ESQUEMA DE ACTUALIZACIÓN =====
-export const EmployeeUpdateSchema = t.Pick(EmployeeSchema, ["updatedAt", "role"], {
+export const EmployeeUpdateSchema = t.Partial(t.Pick(EmployeeSchema, ["updatedAt", "role", "phone"]), {
   description: "Esquema para la actualización de un Empleado",
 });
 
 // ===== ESQUEMAS DE REQUEST =====
-export const EmployeeCreateRequestSchema = t.Pick(EmployeeSchema, ["parkingId", "role", "userId"], {
+export const EmployeeCreateRequestSchema = t.Composite([
+  t.Pick(EmployeeSchema, ["parkingId", "role"]),
+  t.Object({
+    name: t.String({
+      description: "Nombre del empleado",
+      required: true,
+    }),
+    email: t.String({
+      description: "Email del empleado",
+      required: true,
+      format: "email",
+    }),
+    phone: t.String({
+      description: "Teléfono del empleado",
+      required: true,
+    }),
+    password: t.String({
+      description: "Contraseña del empleado",
+      required: true,
+      minLength: 8,
+    }),
+  }),
+], {
   description: "Esquema de request para la creación de un Empleado",
 });
 
-export const EmployeeUpdateRequestSchema = t.Partial(t.Pick(EmployeeSchema, ["role"]), {
+export const EmployeeUpdateRequestSchema = t.Partial(t.Pick(EmployeeSchema, ["role", "phone"]), {
   description: "Esquema de request para la actualización de un Empleado",
+});
+
+export const EmployeePasswordChangeRequestSchema = t.Object({
+  currentPassword: t.String({
+    description: "Contraseña actual",
+    required: true,
+  }),
+  newPassword: t.String({
+    description: "Nueva contraseña",
+    required: true,
+    minLength: 8,
+  }),
+}, {
+  description: "Esquema de request para cambiar la contraseña de un Empleado",
 });
 
 export const EmployeeResponseSchema = t.Pick(EmployeeSchema, ["id", "role", "name", "email", "phone"], {
@@ -70,4 +106,5 @@ export type EmployeeCreate = typeof EmployeeCreateSchema.static;
 export type EmployeeUpdate = typeof EmployeeUpdateSchema.static;
 export type EmployeeCreateRequest = typeof EmployeeCreateRequestSchema.static;
 export type EmployeeUpdateRequest = typeof EmployeeUpdateRequestSchema.static;
+export type EmployeePasswordChangeRequest = typeof EmployeePasswordChangeRequestSchema.static;
 export type EmployeeResponse = typeof EmployeeResponseSchema.static;

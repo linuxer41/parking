@@ -790,14 +790,14 @@ class ParkingPreviewModel extends JsonConvertible<ParkingPreviewModel> {
   final String name;
   final String? address;
   final String? logoUrl;
-  final ParkingParamsModel params;
+  final ParkingParamsModel? params;
 
   ParkingPreviewModel({
     required this.id,
     required this.name,
     this.address,
     this.logoUrl,
-    required this.params,
+    this.params,
   });
 
   factory ParkingPreviewModel.fromJson(Map<String, dynamic> json) =>
