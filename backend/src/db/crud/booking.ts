@@ -1,17 +1,13 @@
 import { pool, withTransaction } from "../connection";
-import { Booking, BookingCreate, BookingUpdate, BookingCreateRequest, RESERVATION_STATUS } from "../../models/booking";
+import { Booking, BookingCreate, BookingUpdate, BookingCreateRequest, RESERVATION_STATUS, BookingResponse } from "../../models/booking";
 import { BadRequestError } from "../../utils/error";
 import { getSchemaValidator } from "elysia";
 import { VehicleCreateSchema } from "../../models/vehicle";
 import { randomUUID } from "crypto";
 
-export const bookingCrud = {
-  // ===== OPERACIONES BÁSICAS =====
-  
-  /**
-   * Crear una nueva reserva
-   */
-  async createBooking(data: BookingCreateRequest, parkingId: string, employeeId: string): Promise<Booking> {
+class BookingCrud {
+
+  async create(data: BookingCreateRequest, parkingId: string, employeeId: string): Promise<BookingResponse> {
     const booking = await withTransaction(async (client) => {
       const { vehiclePlate, vehicleType, vehicleColor, ownerName, ownerDocument, ownerPhone, spotId, startDate, duration, notes } = data;
       
@@ -45,7 +41,7 @@ export const bookingCrud = {
       }
 
       // Generar número de reserva
-      const number = await this.generateBookingNumber(parkingId);
+      const number = await this.generateNumber(parkingId);
 
       // Calcular fecha de fin
       const startDateTime = new Date(startDate);
@@ -82,12 +78,12 @@ export const bookingCrud = {
       return result.rows[0];
     });
 
-    const result = await this.getBookingById(booking.id);
+    const result = await this.getById(booking.id);
     if (!result) {
       throw new BadRequestError("Error al crear la reserva");
     }
     return result;
-  },
+  }
 
   /**
    * Buscar reservas por filtros
@@ -186,23 +182,23 @@ export const bookingCrud = {
     `, values);
 
     return result.rows;
-  },
+  } 
 
   /**
    * Obtener una reserva por ID
    */
-  async getBookingById(id: string): Promise<Booking | null> {
+  async getById(id: string): Promise<BookingResponse | null> {
     const bookings = await this.findBookings({ id: id });
     if (bookings.length === 0) {
       return null;
     }
     return bookings[0];
-  },
+  }
 
   /**
    * Actualizar una reserva
    */
-  async updateBooking(id: string, data: BookingUpdate): Promise<Booking | null> {
+  async update(id: string, data: BookingUpdate): Promise<BookingResponse | null> {
     const updates: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -219,7 +215,7 @@ export const bookingCrud = {
     });
 
     if (updates.length === 1) { // Solo updatedAt
-      return this.getBookingById(id);
+      return this.getById(id);
     }
 
     values.push(id);
@@ -231,109 +227,28 @@ export const bookingCrud = {
     `, values);
 
     return result.rows[0] || null;
-  },
+  }
 
   /**
    * Eliminar una reserva
    */
-  async deleteBooking(id: string): Promise<boolean> {
+  async delete(id: string): Promise<boolean> {
     const result = await pool.query(`
       DELETE FROM t_booking WHERE "id" = $1
     `, [id]);
 
     return result.rowCount ? result.rowCount > 0 : false;
-  },
+  }
 
-  // ===== OPERACIONES ESPECÍFICAS =====
-
-  /**
-   * Obtener reservas activas para un spot
-   */
-  async getActiveBookingsForSpot(spotId: string, date?: string): Promise<Booking[]> {
-    const targetDate = date || new Date().toISOString();
-    
-    const result = await pool.query(`
-      SELECT * FROM t_booking 
-      WHERE "spotId" = $1 
-        AND "status" IN ('pending', 'active')
-        AND "startDate" <= $2 
-        AND "endDate" >= $2
-      ORDER BY "createdAt" DESC
-    `, [spotId, targetDate]);
-
-    return result.rows;
-  },
-
-  /**
-   * Obtener reservas activas para un vehículo
-   */
-  async getActiveBookingsForVehicle(vehicleId: string): Promise<Booking[]> {
-    const result = await pool.query(`
-      SELECT * FROM t_booking 
-      WHERE "vehicleId" = $1 
-        AND "status" IN ('pending', 'active')
-        AND "endDate" >= NOW()
-      ORDER BY "createdAt" DESC
-    `, [vehicleId]);
-
-    return result.rows;
-  },
-
-  /**
-   * Obtener estadísticas de reservas por parking
-   */
-  async getBookingStats(parkingId: string, startDate?: string, endDate?: string): Promise<{
-    total: number;
-    byStatus: { [key: string]: number };
-  }> {
-    const conditions = [`"parkingId" = $1`];
-    const values = [parkingId];
-    let paramIndex = 2;
-
-    if (startDate) {
-      conditions.push(`"createdAt" >= $${paramIndex++}`);
-      values.push(startDate);
-    }
-
-    if (endDate) {
-      conditions.push(`"createdAt" <= $${paramIndex++}`);
-      values.push(endDate);
-    }
-
-    const whereClause = conditions.join(" AND ");
-
-    const result = await pool.query(`
-      SELECT 
-        COUNT(*) as total,
-        "status"
-      FROM t_booking 
-      WHERE ${whereClause}
-      GROUP BY "status"
-    `, values);
-
-    const stats = {
-      total: 0,
-      byStatus: {} as { [key: string]: number }
-    };
-
-    result.rows.forEach(row => {
-      stats.total += parseInt(row.total);
-      stats.byStatus[row.status] = (stats.byStatus[row.status] || 0) + parseInt(row.total);
-    });
-
-    return stats;
-  },
-
-  /**
-   * Generar número único para una reserva
-   */
-  async generateBookingNumber(parkingId: string): Promise<number> {
+  async generateNumber(parkingId: string): Promise<number> {
     const result = await pool.query(`
       SELECT COALESCE(MAX("number"), 0) + 1 as next_number
-      FROM t_booking 
+      FROM t_booking
       WHERE "parkingId" = $1
     `, [parkingId]);
 
     return result.rows[0].next_number;
-  },
-};
+  }
+}
+
+export const bookingCrud = new BookingCrud();

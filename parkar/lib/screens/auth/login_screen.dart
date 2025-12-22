@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:parkar/services/parking_service.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/api_exception.dart';
@@ -39,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final appState = AppStateContainer.of(context);
       final authService = AppStateContainer.di(context).resolve<AuthService>();
+      final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
 
       try {
         final authResponse = await authService.login(
@@ -47,20 +49,16 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (!mounted) return;
-
-        // Usar el modelo de respuesta de autenticación
-        print('Token recibido en login: ${authResponse.auth.token}');
         appState.setAccessToken(authResponse.auth.token);
-        print('Token después de setAccessToken: ${appState.authToken}');
         appState.setCurrentUser(authResponse.user);
 
         // Los parkings ahora vienen en la respuesta
         final parkings = authResponse.parkings;
-        print('Parkings recibidos: ${parkings.length}');
 
         // Si solo hay un estacionamiento, seleccionarlo por defecto
         if (parkings.length == 1) {
-          appState.setCurrentParking(parkings.first);
+          final parking = await parkingService.getParkingById(parkings.first.id);
+          appState.setCurrentParking(parking);
           if (mounted) context.go('/home');
           return;
         }

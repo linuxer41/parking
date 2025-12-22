@@ -19,7 +19,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   late ParkingService _parkingService;
   late EmployeeService _employeeService;
   bool _isLoading = true;
-  ParkingModel? _parking;
+  ParkingModelDetailed? _parking;
   late List<EmployeeModel> _employees;
   String? _error;
 
@@ -60,10 +60,12 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       }
 
       // Load full parking data like parking detail screen does
-      final parking = await _parkingService.getParkingById(currentParking.id).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('Tiempo de espera agotado'),
-      );
+      final parking = await _parkingService
+          .getParkingById(currentParking.id)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception('Tiempo de espera agotado'),
+          );
 
       if (mounted) {
         setState(() {
@@ -112,9 +114,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   Widget _buildMainContent() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -124,7 +124,11 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Error al cargar empleados',
@@ -553,7 +557,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   confirmPasswordController.text.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Por favor complete todos los campos requeridos'),
+                    content: Text(
+                      'Por favor complete todos los campos requeridos',
+                    ),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -576,7 +582,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   'parkingId': _parking?.id,
                   'name': nameController.text.trim(),
                   'email': emailController.text.trim(),
-                  'phone': phoneController.text.isNotEmpty ? phoneController.text.trim() : null,
+                  'phone': phoneController.text.isNotEmpty
+                      ? phoneController.text.trim()
+                      : null,
                   'role': selectedRole,
                   'password': passwordController.text,
                 };
@@ -688,10 +696,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             items: roles.map((role) {
               return DropdownMenuItem<String>(
                 value: role['value'],
-                child: Text(
-                  role['label']!,
-                  style: textTheme.bodyMedium,
-                ),
+                child: Text(role['label']!, style: textTheme.bodyMedium),
               );
             }).toList(),
             onChanged: onChanged,
@@ -730,7 +735,10 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 40,
+            vertical: 24,
+          ),
           title: Text(
             'Editar Empleado',
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -882,14 +890,17 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                       confirmNewPasswordController.text.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Por favor complete todos los campos de contraseña'),
+                        content: Text(
+                          'Por favor complete todos los campos de contraseña',
+                        ),
                         backgroundColor: Colors.red,
                       ),
                     );
                     return;
                   }
 
-                  if (newPasswordController.text != confirmNewPasswordController.text) {
+                  if (newPasswordController.text !=
+                      confirmNewPasswordController.text) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Las nuevas contraseñas no coinciden'),
@@ -908,7 +919,10 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   }
 
                   if (updateData.isNotEmpty) {
-                    await _employeeService.updateEmployee(employee.id, updateData);
+                    await _employeeService.updateEmployee(
+                      employee.id,
+                      updateData,
+                    );
                   }
 
                   // Cambiar contraseña si está activado
@@ -924,7 +938,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                     await _loadParkingDetails(); // Recargar lista
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('Empleado actualizado exitosamente'),
+                        content: const Text(
+                          'Empleado actualizado exitosamente',
+                        ),
                         behavior: SnackBarBehavior.floating,
                         backgroundColor: Colors.green,
                       ),

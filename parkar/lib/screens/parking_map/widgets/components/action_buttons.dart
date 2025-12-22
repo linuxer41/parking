@@ -45,14 +45,19 @@ class PrimaryActionButton extends StatelessWidget {
                   color: Theme.of(context).colorScheme.onPrimary,
                 ),
               )
-            : Row(
+            : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (icon != null) ...[
                     Icon(icon, size: 16),
-                    const SizedBox(width: 8),
+                    const SizedBox(height: 4),
                   ],
-                  Text(label, style: const TextStyle(fontSize: 13)),
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 11),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                  ),
                 ],
               ),
       ),

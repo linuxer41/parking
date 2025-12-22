@@ -5,18 +5,37 @@ import {
   Area, AreaCreate, AreaUpdate, AreaCreateSchema, AreaUpdateSchema, AreaCreateRequest, AreaUpdateRequest, AreaResponse,
   Element, ElementCreate, ElementUpdate, ElementCreateSchema, ElementUpdateSchema, ElementCreateRequest, ElementUpdateRequest, ElementResponse
 } from "../../models/parking";
-import { getSchemaValidator } from "elysia";
+import { getSchemaValidator, t } from "elysia";
 
 const TABLE_NAME = "t_parking";
 const AREA_TABLE_NAME = "t_area";
 const ELEMENT_TABLE_NAME = "t_element";
 
-// ===== CRUD OPERATIONS =====
+class ParkingCrud {
+  private parkingBaseQuery  = `
+    SELECT
+      p.id,
+      p.name,
+      p.phone,
+      p.address,
+      p.email,
+      p."logoUrl",
+      p.rates,
+      p.params,
+      p.location,
+      p."operationMode",
+      p.status,
+      false as "isOwner",
+      p."isOpen",
+      (
+        SELECT COUNT(*) 
+        FROM t_area 
+        WHERE "parkingId" = p.id AND "deletedAt" IS NULL
+      ) AS "areaCount"
+    FROM t_parking p
+  `;
 
-/**
- * Crear un nuevo parking
- */
-export async function createParking(input: ParkingCreateRequest): Promise<Parking> {
+  async create(input: ParkingCreateRequest): Promise<ParkingResponse> {
   const validator = getSchemaValidator(ParkingCreateSchema);
   const data = validator.parse({
     ...input,
@@ -37,50 +56,56 @@ export async function createParking(input: ParkingCreateRequest): Promise<Parkin
     values: values,
   };
   
-  return withClient(async (client) => {
+  let inserted = await withClient(async (client) => {
     const res = await client.query<Parking>(query);
     return res.rows[0];
   });
+
+  return await this.findById(inserted.id);
 }
 
-/**
- * Buscar un parking por ID
- */
-export async function findParkingById(id: string): Promise<Parking | undefined> {
-  const query = {
-    text: `SELECT * FROM ${TABLE_NAME} WHERE id = $1 LIMIT 1`,
-    values: [id],
-  };
-  
-  return withClient(async (client) => {
-    const res = await client.query<Parking>(query);
-    return res.rows[0];
-  });
-}
 
-/**
- * Buscar parkings por criterios
- */
-export async function findParkings(where: Partial<Parking> = {}): Promise<Parking[]> {
-  const conditions = Object.entries(where)
-    .map(([key, value], i) => `"${key}" = $${i + 1}`)
-    .join(" AND ");
-  
-  const query = {
-    text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
-    values: Object.values(where),
-  };
-  
-  return withClient(async (client) => {
-    const res = await client.query<Parking>(query);
-    return res.rows;
-  });
-}
+   async find(where: Partial<Parking> = {}): Promise<Parking[]> {
+    const conditions = Object.entries(where)
+      .map(([key, value], i) => `"${key}" = $${i + 1}`)
+      .join(" AND ");
+    
+    const query = {
+      text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+      values: Object.values(where),
+    };
+    
+    return withClient(async (client) => {
+      const res = await client.query<Parking>(query);
+      return res.rows;
+    });
+  }
 
-/**
- * Actualizar un parking
- */
-export async function updateParking(id: string, input: ParkingUpdateRequest): Promise<Parking> {
+  /**
+   * Buscar un parking por ID
+   */
+  async findById(id: string): Promise<ParkingResponse> {
+    const query = {
+      text: `
+        ${this.parkingBaseQuery}
+        WHERE p.id = $1
+        AND p."deletedAt" IS NULL
+      `,
+      values: [id],
+    };
+    console.log(query);
+
+
+    return withClient(async (client) => {
+      const res = await client.query<ParkingResponse>(query);
+      return res.rows[0];
+    });
+  }
+
+  /**
+   * Actualizar un parking
+   */
+  async update(id: string, input: ParkingUpdateRequest): Promise<ParkingResponse> {
   const validator = getSchemaValidator(ParkingUpdateSchema);
   const data = validator.parse(input);
   
@@ -97,27 +122,24 @@ export async function updateParking(id: string, input: ParkingUpdateRequest): Pr
     values: [...values, id],
   };
   
-  return withClient(async (client) => {
+  const updated = await withClient(async (client) => {
     const res = await client.query<Parking>(query);
-    
-    if (!res.rows || res.rows.length === 0) {
-      throw new Error(`No se encontró el parking con ID ${id} para actualizar`);
-    }
-    
     return res.rows[0];
   });
+
+  return await this.findById(updated.id);
 }
 
-/**
- * Eliminar un parking
- */
-export async function deleteParking(id: string): Promise<Parking> {
+  /**
+   * Eliminar un parking
+   */
+  async delete(id: string): Promise<boolean> {
   const query = {
     text: `DELETE FROM ${TABLE_NAME} WHERE id = $1 RETURNING *`,
     values: [id],
   };
   
-  return withClient(async (client) => {
+  const deleted = await withClient(async (client) => {
     const res = await client.query<Parking>(query);
     
     if (!res.rows || res.rows.length === 0) {
@@ -126,58 +148,60 @@ export async function deleteParking(id: string): Promise<Parking> {
     
     return res.rows[0];
   });
+
+  return deleted.id === id;
 }
 
-export async function findParkingsByUserId(ownerId: string): Promise<ParkingResponse[]> {
-  const sql = `
-  WITH parking_stats AS (
+  async findByUserId(ownerId: string): Promise<ParkingResponse[]> {
+    const sql = `
+      WITH parking_stats AS (
+      SELECT
+        p.id as "parkingId",
+        COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
+        COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "availableSpots",
+        (SELECT COUNT(*) FROM t_area WHERE "parkingId" = p.id AND "deletedAt" IS NULL) as "areaCount"
+      FROM t_parking p
+      LEFT JOIN t_element e ON e."parkingId" = p.id AND e."deletedAt" IS NULL
+      WHERE (p."ownerId" = $1 OR EXISTS (SELECT 1 FROM t_employee emp WHERE emp."parkingId" = p.id AND emp."userId" = $1))
+      AND p."deletedAt" IS NULL
+      GROUP BY p.id
+    )
     SELECT
-      p.id as "parkingId",
-      COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
-      COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "availableSpots",
-      (SELECT COUNT(*) FROM t_area WHERE "parkingId" = p.id AND "deletedAt" IS NULL) as "areaCount"
+      p.id,
+      p.name,
+      p.phone,
+      p.address,
+      p.email,
+      p."logoUrl",
+      p.rates,
+      p.params,
+      p.location,
+      p."operationMode",
+      p.status,
+      p."isOpen",
+      CASE WHEN p."ownerId" = $1 THEN true ELSE false END as "isOwner",
+      true as "isActive",
+      ps."areaCount"::INTEGER as "areaCount",
+      ps."totalSpots"::INTEGER as "totalSpots",
+      (ps."totalSpots" - ps."availableSpots")::INTEGER as "occupiedSpots",
+      ps."availableSpots"::INTEGER as "availableSpots"
     FROM t_parking p
-    LEFT JOIN t_element e ON e."parkingId" = p.id AND e."deletedAt" IS NULL
-    WHERE (p."ownerId" = $1 OR EXISTS (SELECT 1 FROM t_employee emp WHERE emp."parkingId" = p.id AND emp."userId" = $1))
+    JOIN parking_stats ps ON ps."parkingId" = p.id
+    WHERE (p."ownerId" = $1
+    OR EXISTS (SELECT 1 FROM t_employee e WHERE e."parkingId" = p.id AND e."userId" = $1))
     AND p."deletedAt" IS NULL
-    GROUP BY p.id
-  )
-  SELECT
-    p.id,
-    p.name,
-    p.phone,
-    p.address,
-    p.email,
-    p."logoUrl",
-    p.rates,
-    p.params,
-    p.location,
-    p."operationMode",
-    p.status,
-    p."isOpen",
-    CASE WHEN p."ownerId" = $1 THEN true ELSE false END as "isOwner",
-    true as "isActive",
-    ps."areaCount"::INTEGER as "areaCount",
-    ps."totalSpots"::INTEGER as "totalSpots",
-    (ps."totalSpots" - ps."availableSpots")::INTEGER as "occupiedSpots",
-    ps."availableSpots"::INTEGER as "availableSpots"
-  FROM t_parking p
-  JOIN parking_stats ps ON ps."parkingId" = p.id
-  WHERE (p."ownerId" = $1
-  OR EXISTS (SELECT 1 FROM t_employee e WHERE e."parkingId" = p.id AND e."userId" = $1))
-  AND p."deletedAt" IS NULL
-`;
- const query = {
-  text: sql,
-  values: [ownerId],
- };
-  return withClient(async (client) => {
-    const res = await client.query<ParkingResponse>(query);
-    return res.rows;
-  });
-}
+  `;
+    const query = {
+      text: sql,
+      values: [ownerId],
+    };
+    return withClient(async (client) => {
+      const res = await client.query<ParkingResponse>(query);
+      return res.rows;
+    });
+  }
 
-export async function getDetailedParking(id: string, userId: string): Promise<ParkingDetailedResponse> {
+  async getDetailed(id: string, userId: string): Promise<ParkingDetailedResponse> {
   const sql = `
 WITH area_stats AS (
   SELECT
@@ -283,7 +307,7 @@ WHERE p.id = $1`;
 /**
  * Crear un nuevo área
  */
-export async function createArea(input: AreaCreateRequest, parkingId: string): Promise<AreaResponse> {
+async createArea(input: AreaCreateRequest, parkingId: string): Promise<AreaResponse> {
   const validator = getSchemaValidator(AreaCreateSchema);
   const data = validator.parse({
     ...input,
@@ -311,10 +335,10 @@ export async function createArea(input: AreaCreateRequest, parkingId: string): P
   });
 }
 
-/**
- * Buscar un área por ID
- */
-export async function findAreaById(id: string): Promise<AreaResponse | undefined> {
+  /**
+   * Buscar un área por ID
+   */
+  async findAreaById(id: string): Promise<AreaResponse | undefined> {
   const query = {
     text: `SELECT * FROM ${AREA_TABLE_NAME} WHERE id = $1 AND "deletedAt" IS NULL LIMIT 1`,
     values: [id],
@@ -329,7 +353,7 @@ export async function findAreaById(id: string): Promise<AreaResponse | undefined
 /**
  * Buscar áreas por parking ID
  */
-export async function findAreasByParkingId(parkingId: string): Promise<AreaResponse[]> {
+async findAreasByParkingId(parkingId: string): Promise<AreaResponse[]> {
   const sql = `
     WITH area_stats AS (
       SELECT 
@@ -373,7 +397,7 @@ export async function findAreasByParkingId(parkingId: string): Promise<AreaRespo
 /**
  * Actualizar un área
  */
-export async function updateArea(id: string, input: AreaUpdateRequest): Promise<AreaResponse> {
+async updateArea(id: string, input: AreaUpdateRequest): Promise<AreaResponse> {
   const validator = getSchemaValidator(AreaUpdateSchema);
   const data = validator.parse(input);
   
@@ -404,7 +428,7 @@ export async function updateArea(id: string, input: AreaUpdateRequest): Promise<
 /**
  * Eliminar un área
  */
-export async function deleteArea(id: string): Promise<AreaResponse> {
+async deleteArea(id: string): Promise<AreaResponse> {
   const query = {
     text: `UPDATE ${AREA_TABLE_NAME} SET "deletedAt" = NOW() WHERE id = $1 AND "deletedAt" IS NULL RETURNING *`,
     values: [id],
@@ -426,7 +450,7 @@ export async function deleteArea(id: string): Promise<AreaResponse> {
 /**
  * Crear un nuevo elemento
  */
-export async function createElement(input: ElementCreateRequest): Promise<ElementResponse> {
+async createElement(input: ElementCreateRequest): Promise<ElementResponse> {
   const validator = getSchemaValidator(ElementCreateSchema);
   const data = validator.parse({
     ...input,
@@ -456,7 +480,7 @@ export async function createElement(input: ElementCreateRequest): Promise<Elemen
 /**
  * Buscar un elemento por ID
  */
-export async function findElementById(id: string): Promise<ElementResponse | undefined> {
+async findElementById(id: string): Promise<ElementResponse | undefined> {
   const sql = `
     SELECT 
       e.*,
@@ -483,7 +507,7 @@ export async function findElementById(id: string): Promise<ElementResponse | und
 /**
  * Buscar elementos por área ID
  */
-export async function findElementsByAreaId(areaId: string): Promise<ElementResponse[]> {
+async findElementsByAreaId(areaId: string): Promise<ElementResponse[]> {
   const sql = `
     SELECT 
       e.*,
@@ -510,7 +534,7 @@ export async function findElementsByAreaId(areaId: string): Promise<ElementRespo
 /**
  * Buscar elementos por parking ID
  */
-export async function findElementsByParkingId(parkingId: string): Promise<ElementResponse[]> {
+async findElementsByParkingId(parkingId: string): Promise<ElementResponse[]> {
   const sql = `
     SELECT 
       e.*,
@@ -537,7 +561,7 @@ export async function findElementsByParkingId(parkingId: string): Promise<Elemen
 /**
  * Actualizar un elemento
  */
-export async function updateElement(id: string, input: ElementUpdateRequest): Promise<ElementResponse> {
+async updateElement(id: string, input: ElementUpdateRequest): Promise<ElementResponse> {
   const validator = getSchemaValidator(ElementUpdateSchema);
   const data = validator.parse(input);
   
@@ -565,22 +589,25 @@ export async function updateElement(id: string, input: ElementUpdateRequest): Pr
   });
 }
 
-/**
- * Eliminar un elemento
- */
-export async function deleteElement(id: string): Promise<ElementResponse> {
-  const query = {
-    text: `UPDATE ${ELEMENT_TABLE_NAME} SET "deletedAt" = NOW() WHERE id = $1 AND "deletedAt" IS NULL RETURNING *`,
-    values: [id],
-  };
-  
-  return withClient(async (client) => {
-    const res = await client.query<ElementResponse>(query);
-    
-    if (!res.rows || res.rows.length === 0) {
-      throw new Error(`No se encontró el elemento con ID ${id} para eliminar`);
-    }
-    
-    return res.rows[0];
-  });
+  /**
+   * Eliminar un elemento
+   */
+  async deleteElement(id: string): Promise<ElementResponse> {
+    const query = {
+      text: `UPDATE ${ELEMENT_TABLE_NAME} SET "deletedAt" = NOW() WHERE id = $1 AND "deletedAt" IS NULL RETURNING *`,
+      values: [id],
+    };
+
+    return withClient(async (client) => {
+      const res = await client.query<ElementResponse>(query);
+
+      if (!res.rows || res.rows.length === 0) {
+        throw new Error(`No se encontró el elemento con ID ${id} para eliminar`);
+      }
+
+      return res.rows[0];
+    });
+  }
 }
+
+export const parkingCrud = new ParkingCrud();

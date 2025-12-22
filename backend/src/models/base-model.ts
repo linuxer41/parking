@@ -14,7 +14,7 @@ export const BaseSchema = t.Object(
         description: "Fecha de creación del registro",
         required: true,
       }),
-  
+
     updatedAt: t.Union([
       t.String({
         description: "Fecha de última actualización del registro",

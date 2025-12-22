@@ -3,10 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:parkar/screens/parking_map/core/index.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 
-import '../core/parking_state.dart';
 import '../models/enums.dart';
 import '../models/parking_elements.dart';
 import '../models/parking_signage.dart';
@@ -51,7 +50,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   // Mostrar mensaje de colisión
   bool _collisionDetected = false;
   Offset _collisionPosition = Offset.zero;
-  
+
   // Estado de hover para tooltips
   ParkingSpot? _hoveredSpot;
 
@@ -67,17 +66,18 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   @override
   void initState() {
     super.initState();
-    final parkingState = Provider.of<ParkingState>(context, listen: false);
-    parkingState.initKeyboardShortcutsManager(_showActionMessage);
+    final parkingMapState = ParkingMapStateContainer.of(context);
+    parkingMapState.initKeyboardShortcutsManager(_showActionMessage);
   }
 
   @override
   Widget build(BuildContext context) {
+    final parkingMapState = ParkingMapStateContainer.of(context);
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
       onKeyEvent: _handleKeyEvent,
-      child: Consumer<ParkingState>(
-        builder: (context, parkingState, child) {
+      child: Builder(
+        builder: (context) {
           final theme = Theme.of(context);
           final colorScheme = theme.colorScheme;
 
@@ -102,28 +102,27 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                   final double zoomFactor = scrollDelta > 0 ? 0.95 : 1.05;
 
                   // Actualizar la posición del cursor para asegurar un zoom centrado
-                  final cursorWorldPos = parkingState.camera.screenToWorld(
+                  final cursorWorldPos = parkingMapState.camera.screenToWorld(
                     signal.position,
                   );
-                  parkingState.cursorPosition = cursorWorldPos;
+                  parkingMapState.cursorPosition = cursorWorldPos;
 
                   // Aplicar zoom centrado en la posición actual del cursor
-                  parkingState.zoomCamera(
-                    zoomFactor,
-                    signal.position,
-                  );
+                  parkingMapState.zoomCamera(zoomFactor, signal.position);
                 }
               },
               child: GestureDetector(
                 // Manejar tanto arrastre como zoom con el reconocedor de escala
                 onScaleStart: (details) =>
-                    _handleScaleStart(details, parkingState),
+                    _handleScaleStart(details, parkingMapState),
                 onScaleUpdate: (details) =>
-                    _handleScaleUpdate(details, parkingState),
-                onScaleEnd: (details) => _handleScaleEnd(details, parkingState),
+                    _handleScaleUpdate(details, parkingMapState),
+                onScaleEnd: (details) =>
+                    _handleScaleEnd(details, parkingMapState),
 
                 // Manejar tap para selección o elemento en modo de creación
-                onTapDown: (details) => _handleTapDown(details, parkingState),
+                onTapDown: (details) =>
+                    _handleTapDown(details, parkingMapState),
 
                 child: SizedBox(
                   key: _canvasKey,
@@ -134,7 +133,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                       // Canvas principal
                       CustomPaint(
                         painter: _ParkingCanvasPainter(
-                          parkingState: parkingState,
+                          parkingMapState: parkingMapState,
                           colorScheme: colorScheme,
                           selectionRect: _selectionRect,
                         ),
@@ -142,58 +141,74 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                       ),
 
                       // Barra de herramientas contextual
-                      if (parkingState.isEditMode &&
-                          parkingState.selectedElements.isNotEmpty)
+                      if (parkingMapState.isEditMode &&
+                          parkingMapState.selectedElements.isNotEmpty)
                         ContextToolbar(
-                          parkingState: parkingState,
+                          parkingMapState: parkingMapState,
                           onRotateClockwise: () {
                             debugPrint("Callback onRotateClockwise llamado");
-                            _rotateSelectedElement(parkingState, 30);
+                            _rotateSelectedElement(parkingMapState, 30);
                           },
                           onRotateCounterClockwise: () {
-                            debugPrint("Callback onRotateCounterClockwise llamado");
-                            _rotateSelectedElement(parkingState, -30);
+                            debugPrint(
+                              "Callback onRotateCounterClockwise llamado",
+                            );
+                            _rotateSelectedElement(parkingMapState, -30);
                           },
                           onCopy: () {
                             debugPrint("Callback onCopy llamado");
-                            _copySelectedElements(parkingState);
+                            _copySelectedElements(parkingMapState);
                           },
                           onDelete: () {
                             debugPrint("Callback onDelete llamado");
-                            _deleteSelectedElements(parkingState);
+                            _deleteSelectedElements(parkingMapState);
                           },
                           onEditLabel: () {
                             debugPrint("Botón de editar etiqueta presionado");
-                            _editElementLabel(parkingState);
+                            _editElementLabel(parkingMapState);
                           },
-                          onAlignTop: () =>
-                              _alignElements(parkingState, Alignment.topCenter),
+                          onAlignTop: () => _alignElements(
+                            parkingMapState,
+                            Alignment.topCenter,
+                          ),
                           onAlignBottom: () => _alignElements(
-                              parkingState, Alignment.bottomCenter),
-                          onAlignLeft: () =>
-                              _alignElements(parkingState, Alignment.centerLeft),
-                          onAlignRight: () =>
-                              _alignElements(parkingState, Alignment.centerRight),
+                            parkingMapState,
+                            Alignment.bottomCenter,
+                          ),
+                          onAlignLeft: () => _alignElements(
+                            parkingMapState,
+                            Alignment.centerLeft,
+                          ),
+                          onAlignRight: () => _alignElements(
+                            parkingMapState,
+                            Alignment.centerRight,
+                          ),
                           onAlignCenter: () =>
-                              _alignElements(parkingState, Alignment.center),
-                          onDistributeHorizontal: () => _distributeElementsEvenly(
-                              parkingState,
-                              horizontal: true),
+                              _alignElements(parkingMapState, Alignment.center),
+                          onDistributeHorizontal: () =>
+                              _distributeElementsEvenly(
+                                parkingMapState,
+                                horizontal: true,
+                              ),
                           onDistributeVertical: () => _distributeElementsEvenly(
-                              parkingState,
-                              horizontal: false),
+                            parkingMapState,
+                            horizontal: false,
+                          ),
                           selectedElementPosition: () {
                             // Obtener el elemento seleccionado
-                            final element = parkingState.selectedElements.first;
+                            final element =
+                                parkingMapState.selectedElements.first;
 
                             // Obtener la posición actual en pantalla
-                            final screenPos = parkingState.camera
+                            final screenPos = parkingMapState.camera
                                 .worldToScreen(element.position);
 
                             // Obtener dimensiones del elemento
                             final size = element.getSize();
                             final scaledHeight =
-                                size.height * element.scale * parkingState.zoom;
+                                size.height *
+                                element.scale *
+                                parkingMapState.zoom;
 
                             // Calcular posición para la barra (exactamente debajo del elemento)
                             return Offset(
@@ -219,8 +234,11 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                               padding: const EdgeInsets.all(8),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.warning_amber_rounded,
-                                      color: Colors.white, size: 16),
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     "¡Colisión detectada!",
@@ -235,12 +253,12 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                             ),
                           ),
                         ),
-                      
+
                       // Tooltip para espacio al hacer hover (modo normal) - temporalmente deshabilitado
-                      // if (!parkingState.isEditMode && _hoveredSpot != null)
+                      // if (!parkingMapState.isEditMode && _hoveredSpot != null)
                       //   SpotInfoPopup(
                       //     spot: _hoveredSpot!,
-                      //     position: parkingState.camera.worldToScreen(_hoveredSpot!.position),
+                      //     position: parkingMapState.camera.worldToScreen(_hoveredSpot!.position),
                       //   ),
                     ],
                   ),
@@ -253,43 +271,46 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     );
   }
 
-  void _handleScaleStart(ScaleStartDetails details, ParkingState parkingState) {
+  void _handleScaleStart(
+    ScaleStartDetails details,
+    ParkingMapState parkingMapState,
+  ) {
     _dragStartPosition = details.localFocalPoint;
     _cameraStartPosition = vector_math.Vector2(
-      parkingState.cameraPosition.x,
-      parkingState.cameraPosition.y,
+      parkingMapState.cameraPosition.x,
+      parkingMapState.cameraPosition.y,
     );
     _previousScaleFactor = 1.0;
-    _baseScaleFactor = parkingState.zoom;
+    _baseScaleFactor = parkingMapState.zoom;
 
     // Modo de selección: iniciar un rectángulo de selección o arrastrar elementos seleccionados
-    if (parkingState.isEditMode &&
-        parkingState.editorMode == EditorMode.select &&
+    if (parkingMapState.isEditMode &&
+        parkingMapState.editorMode == EditorMode.select &&
         details.pointerCount == 1) {
       // Comprobar si ya hay elementos seleccionados y si el clic es dentro del área de selección
-      if (parkingState.selectedElements.isNotEmpty) {
+      if (parkingMapState.selectedElements.isNotEmpty) {
         // Convertir la posición del clic a coordenadas del mundo
-        final worldPos = parkingState.camera.screenToWorld(
+        final worldPos = parkingMapState.camera.screenToWorld(
           details.localFocalPoint,
         );
 
         // Verificar si hay algún elemento seleccionado en la posición del clic
-        final elementAtPos = parkingState.findElementAt(worldPos);
+        final elementAtPos = parkingMapState.findElementAt(worldPos);
 
         // Si se hace clic en un elemento seleccionado, iniciar arrastre grupal
         if (elementAtPos != null &&
-            parkingState.selectedElements.contains(elementAtPos)) {
+            parkingMapState.selectedElements.contains(elementAtPos)) {
           _draggingMultiple = true;
 
           // Guardar las posiciones iniciales de todos los elementos seleccionados
           _selectedElementsStartPositions.clear();
-          for (final selectedElement in parkingState.selectedElements) {
+          for (final selectedElement in parkingMapState.selectedElements) {
             if (!selectedElement.isLocked) {
               _selectedElementsStartPositions[selectedElement.id] =
                   vector_math.Vector2(
-                selectedElement.position.x,
-                selectedElement.position.y,
-              );
+                    selectedElement.position.x,
+                    selectedElement.position.y,
+                  );
             }
           }
           return;
@@ -299,36 +320,39 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       // Si no hay elementos seleccionados o el clic no es sobre un elemento seleccionado,
       // iniciar una nueva selección rectangular
       _selectionStartPosition = details.localFocalPoint;
-      _selectionRect =
-          Rect.fromPoints(_selectionStartPosition!, _selectionStartPosition!);
+      _selectionRect = Rect.fromPoints(
+        _selectionStartPosition!,
+        _selectionStartPosition!,
+      );
       return;
     }
 
     // Modo de edición libre: verificar si estamos arrastrando elementos
-    if (parkingState.isEditMode &&
-        parkingState.editorMode == EditorMode.free &&
+    if (parkingMapState.isEditMode &&
+        parkingMapState.editorMode == EditorMode.free &&
         details.pointerCount == 1) {
-      final worldPos = parkingState.camera.screenToWorld(
+      final worldPos = parkingMapState.camera.screenToWorld(
         details.localFocalPoint,
       );
 
-      final element = parkingState.findElementAt(worldPos);
+      final element = parkingMapState.findElementAt(worldPos);
 
       // Si hay un elemento en la posición y está seleccionado, preparar para arrastrarlo
-      if (element != null && parkingState.selectedElements.contains(element)) {
+      if (element != null &&
+          parkingMapState.selectedElements.contains(element)) {
         // Si hay múltiples elementos seleccionados, activar el modo de arrastre múltiple
-        if (parkingState.selectedElements.length > 1) {
+        if (parkingMapState.selectedElements.length > 1) {
           _draggingMultiple = true;
 
           // Guardar las posiciones iniciales de todos los elementos seleccionados
           _selectedElementsStartPositions.clear();
-          for (final selectedElement in parkingState.selectedElements) {
+          for (final selectedElement in parkingMapState.selectedElements) {
             if (!selectedElement.isLocked) {
               _selectedElementsStartPositions[selectedElement.id] =
                   vector_math.Vector2(
-                selectedElement.position.x,
-                selectedElement.position.y,
-              );
+                    selectedElement.position.x,
+                    selectedElement.position.y,
+                  );
             }
           }
           return;
@@ -350,12 +374,14 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   void _handleScaleUpdate(
-      ScaleUpdateDetails details, ParkingState parkingState) {
+    ScaleUpdateDetails details,
+    ParkingMapState parkingMapState,
+  ) {
     // Actualizar la posición del cursor
-    final cursorWorldPos = parkingState.camera.screenToWorld(
+    final cursorWorldPos = parkingMapState.camera.screenToWorld(
       details.localFocalPoint,
     );
-    parkingState.cursorPosition = cursorWorldPos;
+    parkingMapState.cursorPosition = cursorWorldPos;
 
     // Reiniciar el estado de colisión
     setState(() {
@@ -363,22 +389,22 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     });
 
     // Modo de selección: actualizar el rectángulo de selección o arrastrar el grupo seleccionado
-    if (parkingState.isEditMode &&
-        parkingState.editorMode == EditorMode.select) {
+    if (parkingMapState.isEditMode &&
+        parkingMapState.editorMode == EditorMode.select) {
       // Si estamos arrastrando múltiples elementos en modo de selección
       if (_draggingMultiple && _selectedElementsStartPositions.isNotEmpty) {
         final delta = details.localFocalPoint - _dragStartPosition!;
 
         // Convertir el delta de pantalla a delta de mundo
         final worldDelta = vector_math.Vector2(
-          delta.dx / parkingState.zoom,
-          delta.dy / parkingState.zoom,
+          delta.dx / parkingMapState.zoom,
+          delta.dy / parkingMapState.zoom,
         );
 
         // Verificar colisiones para cada elemento seleccionado
         bool anyCollision = false;
 
-        for (final selectedElement in parkingState.selectedElements) {
+        for (final selectedElement in parkingMapState.selectedElements) {
           if (_selectedElementsStartPositions.containsKey(selectedElement.id) &&
               !selectedElement.isLocked) {
             final startPos =
@@ -391,13 +417,16 @@ class _ParkingCanvasState extends State<ParkingCanvas>
             );
 
             // Aplicar guías inteligentes
-            final adjustedPosition = parkingState.applySmartGuides(
+            final adjustedPosition = parkingMapState.applySmartGuides(
               selectedElement,
               proposedPosition,
             );
 
             if (_checkCollision(
-                parkingState, selectedElement, adjustedPosition)) {
+              parkingMapState,
+              selectedElement,
+              adjustedPosition,
+            )) {
               anyCollision = true;
               setState(() {
                 _collisionDetected = true;
@@ -411,9 +440,10 @@ class _ParkingCanvasState extends State<ParkingCanvas>
         // Si no hay colisiones, actualizar las posiciones
         if (!anyCollision) {
           setState(() {
-            for (final selectedElement in parkingState.selectedElements) {
-              if (_selectedElementsStartPositions
-                      .containsKey(selectedElement.id) &&
+            for (final selectedElement in parkingMapState.selectedElements) {
+              if (_selectedElementsStartPositions.containsKey(
+                    selectedElement.id,
+                  ) &&
                   !selectedElement.isLocked) {
                 final startPos =
                     _selectedElementsStartPositions[selectedElement.id]!;
@@ -425,7 +455,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                 );
 
                 // Aplicar guías inteligentes
-                final adjustedPosition = parkingState.applySmartGuides(
+                final adjustedPosition = parkingMapState.applySmartGuides(
                   selectedElement,
                   proposedPosition,
                 );
@@ -445,7 +475,9 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       if (_selectionStartPosition != null) {
         setState(() {
           _selectionRect = Rect.fromPoints(
-              _selectionStartPosition!, details.localFocalPoint);
+            _selectionStartPosition!,
+            details.localFocalPoint,
+          );
         });
         return;
       }
@@ -457,21 +489,18 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       _previousScaleFactor = details.scale;
 
       // Aplicar zoom con foco en el punto de escala
-      parkingState.zoomCamera(
-        scaleFactor,
-        details.localFocalPoint,
-      );
+      parkingMapState.zoomCamera(scaleFactor, details.localFocalPoint);
     }
     // Si es un gesto de arrastre (pan) - solo un dedo
     else if (details.pointerCount == 1 && _dragStartPosition != null) {
       final delta = details.localFocalPoint - _dragStartPosition!;
 
       // Si estamos arrastrando un elemento en modo edición
-      if (parkingState.isEditMode && _draggedElement != null) {
+      if (parkingMapState.isEditMode && _draggedElement != null) {
         // Convertir delta de pantalla a delta de mundo
         final worldDelta = vector_math.Vector2(
-          delta.dx / parkingState.zoom,
-          delta.dy / parkingState.zoom,
+          delta.dx / parkingMapState.zoom,
+          delta.dy / parkingMapState.zoom,
         );
 
         // Calcular la nueva posición propuesta
@@ -481,13 +510,17 @@ class _ParkingCanvasState extends State<ParkingCanvas>
         );
 
         // Aplicar guías inteligentes para obtener la posición final
-        final adjustedPosition = parkingState.applySmartGuides(
+        final adjustedPosition = parkingMapState.applySmartGuides(
           _draggedElement!,
           proposedPosition,
         );
 
         // Verificar colisión
-        if (_checkCollision(parkingState, _draggedElement!, adjustedPosition)) {
+        if (_checkCollision(
+          parkingMapState,
+          _draggedElement!,
+          adjustedPosition,
+        )) {
           setState(() {
             _collisionDetected = true;
             _collisionPosition = details.localFocalPoint;
@@ -505,7 +538,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       }
       // Si no estamos arrastrando elementos, hacer pan de cámara (tanto en modo normal como edición)
       else if (_cameraStartPosition != null) {
-        parkingState.cameraPosition = vector_math.Vector2(
+        parkingMapState.cameraPosition = vector_math.Vector2(
           _cameraStartPosition!.x - delta.dx,
           _cameraStartPosition!.y - delta.dy,
         );
@@ -513,16 +546,19 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     }
   }
 
-  void _handleScaleEnd(ScaleEndDetails details, ParkingState parkingState) {
+  void _handleScaleEnd(
+    ScaleEndDetails details,
+    ParkingMapState parkingMapState,
+  ) {
     // Finalizar selección por rectángulo
     if (_selectionRect != null &&
-        parkingState.editorMode == EditorMode.select) {
+        parkingMapState.editorMode == EditorMode.select) {
       // Convertir el rectángulo de selección a coordenadas del mundo
-      final worldTopLeft = parkingState.camera.screenToWorld(
+      final worldTopLeft = parkingMapState.camera.screenToWorld(
         Offset(_selectionRect!.left, _selectionRect!.top),
       );
 
-      final worldBottomRight = parkingState.camera.screenToWorld(
+      final worldBottomRight = parkingMapState.camera.screenToWorld(
         Offset(_selectionRect!.right, _selectionRect!.bottom),
       );
 
@@ -532,19 +568,19 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       );
 
       // Encontrar todos los elementos dentro del rectángulo de selección
-      final elementsInRect = parkingState.allElements.where((element) {
+      final elementsInRect = parkingMapState.allElements.where((element) {
         final elementPos = Offset(element.position.x, element.position.y);
         return worldSelectionRect.contains(elementPos);
       }).toList();
 
       // Si no estamos manteniendo Shift, limpiar la selección actual
       if (!isShiftPressed) {
-        parkingState.clearSelection();
+        parkingMapState.clearSelection();
       }
 
       // Seleccionar todos los elementos encontrados
       if (elementsInRect.isNotEmpty) {
-        parkingState.selectMultipleElements(elementsInRect);
+        parkingMapState.selectMultipleElements(elementsInRect);
       }
     }
 
@@ -575,10 +611,11 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     });
   }
 
-  void _handleTapDown(TapDownDetails details, ParkingState parkingState) {
+  void _handleTapDown(TapDownDetails details, ParkingMapState parkingMapState) {
     // Detección de doble tap
     final currentTime = DateTime.now();
-    final isDoubleTap = _lastTapTime != null &&
+    final isDoubleTap =
+        _lastTapTime != null &&
         currentTime.difference(_lastTapTime!).inMilliseconds < 300;
     _lastTapTime = currentTime;
 
@@ -586,51 +623,52 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     _lastTapPosition = details.localPosition;
 
     if (isDoubleTap) {
-      _handleDoubleTap(details, parkingState);
+      _handleDoubleTap(details, parkingMapState);
       return;
     }
 
     // Convertir punto de pantalla a mundo
-    final worldPoint = parkingState.camera.screenToWorld(
+    final worldPoint = parkingMapState.camera.screenToWorld(
       details.localPosition,
     );
 
     // En modo edición, manejar la selección de elementos para cualquier modo
-    if (parkingState.isEditMode) {
+    if (parkingMapState.isEditMode) {
       // Actualizar la posición del cursor
-      parkingState.cursorPosition = worldPoint;
+      parkingMapState.cursorPosition = worldPoint;
 
       // Encontrar el elemento en la posición del tap
-      final element = parkingState.findElementAt(worldPoint);
+      final element = parkingMapState.findElementAt(worldPoint);
 
       if (element != null) {
         // Verificar si el elemento ya está en un grupo seleccionado
         // Si está en un grupo, no hacer nada para mantener la selección grupal
-        if (parkingState.selectedElements.contains(element) &&
-            parkingState.selectedElements.length > 1) {
+        if (parkingMapState.selectedElements.contains(element) &&
+            parkingMapState.selectedElements.length > 1) {
           // No hacer nada, mantener la selección múltiple intacta
           return;
         }
 
         // Si estamos manteniendo Shift, alternar la selección del elemento
         if (isShiftPressed) {
-          parkingState.toggleElementSelection(element);
+          parkingMapState.toggleElementSelection(element);
         }
         // De lo contrario, seleccionar solo este elemento
         else {
-          parkingState.clearSelection();
-          parkingState.selectElement(element);
+          parkingMapState.clearSelection();
+          parkingMapState.selectElement(element);
         }
       } else {
         // Verificar si el clic está en la barra de herramientas
         // Si hay elementos seleccionados, verificar si el clic está cerca de la barra de herramientas
-        if (parkingState.selectedElements.isNotEmpty) {
-          final selectedElement = parkingState.selectedElements.first;
-          final screenPos =
-              parkingState.camera.worldToScreen(selectedElement.position);
+        if (parkingMapState.selectedElements.isNotEmpty) {
+          final selectedElement = parkingMapState.selectedElements.first;
+          final screenPos = parkingMapState.camera.worldToScreen(
+            selectedElement.position,
+          );
           final size = selectedElement.getSize();
           final scaledHeight =
-              size.height * selectedElement.scale * parkingState.zoom;
+              size.height * selectedElement.scale * parkingMapState.zoom;
 
           // Calcular la posición aproximada de la barra de herramientas
           final toolbarY = screenPos.dy + (scaledHeight / 2) + 10;
@@ -649,28 +687,29 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
           if (toolbarArea.contains(Offset(clickX, clickY))) {
             debugPrint(
-                "Clic detectado en la barra de herramientas, no deseleccionar");
+              "Clic detectado en la barra de herramientas, no deseleccionar",
+            );
             return; // No deseleccionar si el clic está en la barra de herramientas
           }
         }
 
         // Solo deseleccionar si no estamos manteniendo Shift y no es un clic en la barra de herramientas
         if (!isShiftPressed) {
-          parkingState.clearSelection();
+          parkingMapState.clearSelection();
         }
       }
     }
     // En modo normal, si hacemos clic en un spot, mostrar modal o destacarlo
-    else if (!parkingState.isEditMode) {
-      final element = parkingState.findElementAt(worldPoint);
-      
+    else if (!parkingMapState.isEditMode) {
+      final element = parkingMapState.findElementAt(worldPoint);
+
       // Primero, quitar el destacado de todos los spots
-      parkingState.clearAllHighlights();
-      
+      parkingMapState.clearAllHighlights();
+
       if (element != null && element is ParkingSpot) {
         // Destacar el spot al hacer clic en él
         element.isHighlighted = true;
-        
+
         // Mostrar el modal apropiado según el estado del spot
         if (element.status == 'occupied') {
           // Si está ocupado, mostrar modal de acceso
@@ -689,10 +728,10 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       // Si se hace clic en un área vacía, simplemente se limpia el destacado (ya realizado arriba)
     }
   }
-  
+
   // Método para quitar el destacado de todos los spots
-  void _clearAllHighlights(ParkingState parkingState) {
-    for (final element in parkingState.allElements) {
+  void _clearAllHighlights(ParkingMapState parkingMapState) {
+    for (final element in parkingMapState.allElements) {
       if (element is ParkingSpot && element.isHighlighted) {
         element.isHighlighted = false;
       }
@@ -704,7 +743,8 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     // Actualizar estado de teclas modificadoras
     if (event is KeyDownEvent) {
       setState(() {
-        _isShiftPressed = event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+        _isShiftPressed =
+            event.logicalKey == LogicalKeyboardKey.shiftLeft ||
             event.logicalKey == LogicalKeyboardKey.shiftRight;
       });
     } else if (event is KeyUpEvent) {
@@ -713,8 +753,8 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       });
     }
 
-    final parkingState = Provider.of<ParkingState>(context, listen: false);
-    final keyboardManager = parkingState.keyboardShortcutsManager;
+    final parkingMapState = ParkingMapStateContainer.of(context);
+    final keyboardManager = parkingMapState.keyboardShortcutsManager;
     if (keyboardManager != null) {
       // TODO: Actualizar KeyboardShortcutsManager para manejar KeyEvent directamente
       // Por ahora, comentamos esta línea para evitar errores
@@ -727,16 +767,19 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   bool get isShiftPressed => _isShiftPressed;
 
   /// Rota el elemento seleccionado en X grados
-  void _rotateSelectedElement(ParkingState parkingState, double degrees) {
+  void _rotateSelectedElement(ParkingMapState parkingMapState, double degrees) {
     debugPrint("_rotateSelectedElement llamado con $degrees grados");
-    if (parkingState.selectedElements.length != 1) {
+    if (parkingMapState.selectedElements.length != 1) {
       debugPrint(
-          "No hay exactamente un elemento seleccionado: ${parkingState.selectedElements.length}");
+        "No hay exactamente un elemento seleccionado: ${parkingMapState.selectedElements.length}",
+      );
       return;
     }
 
-    final element = parkingState.selectedElements.first;
-    debugPrint("Elemento a rotar: ${element.runtimeType} con ID: ${element.id}");
+    final element = parkingMapState.selectedElements.first;
+    debugPrint(
+      "Elemento a rotar: ${element.runtimeType} con ID: ${element.id}",
+    );
 
     if (element.isLocked) {
       debugPrint("El elemento está bloqueado, no se puede rotar");
@@ -744,7 +787,9 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     }
 
     final newRotation = element.rotation + degrees;
-    debugPrint("Rotación actual: ${element.rotation}, nueva rotación: $newRotation");
+    debugPrint(
+      "Rotación actual: ${element.rotation}, nueva rotación: $newRotation",
+    );
 
     setState(() {
       element.rotation = newRotation;
@@ -754,7 +799,8 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'Elemento rotado ${degrees > 0 ? 'a la derecha' : 'a la izquierda'}'),
+          'Elemento rotado ${degrees > 0 ? 'a la derecha' : 'a la izquierda'}',
+        ),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
       ),
@@ -762,12 +808,12 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   /// Copia los elementos seleccionados
-  void _copySelectedElements(ParkingState parkingState) {
-    if (parkingState.selectedElements.isEmpty) return;
+  void _copySelectedElements(ParkingMapState parkingMapState) {
+    if (parkingMapState.selectedElements.isEmpty) return;
 
     final copiedElements = <ParkingElement>[];
 
-    for (final element in parkingState.selectedElements) {
+    for (final element in parkingMapState.selectedElements) {
       // Crear una copia del elemento con un offset para que sea visible
       final copy = element.clone();
       copy.position = vector_math.Vector2(
@@ -775,13 +821,13 @@ class _ParkingCanvasState extends State<ParkingCanvas>
         element.position.y + 20,
       );
 
-      parkingState.addElement(copy);
+      parkingMapState.addElement(copy);
       copiedElements.add(copy);
     }
 
     // Seleccionar los nuevos elementos copiados
-    parkingState.clearSelection();
-    parkingState.selectMultipleElements(copiedElements);
+    parkingMapState.clearSelection();
+    parkingMapState.selectMultipleElements(copiedElements);
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -794,25 +840,26 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   /// Elimina los elementos seleccionados
-  void _deleteSelectedElements(ParkingState parkingState) {
+  void _deleteSelectedElements(ParkingMapState parkingMapState) {
     debugPrint("_deleteSelectedElements llamado");
-    if (parkingState.selectedElements.isEmpty) {
+    if (parkingMapState.selectedElements.isEmpty) {
       debugPrint("No hay elementos seleccionados para eliminar");
       return;
     }
 
-    final count = parkingState.selectedElements.length;
+    final count = parkingMapState.selectedElements.length;
     debugPrint("Eliminando $count elementos");
 
     // Eliminar elementos seleccionados
-    for (final element in List.from(parkingState.selectedElements)) {
+    for (final element in List.from(parkingMapState.selectedElements)) {
       debugPrint(
-          "Eliminando elemento: ${element.runtimeType} con ID: ${element.id}");
-      parkingState.removeElement(element);
+        "Eliminando elemento: ${element.runtimeType} con ID: ${element.id}",
+      );
+      parkingMapState.removeElement(element);
     }
 
     // Limpiar selección después de eliminar
-    parkingState.clearSelection();
+    parkingMapState.clearSelection();
 
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -825,17 +872,19 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   /// Muestra un diálogo para editar la etiqueta del elemento
-  void _editElementLabel(ParkingState parkingState) {
+  void _editElementLabel(ParkingMapState parkingMapState) {
     debugPrint("_editElementLabel llamado");
-    if (parkingState.selectedElements.length != 1) {
+    if (parkingMapState.selectedElements.length != 1) {
       debugPrint(
-          "No hay exactamente un elemento seleccionado: ${parkingState.selectedElements.length}");
+        "No hay exactamente un elemento seleccionado: ${parkingMapState.selectedElements.length}",
+      );
       return;
     }
 
-    final element = parkingState.selectedElements.first;
+    final element = parkingMapState.selectedElements.first;
     debugPrint(
-        "Elemento seleccionado: ${element.runtimeType} con ID: ${element.id}");
+      "Elemento seleccionado: ${element.runtimeType} con ID: ${element.id}",
+    );
 
     // No permitir editar señales
     if (element is ParkingSignage) {
@@ -857,7 +906,9 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
     // Si es un ParkingSpot, mostrar opciones adicionales
     if (element is ParkingSpot) {
-      debugPrint("Es un ParkingSpot, mostrando diálogo con opciones adicionales");
+      debugPrint(
+        "Es un ParkingSpot, mostrando diálogo con opciones adicionales",
+      );
       final spot = element;
 
       // Variables para almacenar los valores seleccionados
@@ -938,17 +989,16 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                               });
                             },
                             backgroundColor: isSelected
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withOpacity(0.1)
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withOpacity(0.1)
                                 : null,
-                            selectedColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.2),
-                            checkmarkColor:
-                                Theme.of(context).colorScheme.primary,
+                            selectedColor: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.2),
+                            checkmarkColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
                           );
                         }).toList(),
                       ),
@@ -958,7 +1008,9 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                       // Checkbox para activar/desactivar el espacio
                       SwitchListTile(
                         title: const Text('Espacio activo'),
-                        subtitle: const Text('Determina si el espacio está disponible para uso'),
+                        subtitle: const Text(
+                          'Determina si el espacio está disponible para uso',
+                        ),
                         value: isActive,
                         onChanged: (value) {
                           setState(() {
@@ -984,7 +1036,9 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                       final newSpot = ParkingSpot(
                         id: spot.id,
                         position: vector_math.Vector2(
-                            spot.position.x, spot.position.y),
+                          spot.position.x,
+                          spot.position.y,
+                        ),
                         type: selectedType,
                         label: textController.text.trim(),
                         isOccupied: spot.isOccupied,
@@ -999,7 +1053,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
                       );
 
                       // Actualizar el elemento en el estado
-                      parkingState.updateElement(spot, newSpot);
+                      parkingMapState.updateElement(spot, newSpot);
 
                       Navigator.pop(context);
 
@@ -1083,8 +1137,8 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   /// Alinea los elementos seleccionados según la alineación especificada
-  void _alignElements(ParkingState parkingState, Alignment alignment) {
-    if (parkingState.selectedElements.length <= 1) return;
+  void _alignElements(ParkingMapState parkingMapState, Alignment alignment) {
+    if (parkingMapState.selectedElements.length <= 1) return;
 
     // Calcular los límites del grupo seleccionado
     double minX = double.infinity;
@@ -1093,13 +1147,13 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     double maxY = double.negativeInfinity;
 
     // Ordenar elementos según su posición para alinear al elemento más externo
-    final List<ParkingElement> sortedElementsX =
-        List.from(parkingState.selectedElements)
-          ..sort((a, b) => a.position.x.compareTo(b.position.x));
+    final List<ParkingElement> sortedElementsX = List.from(
+      parkingMapState.selectedElements,
+    )..sort((a, b) => a.position.x.compareTo(b.position.x));
 
-    final List<ParkingElement> sortedElementsY =
-        List.from(parkingState.selectedElements)
-          ..sort((a, b) => a.position.y.compareTo(b.position.y));
+    final List<ParkingElement> sortedElementsY = List.from(
+      parkingMapState.selectedElements,
+    )..sort((a, b) => a.position.y.compareTo(b.position.y));
 
     // Obtener el elemento más a la izquierda, derecha, arriba y abajo
     final ParkingElement leftmostElement = sortedElementsX.first;
@@ -1108,7 +1162,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     final ParkingElement bottommostElement = sortedElementsY.last;
 
     // También calcular los límites generales para el centrado
-    for (final element in parkingState.selectedElements) {
+    for (final element in parkingMapState.selectedElements) {
       minX = math.min(minX, element.position.x);
       minY = math.min(minY, element.position.y);
       maxX = math.max(maxX, element.position.x);
@@ -1126,7 +1180,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
       // Obtener tamaños aproximados para calcular espaciado
       final Map<String, double> elementWidths = {};
-      for (final element in parkingState.selectedElements) {
+      for (final element in parkingMapState.selectedElements) {
         elementWidths[element.id] = element.getSize().width * element.scale;
       }
 
@@ -1174,7 +1228,7 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
       // Obtener tamaños aproximados para calcular espaciado
       final Map<String, double> elementHeights = {};
-      for (final element in parkingState.selectedElements) {
+      for (final element in parkingMapState.selectedElements) {
         elementHeights[element.id] = element.getSize().height * element.scale;
       }
 
@@ -1203,7 +1257,8 @@ class _ParkingCanvasState extends State<ParkingCanvas>
           final currHeight = elementHeights[element.id] ?? 0;
 
           // Calcular posición Y mínima para evitar sobreposición
-          final minY = prevElement.position.y +
+          final minY =
+              prevElement.position.y +
               (prevHeight + currHeight) / 2 +
               minSpacing;
 
@@ -1223,25 +1278,27 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       final centerY = (minY + maxY) / 2;
 
       // Reordenar elementos para minimizar sobreposiciones
-      for (final element in parkingState.selectedElements) {
+      for (final element in parkingMapState.selectedElements) {
         if (element.isLocked) continue;
         element.position = vector_math.Vector2(centerX, centerY);
       }
 
       // Aplicar un ligero desplazamiento radial para evitar sobreposición total
-      double angleStep = 2 * math.pi / parkingState.selectedElements.length;
+      double angleStep = 2 * math.pi / parkingMapState.selectedElements.length;
       double radius = 10.0; // Radio de separación
 
-      for (int i = 0; i < parkingState.selectedElements.length; i++) {
-        final element = parkingState.selectedElements[i];
+      for (int i = 0; i < parkingMapState.selectedElements.length; i++) {
+        final element = parkingMapState.selectedElements[i];
         if (element.isLocked) continue;
 
         double angle = i * angleStep;
         double offsetX = radius * math.cos(angle);
         double offsetY = radius * math.sin(angle);
 
-        element.position =
-            vector_math.Vector2(centerX + offsetX, centerY + offsetY);
+        element.position = vector_math.Vector2(
+          centerX + offsetX,
+          centerY + offsetY,
+        );
       }
     }
 
@@ -1256,9 +1313,12 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   /// Distribuye uniformemente los elementos seleccionados con un espaciado mínimo
-  void _distributeElementsEvenly(ParkingState parkingState,
-      {required bool horizontal, double minSpacing = 20.0}) {
-    final elements = parkingState.selectedElements;
+  void _distributeElementsEvenly(
+    ParkingMapState parkingMapState, {
+    required bool horizontal,
+    double minSpacing = 20.0,
+  }) {
+    final elements = parkingMapState.selectedElements;
 
     // Necesitamos al menos 3 elementos para distribuir
     if (elements.length < 3) {
@@ -1296,10 +1356,14 @@ class _ParkingCanvasState extends State<ParkingCanvas>
       // Necesitamos más espacio, ajustar la posición del último elemento
       if (horizontal) {
         lastElement.position = vector_math.Vector2(
-            firstElement.position.x + requiredSpace, lastElement.position.y);
+          firstElement.position.x + requiredSpace,
+          lastElement.position.y,
+        );
       } else {
         lastElement.position = vector_math.Vector2(
-            lastElement.position.x, firstElement.position.y + requiredSpace);
+          lastElement.position.x,
+          firstElement.position.y + requiredSpace,
+        );
       }
     }
 
@@ -1329,7 +1393,8 @@ class _ParkingCanvasState extends State<ParkingCanvas>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            'Elementos distribuidos uniformemente (espacio: ${spacing.toStringAsFixed(1)})'),
+          'Elementos distribuidos uniformemente (espacio: ${spacing.toStringAsFixed(1)})',
+        ),
         duration: const Duration(seconds: 1),
         behavior: SnackBarBehavior.floating,
       ),
@@ -1337,11 +1402,16 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   /// Verifica si hay colisión entre elementos
-  bool _checkCollision(ParkingState parkingState, ParkingElement element,
-      vector_math.Vector2 newPosition) {
+  bool _checkCollision(
+    ParkingMapState parkingMapState,
+    ParkingElement element,
+    vector_math.Vector2 newPosition,
+  ) {
     // Guardar la posición actual
-    final originalPosition =
-        vector_math.Vector2(element.position.x, element.position.y);
+    final originalPosition = vector_math.Vector2(
+      element.position.x,
+      element.position.y,
+    );
 
     // Mover temporalmente el elemento a la nueva posición para verificar colisión
     element.position = newPosition;
@@ -1351,10 +1421,10 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
     // Verificar colisión con todos los demás elementos
     bool collisionDetected = false;
-    for (final otherElement in parkingState.allElements) {
+    for (final otherElement in parkingMapState.allElements) {
       // No verificar colisión consigo mismo o elementos seleccionados en grupo
       if (otherElement.id == element.id ||
-          parkingState.selectedElements.contains(otherElement)) {
+          parkingMapState.selectedElements.contains(otherElement)) {
         continue;
       }
 
@@ -1371,18 +1441,21 @@ class _ParkingCanvasState extends State<ParkingCanvas>
   }
 
   // Método para manejar doble tap en un elemento (centrar vista)
-  void _handleDoubleTap(TapDownDetails details, ParkingState parkingState) {
+  void _handleDoubleTap(
+    TapDownDetails details,
+    ParkingMapState parkingMapState,
+  ) {
     final point = details.localPosition;
 
     // Convertir punto de pantalla a mundo
-    final worldPoint = parkingState.camera.screenToWorld(point);
+    final worldPoint = parkingMapState.camera.screenToWorld(point);
 
     // Buscar elemento en esta posición
-    final element = parkingState.findElementAt(worldPoint);
+    final element = parkingMapState.findElementAt(worldPoint);
 
     // Si hay un elemento, centrar vista en él con animación
     if (element != null) {
-      parkingState.centerViewOnPointWithAnimation(
+      parkingMapState.centerViewOnPointWithAnimation(
         element.position,
         this,
         targetZoom: 1.5,
@@ -1405,12 +1478,12 @@ class _ParkingCanvasState extends State<ParkingCanvas>
 
 /// Painter para dibujar el canvas del sistema de parkeo
 class _ParkingCanvasPainter extends CustomPainter {
-  final ParkingState parkingState;
+  final ParkingMapState parkingMapState;
   final Rect? selectionRect;
   final ColorScheme colorScheme;
 
   _ParkingCanvasPainter({
-    required this.parkingState,
+    required this.parkingMapState,
     required this.colorScheme,
     this.selectionRect,
   });
@@ -1437,8 +1510,8 @@ class _ParkingCanvasPainter extends CustomPainter {
     }
 
     // Dibujar rectángulos de corrección para elementos seleccionados
-    if (parkingState.selectedElements.isNotEmpty) {
-      for (final element in parkingState.selectedElements) {
+    if (parkingMapState.selectedElements.isNotEmpty) {
+      for (final element in parkingMapState.selectedElements) {
         if (!element.isVisible) continue;
         _drawSelectionIndicator(canvas, element);
       }
@@ -1453,8 +1526,8 @@ class _ParkingCanvasPainter extends CustomPainter {
   void _paintWorld(Canvas canvas, Size size) {
     // Actualizar el tamaño del canvas en el estado solo si ha cambiado
     // y hacerlo en un post-frame callback para evitar ciclos de notificación
-    if (parkingState.canvasSize != size) {
-      parkingState.canvasSize = size;
+    if (parkingMapState.canvasSize != size) {
+      parkingMapState.canvasSize = size;
     }
 
     // Guardar el estado del canvas
@@ -1464,7 +1537,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     _paintBackground(canvas, size);
 
     // Pintar la cuadrícula si está habilitada
-    if (parkingState.showGrid) {
+    if (parkingMapState.showGrid) {
       _paintGrid(canvas, size);
     }
 
@@ -1472,7 +1545,7 @@ class _ParkingCanvasPainter extends CustomPainter {
     _paintOrigin(canvas, size);
 
     // Pintar guías inteligentes si están activas y estamos en modo edición
-    if (parkingState.isEditMode) {
+    if (parkingMapState.isEditMode) {
       _paintSmartGuides(canvas, size);
     }
 
@@ -1485,15 +1558,15 @@ class _ParkingCanvasPainter extends CustomPainter {
 
   /// Pintar la cuadrícula
   void _paintGrid(Canvas canvas, Size size) {
-    final gridLines = parkingState.gridManager.getVisibleGridLines(
-      parkingState.cameraPosition,
-      parkingState.zoom,
+    final gridLines = parkingMapState.gridManager.getVisibleGridLines(
+      parkingMapState.cameraPosition,
+      parkingMapState.zoom,
       size,
     );
 
     for (final line in gridLines) {
-      final startScreen = parkingState.camera.worldToScreen(line.start);
-      final endScreen = parkingState.camera.worldToScreen(line.end);
+      final startScreen = parkingMapState.camera.worldToScreen(line.start);
+      final endScreen = parkingMapState.camera.worldToScreen(line.end);
 
       final paint = Paint()
         ..color = line.isMainLine
@@ -1508,7 +1581,7 @@ class _ParkingCanvasPainter extends CustomPainter {
 
   /// Pintar guías inteligentes
   void _paintSmartGuides(Canvas canvas, Size size) {
-    final activeGuides = parkingState.gridManager.activeGuides;
+    final activeGuides = parkingMapState.gridManager.activeGuides;
 
     if (activeGuides.isEmpty) return;
 
@@ -1527,8 +1600,8 @@ class _ParkingCanvasPainter extends CustomPainter {
           ? vector_math.Vector2(guide.position, 10000)
           : vector_math.Vector2(10000, guide.position);
 
-      final startScreen = parkingState.camera.worldToScreen(startWorld);
-      final endScreen = parkingState.camera.worldToScreen(endWorld);
+      final startScreen = parkingMapState.camera.worldToScreen(startWorld);
+      final endScreen = parkingMapState.camera.worldToScreen(endWorld);
 
       // Dibujar línea punteada
       _drawDashedLine(canvas, startScreen, endScreen, guidePaint);
@@ -1561,7 +1634,10 @@ class _ParkingCanvasPainter extends CustomPainter {
       currentY += unitVectorY * dashWidth;
 
       canvas.drawLine(
-          Offset(startX, startY), Offset(currentX, currentY), paint);
+        Offset(startX, startY),
+        Offset(currentX, currentY),
+        paint,
+      );
 
       currentX += unitVectorX * dashSpace;
       currentY += unitVectorY * dashSpace;
@@ -1577,10 +1653,7 @@ class _ParkingCanvasPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [
-          colorScheme.surface,
-          colorScheme.surfaceContainerHighest,
-        ],
+        colors: [colorScheme.surface, colorScheme.surfaceContainerHighest],
         stops: const [0.0, 1.0],
       ).createShader(rect)
       ..style = PaintingStyle.fill;
@@ -1590,11 +1663,12 @@ class _ParkingCanvasPainter extends CustomPainter {
 
   /// Pintar el origen de coordenadas
   void _paintOrigin(Canvas canvas, Size size) {
-    if (!parkingState.showCoordinates) return;
+    if (!parkingMapState.showCoordinates) return;
 
     // Calcular la posición del origen en coordenadas de pantalla usando la cámara
-    final originScreen =
-        parkingState.camera.worldToScreen(vector_math.Vector2(0, 0));
+    final originScreen = parkingMapState.camera.worldToScreen(
+      vector_math.Vector2(0, 0),
+    );
 
     // Dibujar ejes X e Y con el color primario del tema
     final axisPaint = Paint()
@@ -1644,29 +1718,29 @@ class _ParkingCanvasPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    canvas.drawCircle(
-      originScreen,
-      crossSize,
-      circlePaint,
-    );
+    canvas.drawCircle(originScreen, crossSize, circlePaint);
   }
 
   /// Pintar todos los elementos del mundo
   void _paintElements(Canvas canvas, Size size) {
     // Pintar cada tipo de elemento
-    _paintElementGroup(canvas, parkingState.facilities, 1.0);
-    _paintElementGroup(canvas, parkingState.spots, 1.0);
-    _paintElementGroup(canvas, parkingState.signages, 1.0);
+    _paintElementGroup(canvas, parkingMapState.facilities, 1.0);
+    _paintElementGroup(canvas, parkingMapState.spots, 1.0);
+    _paintElementGroup(canvas, parkingMapState.signages, 1.0);
   }
 
   /// Pintar un grupo de elementos
   void _paintElementGroup(
-      Canvas canvas, List<ParkingElement> elements, double baseOpacity) {
+    Canvas canvas,
+    List<ParkingElement> elements,
+    double baseOpacity,
+  ) {
     for (final element in elements) {
       if (!element.isVisible) continue;
       // Calcular la posición en pantalla usando la cámara
-      final positionScreen =
-          parkingState.camera.worldToScreen(element.position);
+      final positionScreen = parkingMapState.camera.worldToScreen(
+        element.position,
+      );
 
       // Guardar el estado del canvas
       canvas.save();
@@ -1677,7 +1751,7 @@ class _ParkingCanvasPainter extends CustomPainter {
 
       // Aplicar escala base * escala animada si está disponible
       final animatedScale = element.getAnimatedScale();
-      canvas.scale(animatedScale * parkingState.zoom);
+      canvas.scale(animatedScale * parkingMapState.zoom);
 
       // Pintar el elemento con su opacidad
       final opacity = ElementOpacityHelper.getOpacity(element.id);
@@ -1703,12 +1777,12 @@ class _ParkingCanvasPainter extends CustomPainter {
   /// Dibuja un indicador de selección alrededor del elemento
   void _drawSelectionIndicator(Canvas canvas, ParkingElement element) {
     // Obtener la posición en pantalla
-    final screenPos = parkingState.camera.worldToScreen(element.position);
+    final screenPos = parkingMapState.camera.worldToScreen(element.position);
 
     // Obtener dimensiones exactas del elemento
     final size = element.getSize();
-    final scaledWidth = size.width * element.scale * parkingState.zoom;
-    final scaledHeight = size.height * element.scale * parkingState.zoom;
+    final scaledWidth = size.width * element.scale * parkingMapState.zoom;
+    final scaledHeight = size.height * element.scale * parkingMapState.zoom;
 
     // Rotación en radianes
     final angleRad = element.rotation * math.pi / 180;
@@ -1717,25 +1791,20 @@ class _ParkingCanvasPainter extends CustomPainter {
     final bottomOffsetY = (scaledHeight / 2) * math.cos(angleRad);
     final bottomOffsetX = (scaledHeight / 2) * math.sin(angleRad);
 
-    final bottomPoint =
-        Offset(screenPos.dx + bottomOffsetX, screenPos.dy + bottomOffsetY);
+    final bottomPoint = Offset(
+      screenPos.dx + bottomOffsetX,
+      screenPos.dy + bottomOffsetY,
+    );
 
     // Punto donde debería estar la barra de herramientas (10px más abajo)
-    final toolbarPosition = Offset(
-      bottomPoint.dx,
-      bottomPoint.dy + 10,
-    );
+    final toolbarPosition = Offset(bottomPoint.dx, bottomPoint.dy + 10);
 
     final linePaint = Paint()
       ..color = colorScheme.primary.withOpacity(0.7)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    canvas.drawLine(
-      bottomPoint,
-      toolbarPosition,
-      linePaint,
-    );
+    canvas.drawLine(bottomPoint, toolbarPosition, linePaint);
 
     // Dibujar un punto donde debería estar la barra de herramientas
     final pointPaint = Paint()

@@ -6,6 +6,7 @@ import 'package:system_theme/system_theme.dart';
 import '../models/employee_model.dart';
 import '../models/parking_model.dart';
 import '../models/user_model.dart';
+import '../models/cash_register_model.dart';
 import '../services/print_service.dart';
 import '../services/print_service.dart'; // For PrintSettings
 
@@ -13,7 +14,8 @@ class AppState extends ChangeNotifier {
   // Token and user state
   UserModel? _currentUser;
   EmployeeModel? _employee;
-  ParkingSimpleModel? _currentParking;
+  ParkingModelDetailed? _currentParking;
+  CashRegisterModel? _currentCashRegister;
   String? _authToken;
   String? _refreshToken;
   String? _selectedAreaId;
@@ -41,7 +43,8 @@ class AppState extends ChangeNotifier {
   // User state getters
   UserModel? get currentUser => _currentUser;
   EmployeeModel? get employee => _employee;
-  ParkingSimpleModel? get currentParking => _currentParking;
+  ParkingModelDetailed? get currentParking => _currentParking;
+  CashRegisterModel? get currentCashRegister => _currentCashRegister;
   String? get authToken => _authToken;
   String? get refreshToken => _refreshToken;
   String? get selectedAreaId => _selectedAreaId;
@@ -105,7 +108,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-
   // Constructor
   AppState() {
     loadState();
@@ -148,9 +150,15 @@ class AppState extends ChangeNotifier {
     final printerTypeIndex = prefs.getInt(_printerTypeKey);
 
     _printSettings = PrintSettings(
-      processingMode: processingModeIndex != null ? ProcessingMode.values[processingModeIndex] : ProcessingMode.viewPdf,
-      printMethod: printMethodIndex != null ? PrintMethod.values[printMethodIndex] : PrintMethod.native,
-      printerType: printerTypeIndex != null ? PrinterType.values[printerTypeIndex] : PrinterType.generic,
+      processingMode: processingModeIndex != null
+          ? ProcessingMode.values[processingModeIndex]
+          : ProcessingMode.viewPdf,
+      printMethod: printMethodIndex != null
+          ? PrintMethod.values[printMethodIndex]
+          : PrintMethod.native,
+      printerType: printerTypeIndex != null
+          ? PrinterType.values[printerTypeIndex]
+          : PrinterType.generic,
     );
 
     notifyListeners();
@@ -221,8 +229,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Actualizado para aceptar ParkingModel completo o ParkingSimpleModel
-  void setCurrentParking(ParkingSimpleModel parking) {
+  void setCurrentParking(ParkingModelDetailed parking) {
     _currentParking = parking;
     _selectedAreaId = null;
     notifyListeners();
@@ -231,6 +238,11 @@ class AppState extends ChangeNotifier {
   void setCurrentArea(String areaId) {
     _selectedAreaId = areaId;
     saveState();
+    notifyListeners();
+  }
+
+  void setCurrentCashRegister(CashRegisterModel? cashRegister) {
+    _currentCashRegister = cashRegister;
     notifyListeners();
   }
 
@@ -250,6 +262,7 @@ class AppState extends ChangeNotifier {
     _currentUser = null;
     _employee = null;
     _currentParking = null;
+    _currentCashRegister = null;
     _authToken = null;
     _refreshToken = null;
     _selectedAreaId = null;

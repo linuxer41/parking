@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingParkingParams = false;
   String? _parkingParamsError;
   late ParkingService _parkingService;
-  ParkingModel? _currentParking;
+  ParkingModelDetailed? _currentParking;
 
   @override
   void initState() {
@@ -68,12 +68,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       final parking = await _parkingService.getParkingById(currentParking.id);
-      
+
       if (mounted) {
         setState(() {
           _currentParking = parking;
           _currencyController.text = parking.params.currency;
-          _decimalPlacesController.text = parking.params.decimalPlaces.toString();
+          _decimalPlacesController.text = parking.params.decimalPlaces
+              .toString();
           _selectedTimeZone = parking.params.timeZone;
           _selectedCountryCode = parking.params.countryCode;
           _isLoadingParkingParams = false;
@@ -102,7 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     // Validar campos requeridos
-    if (_currencyController.text.isEmpty || _decimalPlacesController.text.isEmpty) {
+    if (_currencyController.text.isEmpty ||
+        _decimalPlacesController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor completa los campos requeridos'),
@@ -134,8 +136,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final updatedParams = ParkingParamsModel(
         theme: _currentParking!.params.theme, // Mantener el tema actual
         currency: _currencyController.text.trim(),
-        timeZone: _selectedTimeZone?.isNotEmpty == true ? _selectedTimeZone! : '',
-        countryCode: _selectedCountryCode?.isNotEmpty == true ? _selectedCountryCode! : '',
+        timeZone: _selectedTimeZone?.isNotEmpty == true
+            ? _selectedTimeZone!
+            : '',
+        countryCode: _selectedCountryCode?.isNotEmpty == true
+            ? _selectedCountryCode!
+            : '',
         decimalPlaces: decimalPlaces,
         slogan: _currentParking!.params.slogan, // Mantener el slogan actual
       );
@@ -158,7 +164,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _parkingParamsError = 'Error al actualizar parámetros: ${e.toString()}';
+          _parkingParamsError =
+              'Error al actualizar parámetros: ${e.toString()}';
           _isLoadingParkingParams = false;
         });
       }
@@ -195,7 +202,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                      Icon(
+                        Icons.error_outline,
+                        color: colorScheme.error,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -208,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-              
+
               if (_isLoadingParkingParams)
                 const Padding(
                   padding: EdgeInsets.all(16),
@@ -248,7 +259,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoadingParkingParams ? null : _saveParkingParameters,
+                      onPressed: _isLoadingParkingParams
+                          ? null
+                          : _saveParkingParameters,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
@@ -610,10 +623,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         labelText: label,
         hintText: hintText,
         prefixIcon: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       keyboardType: keyboardType,
       style: textTheme.bodyMedium,
@@ -681,7 +695,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonFormField<String>(
-              value: _selectedCountryCode != null &&
+              value:
+                  _selectedCountryCode != null &&
                       countries.any((c) => c['code'] == _selectedCountryCode)
                   ? _selectedCountryCode
                   : null,
@@ -797,7 +812,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonFormField<String>(
-              value: _selectedTimeZone != null && timeZones.contains(_selectedTimeZone)
+              value:
+                  _selectedTimeZone != null &&
+                      timeZones.contains(_selectedTimeZone)
                   ? _selectedTimeZone
                   : null,
               decoration: InputDecoration(

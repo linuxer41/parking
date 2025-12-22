@@ -2,45 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:parkar/di/di_container.dart';
 import 'app_state.dart';
 
-class AppStateContainer extends InheritedWidget {
+class AppStateContainer extends StatefulWidget {
   final AppState state;
   final DIContainer diContainer;
+  final Widget child;
 
   const AppStateContainer({
     super.key,
     required this.state,
     required this.diContainer,
-    required super.child,
+    required this.child,
   });
 
   @override
-  bool updateShouldNotify(AppStateContainer oldWidget) {
-    // Debemos notificar si state o diContainer cambian
-    return oldWidget.state != state || oldWidget.diContainer != diContainer;
-  }
+  State<AppStateContainer> createState() => _AppStateContainerState();
 
   static AppState of(BuildContext context) {
-    final container =
-        context.dependOnInheritedWidgetOfExactType<AppStateContainer>();
-    if (container == null) {
+    final state = context.findAncestorStateOfType<_AppStateContainerState>();
+    if (state == null) {
       throw FlutterError(
           'AppStateContainer no encontrado en el árbol de widgets');
     }
-    return container.state;
+    return state.widget.state;
   }
 
   static DIContainer di(BuildContext context) {
-    final container =
-        context.dependOnInheritedWidgetOfExactType<AppStateContainer>();
-    if (container == null) {
+    final state = context.findAncestorStateOfType<_AppStateContainerState>();
+    if (state == null) {
       throw FlutterError(
           'AppStateContainer no encontrado en el árbol de widgets');
     }
-    return container.diContainer;
+    return state.widget.diContainer;
   }
 
   static AppState theme(BuildContext context) {
-    // Ahora devolvemos directamente AppState ya que contiene la funcionalidad de theme
     return of(context);
+  }
+}
+
+class _AppStateContainerState extends State<AppStateContainer> {
+  @override
+  void initState() {
+    super.initState();
+    widget.state.addListener(_onStateChanged);
+  }
+
+  @override
+  void didUpdateWidget(AppStateContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state != widget.state) {
+      oldWidget.state.removeListener(_onStateChanged);
+      widget.state.addListener(_onStateChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.state.removeListener(_onStateChanged);
+    super.dispose();
+  }
+
+  void _onStateChanged() {
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

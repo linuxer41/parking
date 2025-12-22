@@ -556,7 +556,7 @@ class BaseService {
     Map<String, String>? additionalHeaders,
   }) async {
     final uri = Uri.parse('$baseUrl$path$endpoint');
-    final processedBody = removeNulls(body is Map ? body : body.toJson());
+    final processedBody = removeNulls(body is Map ? body : body?.toJson());
     final encodedBody = jsonEncode(processedBody);
 
     return _handleRequest<T>(

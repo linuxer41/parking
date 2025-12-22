@@ -3,14 +3,15 @@ import { getConnection, withClient } from "../connection";
 import { Movement, MovementCreate, MovementUpdate, MovementCreateSchema, MovementUpdateSchema, MovementCreateRequest, MovementUpdateRequest } from "../../models/movement";
 import { getSchemaValidator } from "elysia";
 
-const TABLE_NAME = "t_movement";
+class MovementCrud {
+  private TABLE_NAME = "t_movement";
 
 // ===== CRUD OPERATIONS =====
 
 /**
  * Crear un nuevo movimiento
  */
-export async function createMovement(input: MovementCreateRequest): Promise<Movement> {
+async create(input: MovementCreateRequest): Promise<Movement> {
   const validator = getSchemaValidator(MovementCreateSchema);
   const data = validator.parse({
     ...input,
@@ -30,7 +31,7 @@ export async function createMovement(input: MovementCreateRequest): Promise<Move
   const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
   
   const query = {
-    text: `INSERT INTO ${TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
+    text: `INSERT INTO ${this.TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
     values: values,
   };
   
@@ -43,9 +44,9 @@ export async function createMovement(input: MovementCreateRequest): Promise<Move
 /**
  * Buscar un movimiento por ID
  */
-export async function findMovementById(id: string): Promise<Movement | undefined> {
+async findById(id: string): Promise<Movement | undefined> {
   const query = {
-    text: `SELECT * FROM ${TABLE_NAME} WHERE id = $1 LIMIT 1`,
+    text: `SELECT * FROM ${this.TABLE_NAME} WHERE id = $1 LIMIT 1`,
     values: [id],
   };
   
@@ -58,13 +59,13 @@ export async function findMovementById(id: string): Promise<Movement | undefined
 /**
  * Buscar movimientos por criterios
  */
-export async function findMovements(where: Partial<Movement> = {}): Promise<Movement[]> {
+async find(where: Partial<Movement> = {}): Promise<Movement[]> {
   const conditions = Object.entries(where)
     .map(([key, value], i) => `"${key}" = $${i + 1}`)
     .join(" AND ");
   
   const query = {
-    text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+    text: `SELECT * FROM ${this.TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
     values: Object.values(where),
   };
   
@@ -77,7 +78,7 @@ export async function findMovements(where: Partial<Movement> = {}): Promise<Move
 /**
  * Actualizar un movimiento
  */
-export async function updateMovement(id: string, input: MovementUpdateRequest): Promise<Movement> {
+async update(id: string, input: MovementUpdateRequest): Promise<Movement> {
   const validator = getSchemaValidator(MovementUpdateSchema);
   const data = validator.parse(input);
   
@@ -90,7 +91,7 @@ export async function updateMovement(id: string, input: MovementUpdateRequest): 
   );
   
   const query = {
-    text: `UPDATE ${TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
+    text: `UPDATE ${this.TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
     values: [...values, id],
   };
   
@@ -108,9 +109,9 @@ export async function updateMovement(id: string, input: MovementUpdateRequest): 
 /**
  * Eliminar un movimiento
  */
-export async function deleteMovement(id: string): Promise<Movement> {
+async delete(id: string): Promise<Movement> {
   const query = {
-    text: `DELETE FROM ${TABLE_NAME} WHERE id = $1 RETURNING *`,
+    text: `DELETE FROM ${this.TABLE_NAME} WHERE id = $1 RETURNING *`,
     values: [id],
   };
   
@@ -124,3 +125,6 @@ export async function deleteMovement(id: string): Promise<Movement> {
     return res.rows[0];
   });
 }
+}
+
+export const movementCrud = new MovementCrud();

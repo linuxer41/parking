@@ -23,7 +23,7 @@ class ParkingRatesScreen extends StatefulWidget {
 class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
-  ParkingModel? _parking;
+  ParkingModelDetailed? _parking;
   List<RateModel> _rates = [];
   String? _error;
   final _refreshKey = GlobalKey<RefreshIndicatorState>();

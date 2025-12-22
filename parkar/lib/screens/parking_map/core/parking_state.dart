@@ -10,7 +10,7 @@ import 'history_manager.dart';
 import 'keyboard_shortcuts_manager.dart';
 
 /// Clase que gestiona el estado del sistema de parkeo
-class ParkingState with ChangeNotifier {
+class ParkingMapState with ChangeNotifier {
   // Elementos del mundo
   final List<ParkingElement> _spots = [];
   final List<ParkingElement> _signages = [];
@@ -52,10 +52,12 @@ class ParkingState with ChangeNotifier {
   KeyboardShortcutsManager? _keyboardShortcutsManager;
 
   // Constructor
-  ParkingState() {
+  ParkingMapState() {
     // Inicializar la cámara
-    _camera =
-        Camera(initialPosition: vector_math.Vector2(0, 0), initialZoom: 1.0);
+    _camera = Camera(
+      initialPosition: vector_math.Vector2(0, 0),
+      initialZoom: 1.0,
+    );
 
     // Escuchar cambios en la cámara para notificar a los widgets
     _camera.addListener(() {
@@ -181,14 +183,14 @@ class ParkingState with ChangeNotifier {
   // Método para limpiar el estado de destacado de todos los spots
   void clearAllHighlights() {
     bool changed = false;
-    
+
     for (final element in allElements) {
       if (element is ParkingSpot && element.isHighlighted) {
         element.isHighlighted = false;
         changed = true;
       }
     }
-    
+
     if (changed) {
       notifyListeners();
     }
@@ -203,7 +205,7 @@ class ParkingState with ChangeNotifier {
   void highlightElement(String elementId) {
     // Primero limpiar todos los resaltados
     clearAllHighlights();
-    
+
     // Buscar y resaltar el elemento específico
     for (final element in allElements) {
       if (element.id == elementId && element is ParkingSpot) {
@@ -219,11 +221,11 @@ class ParkingState with ChangeNotifier {
     // Calcular la posición centrada en el canvas
     final centerX = _canvasSize.width / 2;
     final centerY = _canvasSize.height / 2;
-    
+
     // Calcular el offset necesario para centrar el elemento
     final offsetX = centerX - position.x;
     final offsetY = centerY - position.y;
-    
+
     // Mover la cámara a la nueva posición
     _camera.position = vector_math.Vector2(offsetX, offsetY);
   }
@@ -234,7 +236,7 @@ class ParkingState with ChangeNotifier {
 
     // Siempre limpiar la selección al cambiar de modo
     clearSelection();
-    
+
     // Siempre limpiar el estado de destacado al cambiar de modo
     clearAllHighlights();
 
@@ -420,10 +422,7 @@ class ParkingState with ChangeNotifier {
       'spots': _spots.map((spot) => spot.toJson()).toList(),
       'signages': _signages.map((signage) => signage.toJson()).toList(),
       'facilities': _facilities.map((facility) => facility.toJson()).toList(),
-      'cameraPosition': {
-        'x': _camera.position.x,
-        'y': _camera.position.y,
-      },
+      'cameraPosition': {'x': _camera.position.x, 'y': _camera.position.y},
       'zoom': _camera.zoom,
     };
   }
@@ -443,7 +442,9 @@ class ParkingState with ChangeNotifier {
   /// Encuentra una posición óptima para un nuevo elemento que no colisione con otros
   /// y que esté alineado con elementos contiguos si es posible
   vector_math.Vector2 findOptimalPosition(
-      Size elementSize, vector_math.Vector2 initialPosition) {
+    Size elementSize,
+    vector_math.Vector2 initialPosition,
+  ) {
     // Paso 1: Verificar si la posición inicial es válida (sin colisiones)
     if (!_hasCollisionAtPosition(initialPosition, elementSize)) {
       return initialPosition;
@@ -490,7 +491,9 @@ class ParkingState with ChangeNotifier {
 
   /// Busca una posición alineada con elementos cercanos
   vector_math.Vector2? _findAlignedPosition(
-      vector_math.Vector2 position, Size elementSize) {
+    vector_math.Vector2 position,
+    Size elementSize,
+  ) {
     // Radio de búsqueda para elementos cercanos
     const double searchRadius = 200.0;
 
@@ -513,16 +516,18 @@ class ParkingState with ChangeNotifier {
       final positions = [
         // A la derecha del elemento
         vector_math.Vector2(
-            elementPos.x +
-                (size.width * element.scale + elementSize.width) / 2 +
-                10,
-            elementPos.y),
+          elementPos.x +
+              (size.width * element.scale + elementSize.width) / 2 +
+              10,
+          elementPos.y,
+        ),
         // A la izquierda del elemento
         vector_math.Vector2(
-            elementPos.x -
-                (size.width * element.scale + elementSize.width) / 2 -
-                10,
-            elementPos.y),
+          elementPos.x -
+              (size.width * element.scale + elementSize.width) / 2 -
+              10,
+          elementPos.y,
+        ),
       ];
 
       for (final pos in positions) {
@@ -541,16 +546,18 @@ class ParkingState with ChangeNotifier {
       final positions = [
         // Debajo del elemento
         vector_math.Vector2(
-            elementPos.x,
-            elementPos.y +
-                (size.height * element.scale + elementSize.height) / 2 +
-                10),
+          elementPos.x,
+          elementPos.y +
+              (size.height * element.scale + elementSize.height) / 2 +
+              10,
+        ),
         // Encima del elemento
         vector_math.Vector2(
-            elementPos.x,
-            elementPos.y -
-                (size.height * element.scale + elementSize.height) / 2 -
-                10),
+          elementPos.x,
+          elementPos.y -
+              (size.height * element.scale + elementSize.height) / 2 -
+              10,
+        ),
       ];
 
       for (final pos in positions) {
@@ -565,7 +572,9 @@ class ParkingState with ChangeNotifier {
 
   /// Busca una posición sin colisiones usando un patrón de espiral
   vector_math.Vector2 _findPositionWithoutCollision(
-      vector_math.Vector2 initialPosition, Size elementSize) {
+    vector_math.Vector2 initialPosition,
+    Size elementSize,
+  ) {
     // Búsqueda en espiral para encontrar una posición libre
     const double stepSize = 40.0; // Tamaño del paso
     const int maxSteps = 100; // Número máximo de pasos
@@ -589,7 +598,9 @@ class ParkingState with ChangeNotifier {
 
       // Calcular la nueva posición
       final position = vector_math.Vector2(
-          initialPosition.x + x * stepSize, initialPosition.y + y * stepSize);
+        initialPosition.x + x * stepSize,
+        initialPosition.y + y * stepSize,
+      );
 
       // Verificar si la posición está libre
       if (!_hasCollisionAtPosition(position, elementSize)) {
@@ -599,7 +610,9 @@ class ParkingState with ChangeNotifier {
 
     // Si no se encuentra una posición libre, devolver una posición alejada del origen
     return vector_math.Vector2(
-        initialPosition.x + 300, initialPosition.y + 300);
+      initialPosition.x + 300,
+      initialPosition.y + 300,
+    );
   }
 
   /// Método para centrar la vista en el origen
@@ -629,13 +642,18 @@ class ParkingState with ChangeNotifier {
     TickerProvider vsync, {
     double? targetZoom,
   }) async {
-    await _camera.centerOnPointWithAnimation(point, vsync,
-        targetZoom: targetZoom);
+    await _camera.centerOnPointWithAnimation(
+      point,
+      vsync,
+      targetZoom: targetZoom,
+    );
   }
 
   /// Método para añadir un elemento con animación
   Future<void> addElementWithAnimation(
-      ParkingElement element, TickerProvider vsync) async {
+    ParkingElement element,
+    TickerProvider vsync,
+  ) async {
     // Añadir el elemento normalmente
     addElement(element);
 
@@ -647,8 +665,11 @@ class ParkingState with ChangeNotifier {
   }
 
   /// Método para mover elementos con animación
-  Future<void> moveElementsWithAnimation(List<ParkingElement> elements,
-      vector_math.Vector2 delta, TickerProvider vsync) async {
+  Future<void> moveElementsWithAnimation(
+    List<ParkingElement> elements,
+    vector_math.Vector2 delta,
+    TickerProvider vsync,
+  ) async {
     if (elements.isEmpty) return;
 
     // Calcular posiciones objetivo
@@ -698,17 +719,16 @@ class ParkingState with ChangeNotifier {
   }
 
   /// Método para rotar un elemento con animación
-  Future<void> rotateElementWithAnimation(ParkingElement element,
-      double targetRotation, TickerProvider vsync) async {
+  Future<void> rotateElementWithAnimation(
+    ParkingElement element,
+    double targetRotation,
+    TickerProvider vsync,
+  ) async {
     // Guardar rotación anterior para historial
     final double previousRotation = element.rotation;
 
     // Animar la rotación
-    await animationManager.animateRotation(
-      element,
-      targetRotation,
-      vsync,
-    );
+    await animationManager.animateRotation(element, targetRotation, vsync);
 
     // Actualizar el historial después de la animación
     _historyManager.rotateElementAction(
@@ -722,7 +742,9 @@ class ParkingState with ChangeNotifier {
 
   /// Método para eliminar un elemento con animación
   Future<void> removeElementWithAnimation(
-      ParkingElement element, TickerProvider vsync) async {
+    ParkingElement element,
+    TickerProvider vsync,
+  ) async {
     // Registrar la acción en el historial
     _historyManager.removeElementAction(element);
 
@@ -748,7 +770,7 @@ class ParkingState with ChangeNotifier {
   // Inicializar el gestor de atajos de teclado (después de crear la UI)
   void initKeyboardShortcutsManager(Function(String) onActionPerformed) {
     _keyboardShortcutsManager = KeyboardShortcutsManager(
-      parkingState: this,
+      parkingMapState: this,
       clipboardManager: clipboardManager,
       onActionPerformed: onActionPerformed,
     );
@@ -896,7 +918,9 @@ class ParkingState with ChangeNotifier {
 
     // Verificar que los IDs coinciden
     if (oldElement.id != newElement.id) {
-      debugPrint("Error: Los IDs de los elementos deben coincidir para actualizar");
+      debugPrint(
+        "Error: Los IDs de los elementos deben coincidir para actualizar",
+      );
       return;
     }
 
@@ -922,7 +946,9 @@ class ParkingState with ChangeNotifier {
 
   /// Método auxiliar para aplicar propiedades a un elemento
   void _applyProperties(
-      ParkingElement element, Map<String, dynamic> properties) {
+    ParkingElement element,
+    Map<String, dynamic> properties,
+  ) {
     // Propiedades comunes
     if (properties.containsKey('position')) {
       element.position = properties['position'] as vector_math.Vector2;

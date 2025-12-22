@@ -35,18 +35,32 @@ class RegisterOccupancy extends StatefulWidget {
   final VoidCallback? onEntrySuccess;
   final String? initialPlate;
 
-  const RegisterOccupancy({super.key, this.spot, this.onEntrySuccess, this.initialPlate});
+  const RegisterOccupancy({
+    super.key,
+    this.spot,
+    this.onEntrySuccess,
+    this.initialPlate,
+  });
 
   @override
   State<RegisterOccupancy> createState() => _RegisterOccupancyState();
 
   /// Mostrar el modal como un bottom sheet
-  static Future<void> show(BuildContext context, ParkingSpot? spot, {VoidCallback? onEntrySuccess, String? initialPlate}) async {
+  static Future<void> show(
+    BuildContext context,
+    ParkingSpot? spot, {
+    VoidCallback? onEntrySuccess,
+    String? initialPlate,
+  }) async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => RegisterOccupancy(spot: spot, onEntrySuccess: onEntrySuccess, initialPlate: initialPlate),
+      builder: (context) => RegisterOccupancy(
+        spot: spot,
+        onEntrySuccess: onEntrySuccess,
+        initialPlate: initialPlate,
+      ),
     );
   }
 }
@@ -871,7 +885,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     final appState = AppStateContainer.of(context);
     final parking = appState.currentParking;
 
-    // Si no hay parking o no es ParkingModel completo, usar valores por defecto
+    // Si no hay parking o no es ParkingModelDetailed completo, usar valores por defecto
     if (parking == null) {
       switch (period) {
         case SubscriptionPeriod.weekly:
@@ -886,8 +900,8 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     // Intentar obtener las tarifas del parking
     List<RateModel>? rates;
     try {
-      // Si es ParkingModel completo, usar las tarifas
-      if (parking is ParkingModel) {
+      // Si es ParkingModelDetailed completo, usar las tarifas
+      if (parking is ParkingModelDetailed) {
         rates = parking.rates;
       }
     } catch (e) {
@@ -1049,7 +1063,6 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     }
   }
 
-
   /// Obtiene el nombre del propietario de suscripción validado
   String? _getValidatedSubscriptionOwnerName() {
     final name = subscriptionNameController.text.trim();
@@ -1090,9 +1103,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
   }
 
   /// Imprime el recibo de suscripción
-  Future<void> _printSubscriptionReceipt(
-    SubscriptionModel subscription,
-  ) async {
+  Future<void> _printSubscriptionReceipt(SubscriptionModel subscription) async {
     try {
       // Imprimir recibo de suscripción usando la preferencia guardada
       final printService = AppStateContainer.di(
@@ -1192,10 +1203,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Campo de placa
-        _buildPlateField(
-          plateController: plateController,
-          autofocus: true,
-        ),
+        _buildPlateField(plateController: plateController, autofocus: true),
         const SizedBox(height: 16),
 
         // Sección de información del propietario
@@ -1218,9 +1226,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Campo de placa
-        _buildPlateField(
-          plateController: plateController,
-        ),
+        _buildPlateField(plateController: plateController),
         const SizedBox(height: 16),
 
         // Sección de detalles de reserva
@@ -1359,9 +1365,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Campo de placa
-        _buildPlateField(
-          plateController: plateController,
-        ),
+        _buildPlateField(plateController: plateController),
         const SizedBox(height: 16),
 
         // Sección de detalles de suscripción
@@ -2053,9 +2057,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
               horizontal: 10,
               vertical: 10,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             prefixIcon: const Icon(Icons.directions_car, size: 16),
           ),
         ),

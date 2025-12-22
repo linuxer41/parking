@@ -18,8 +18,7 @@ export const EmployeeBasicSchema = t.Object({
 
 // ===== TIPOS DE ACCESO =====
 export const ACCESS_STATUS = {
-  ENTERED: "entered",
-  EXITED: "exited",
+  ENTERED: "valid",
   CANCELLED: "cancelled"
 } as const;
 
@@ -90,14 +89,7 @@ export const AccessSchema = t.Composite([
       description: "Monto a pagar",
       required: true,
     }),
-    status: t.Union([
-      t.Literal(ACCESS_STATUS.ENTERED),
-      t.Literal(ACCESS_STATUS.EXITED),
-      t.Literal(ACCESS_STATUS.CANCELLED),
-    ], {
-      description: "Estado del acceso",
-      required: true,
-    }),
+    status: t.Union([t.String({ enum: ACCESS_STATUS }), t.Null()]),
     notes: t.Optional(t.String({
       description: "Notas adicionales del acceso",
       required: false,
@@ -178,33 +170,12 @@ export const AccessUpdateSchema = t.Partial(t.Pick(AccessSchema, [
   description: "Esquema para la actualización de un Acceso",
 });
 
-// ===== ESQUEMAS ADICIONALES =====
-export const AccessResponseSchema = t.Object({
-  id: t.String({ format: "uuid" }),
-  entryTime: t.Union([
-    t.String(),
-    t.Date(),
-  ]),
-  exitTime: t.Union([
-    t.Null(),
-    t.String(),
-    t.Date(),
-  ]),
-  status: t.Union([
-    t.Literal(ACCESS_STATUS.ENTERED),
-    t.Literal(ACCESS_STATUS.EXITED),
-    t.Literal(ACCESS_STATUS.CANCELLED),
-  ]),
-  amount: t.Numeric(),
-  number: t.Integer(),
-  notes: t.Optional(t.Union([t.Null(), t.String()])),
-  parking: ParkingBasicSchema,
-  employee: EmployeeBasicSchema,
-  exitEmployee: t.Union([t.Null(), EmployeeBasicSchema]),
-  vehicle: VehiclePreviewSchema,
-}, {
-  description: "Esquema para la respuesta de un Acceso con objetos anidados",
-});
+export const AccessResponseSchema = t.Pick(AccessSchema, [
+  "id", "number", "parking", "employee", "vehicle", 
+  "entryTime", "exitTime", "amount", "status", "notes"
+], {
+  description: "Esquema para la respuesta de un Acceso",
+})
 
 export const AccessForElementSchema = t.Pick(AccessSchema, [
   "id", "number", "employee", "vehicle", "entryTime", 

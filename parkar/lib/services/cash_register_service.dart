@@ -22,6 +22,18 @@ class CashRegisterService extends BaseService {
     );
   }
 
+  Future<CashRegisterModel?> getCurrentCashRegister() async {
+    try {
+      return get<CashRegisterModel>(
+        endpoint: '/current',
+        parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+      );
+    } catch (e) {
+      // If no current cash register, return null
+      return null;
+    }
+  }
+
   Future<CashRegisterModel> createCashRegister(
     CashRegisterCreateModel model,
   ) async {
@@ -32,12 +44,31 @@ class CashRegisterService extends BaseService {
     );
   }
 
+  Future<CashRegisterModel> openCashRegister(
+    CashRegisterCreateModel model,
+  ) async {
+    return post<CashRegisterModel>(
+      endpoint: '/open',
+      body: model,
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+    );
+  }
+
+
   Future<CashRegisterModel> updateCashRegister(
     String id,
     CashRegisterUpdateModel model,
   ) async {
     return patch<CashRegisterModel>(
       endpoint: '/$id',
+      body: model,
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+    );
+  }
+
+  Future<CashRegisterModel> closeCashRegister(String id, CashRegisterCloseModel model) async {
+    return post<CashRegisterModel>(
+      endpoint: '/$id/close',
       body: model,
       parser: (json) => parseModel(json, CashRegisterModel.fromJson),
     );

@@ -7,12 +7,13 @@ import {
   ReportFilter,
 } from "../../models/report";
 
-// ===== REPORT METHODS =====
+class ReportCrud {
+  // ===== REPORT METHODS =====
 
 /**
  * Obtener reporte de ocupación
  */
-export async function getOccupancyReport(filter: ReportFilter): Promise<OccupancyReport> {
+async getOccupancy(filter: ReportFilter): Promise<OccupancyReport> {
   const groupBy = filter.groupBy || "day";
   let groupFormat = "";
 
@@ -109,7 +110,7 @@ export async function getOccupancyReport(filter: ReportFilter): Promise<Occupanc
 /**
  * Obtener reporte de ingresos
  */
-export async function getRevenueReport(filter: ReportFilter): Promise<RevenueReport> {
+async getRevenue(filter: ReportFilter): Promise<RevenueReport> {
   const groupBy = filter.groupBy || "day";
   let groupFormat = "";
 
@@ -202,7 +203,7 @@ export async function getRevenueReport(filter: ReportFilter): Promise<RevenueRep
 /**
  * Obtener reporte de vehículos
  */
-export async function getVehicleReport(filter: ReportFilter): Promise<VehicleReport> {
+async getVehicle(filter: ReportFilter): Promise<VehicleReport> {
   const query = {
     text: `
       WITH vehicle_counts AS (
@@ -246,3 +247,6 @@ export async function getVehicleReport(filter: ReportFilter): Promise<VehicleRep
     return res.rows[0];
   });
 }
+}
+
+export const reportCrud = new ReportCrud();

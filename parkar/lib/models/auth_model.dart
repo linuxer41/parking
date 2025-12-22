@@ -40,7 +40,7 @@ class ValidationErrorModel extends JsonConvertible<ValidationErrorModel> {
 class AuthResponseModel extends JsonConvertible<AuthResponseModel> {
   final AuthDataModel auth;
   final UserModel user;
-  final List<ParkingSimpleModel> parkings;
+  final List<ParkingModel> parkings;
 
   AuthResponseModel({
     required this.auth,

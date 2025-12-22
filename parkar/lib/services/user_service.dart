@@ -41,10 +41,10 @@ class UserService extends BaseService {
     );
   }
 
-  Future<List<ParkingSimpleModel>> getParkings(String userId) async {
-    return get<List<ParkingSimpleModel>>(
+  Future<List<ParkingModel>> getParkings(String userId) async {
+    return get<List<ParkingModel>>(
       endpoint: '/$userId/parkings',
-      parser: (json) => parseModelList(json, ParkingSimpleModel.fromJson),
+      parser: (json) => parseModelList(json, ParkingModel.fromJson),
     );
   }
 

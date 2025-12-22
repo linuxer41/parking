@@ -39,7 +39,7 @@ AuthResponseModel _$AuthResponseModelFromJson(Map<String, dynamic> json) =>
       auth: AuthDataModel.fromJson(json['auth'] as Map<String, dynamic>),
       user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
       parkings: (json['parkings'] as List<dynamic>)
-          .map((e) => ParkingSimpleModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => ParkingModel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 

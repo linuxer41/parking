@@ -3,14 +3,15 @@ import { getConnection, withClient } from "../connection";
 import { User, UserCreate, UserUpdate, UserCreateSchema, UserUpdateSchema, UserCreateRequest, UserUpdateRequest } from "../../models/user";
 import { getSchemaValidator } from "elysia";
 
-const TABLE_NAME = "t_user";
+class UserCrud {
+  private TABLE_NAME = "t_user";
 
 // ===== CRUD OPERATIONS =====
 
 /**
  * Crear un nuevo usuario
  */
-export async function createUser(input: UserCreateRequest): Promise<User> {
+async create(input: UserCreateRequest): Promise<User> {
   const validator = getSchemaValidator(UserCreateSchema);
   const data = validator.parse({
     ...input,
@@ -30,7 +31,7 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
   const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
   
   const query = {
-    text: `INSERT INTO ${TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
+    text: `INSERT INTO ${this.TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
     values: values,
   };
   
@@ -43,9 +44,9 @@ export async function createUser(input: UserCreateRequest): Promise<User> {
 /**
  * Buscar un usuario por ID
  */
-export async function findUserById(id: string): Promise<User | undefined> {
+async findById(id: string): Promise<User | undefined> {
   const query = {
-    text: `SELECT * FROM ${TABLE_NAME} WHERE id = $1 LIMIT 1`,
+    text: `SELECT * FROM ${this.TABLE_NAME} WHERE id = $1 LIMIT 1`,
     values: [id],
   };
   
@@ -58,13 +59,13 @@ export async function findUserById(id: string): Promise<User | undefined> {
 /**
  * Buscar usuarios por criterios
  */
-export async function findUsers(where: Partial<User> = {}): Promise<User[]> {
+async find(where: Partial<User> = {}): Promise<User[]> {
   const conditions = Object.entries(where)
     .map(([key, value], i) => `"${key}" = $${i + 1}`)
     .join(" AND ");
   
   const query = {
-    text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+    text: `SELECT * FROM ${this.TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
     values: Object.values(where),
   };
   
@@ -77,7 +78,7 @@ export async function findUsers(where: Partial<User> = {}): Promise<User[]> {
 /**
  * Actualizar un usuario
  */
-export async function updateUser(id: string, input: UserUpdateRequest): Promise<User> {
+async update(id: string, input: UserUpdateRequest): Promise<User> {
   const validator = getSchemaValidator(UserUpdateSchema);
   const data = validator.parse(input);
   
@@ -90,7 +91,7 @@ export async function updateUser(id: string, input: UserUpdateRequest): Promise<
   );
   
   const query = {
-    text: `UPDATE ${TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
+    text: `UPDATE ${this.TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
     values: [...values, id],
   };
   
@@ -108,19 +109,22 @@ export async function updateUser(id: string, input: UserUpdateRequest): Promise<
 /**
  * Eliminar un usuario
  */
-export async function deleteUser(id: string): Promise<User> {
+async delete(id: string): Promise<User> {
   const query = {
-    text: `DELETE FROM ${TABLE_NAME} WHERE id = $1 RETURNING *`,
+    text: `DELETE FROM ${this.TABLE_NAME} WHERE id = $1 RETURNING *`,
     values: [id],
   };
-  
+
   return withClient(async (client) => {
     const res = await client.query<User>(query);
-    
+
     if (!res.rows || res.rows.length === 0) {
       throw new Error(`No se encontró el usuario con ID ${id} para eliminar`);
     }
-    
+
     return res.rows[0];
   });
 }
+}
+
+export const userCrud = new UserCrud();

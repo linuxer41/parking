@@ -128,6 +128,7 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
     });
 
     final authService = AppStateContainer.di(context).resolve<AuthService>();
+    final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
 
     try {
       // Preparar las coordenadas
@@ -178,7 +179,8 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
       if (mounted) {
         // Si solo hay un estacionamiento, seleccionarlo por defecto
         if (parkings.length == 1) {
-          appState.setCurrentParking(parkings.first);
+          final parking = await parkingService.getParkingById(parkings.first.id);
+          appState.setCurrentParking(parking);
           context.go('/home');
           return;
         }

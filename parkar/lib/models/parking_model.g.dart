@@ -263,9 +263,9 @@ Map<String, dynamic> _$AreaDetailModelToJson(AreaDetailModel instance) =>
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
 
-ParkingSimpleModel _$ParkingSimpleModelFromJson(
+ParkingModel _$ParkingSimpleModelFromJson(
   Map<String, dynamic> json,
-) => ParkingSimpleModel(
+) => ParkingModel(
   id: json['id'] as String,
   name: json['name'] as String,
   email: json['email'] as String?,
@@ -286,12 +286,9 @@ ParkingSimpleModel _$ParkingSimpleModelFromJson(
   ),
   isOwner: json['isOwner'] as bool,
   areaCount: (json['areaCount'] as num).toInt(),
-  totalSpots: (json['totalSpots'] as num).toInt(),
-  occupiedSpots: (json['occupiedSpots'] as num).toInt(),
-  availableSpots: (json['availableSpots'] as num).toInt(),
 );
 
-Map<String, dynamic> _$ParkingSimpleModelToJson(ParkingSimpleModel instance) =>
+Map<String, dynamic> _$ParkingSimpleModelToJson(ParkingModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
@@ -306,9 +303,6 @@ Map<String, dynamic> _$ParkingSimpleModelToJson(ParkingSimpleModel instance) =>
       'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode]!,
       'isOwner': instance.isOwner,
       'areaCount': instance.areaCount,
-      'totalSpots': instance.totalSpots,
-      'occupiedSpots': instance.occupiedSpots,
-      'availableSpots': instance.availableSpots,
     };
 
 const _$ParkingOperationModeEnumMap = {
@@ -316,7 +310,9 @@ const _$ParkingOperationModeEnumMap = {
   ParkingOperationMode.list: 'list',
 };
 
-ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
+ParkingModelDetailed _$ParkingModelFromJson(
+  Map<String, dynamic> json,
+) => ParkingModelDetailed(
   id: json['id'] as String,
   name: json['name'] as String,
   email: json['email'] as String?,
@@ -335,8 +331,8 @@ ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
       .map((e) => RateModel.fromJson(e as Map<String, dynamic>))
       .toList(),
   params: ParkingParamsModel.fromJson(json['params'] as Map<String, dynamic>),
-  areas: (json['areas'] as List<dynamic>?)
-      ?.map((e) => AreaModel.fromJson(e as Map<String, dynamic>))
+  areas: (json['areas'] as List<dynamic>)
+      .map((e) => AreaModel.fromJson(e as Map<String, dynamic>))
       .toList(),
   employees: (json['employees'] as List<dynamic>?)
       ?.map((e) => EmployeeModel.fromJson(e as Map<String, dynamic>))
@@ -344,18 +340,14 @@ ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
   location: json['location'] == null
       ? null
       : ParkingLocationModel.fromJson(json['location'] as Map<String, dynamic>),
-  totalSpots: (json['totalSpots'] as num?)?.toInt(),
-  availableSpots: (json['availableSpots'] as num?)?.toInt(),
-  occupiedSpots: (json['occupiedSpots'] as num?)?.toInt(),
   areaCount: (json['areaCount'] as num?)?.toInt(),
   operationMode: $enumDecodeNullable(
     _$ParkingOperationModeEnumMap,
     json['operationMode'],
   ),
-  capacity: (json['capacity'] as num?)?.toDouble(),
 );
 
-Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
+Map<String, dynamic> _$ParkingModelToJson(ParkingModelDetailed instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
@@ -374,12 +366,8 @@ Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
       'areas': instance.areas,
       'employees': instance.employees,
       'location': instance.location,
-      'totalSpots': instance.totalSpots,
-      'availableSpots': instance.availableSpots,
-      'occupiedSpots': instance.occupiedSpots,
       'areaCount': instance.areaCount,
       'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
-      'capacity': instance.capacity,
     };
 
 ParkingLocationModel _$ParkingLocationModelFromJson(

@@ -8,13 +8,13 @@ import {
   ElementCreateRequestSchema,
   ElementResponseSchema,
   ElementUpdateRequestSchema,
-  Parking,
   ParkingCreateSchema,
-  ParkingSchema,
+  ParkingDetailedResponseSchema,
+  ParkingResponseSchema,
   ParkingUpdateSchema
 } from "../models/parking";
 import { authPlugin } from "../plugins";
-import { ApiError, InternalServerError, NotFoundError } from "../utils/error";
+import { ApiError, NotFoundError } from "../utils/error";
 
 export const parkingController = new Elysia({
   prefix: "/parkings",
@@ -31,8 +31,8 @@ export const parkingController = new Elysia({
   .post(
     "/",
     async ({ body }) => {
-      const res = await db.parking.createParking(body);
-      return res as Parking;
+      const res = await db.parking.create(body);
+      return res;
     },
     {
       body: ParkingCreateSchema,
@@ -42,7 +42,7 @@ export const parkingController = new Elysia({
           "Crea un nuevo registro de parking con los datos proporcionados.",
       },
       response: {
-        200: ParkingSchema,
+        200: ParkingResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -51,87 +51,52 @@ export const parkingController = new Elysia({
   .patch(
     "/:parkingId",
     async ({ params, body, user, set }) => {
-      try {
-        console.log("PATCH /parkings/:parkingId - Iniciando");
-        console.log("Params:", params);
-        console.log("Body:", body);
-        console.log("User:", user?.id);
 
-        // Verificar si el parking existe antes de actualizar
-        const existingParking = await db.parking.findParkingById(params.parkingId);
 
-        if (!existingParking) {
-          console.log("Parking no encontrado:", params.parkingId);
-          set.status = 404;
-          throw new NotFoundError("Parking no encontrado");
-        }
+      // Verificar si el parking existe antes de actualizar
+      const existingParking = await db.parking.findById(params.parkingId);
 
-        // Si se va a cambiar el modo de operación, validar que no haya vehículos activos
-        if (body.operationMode && body.operationMode !== existingParking.operationMode) {
-          console.log("Cambio de modo de operación detectado, validando...");
-
-          // Verificar accesos activos (sin hora de salida)
-          const activeAccessesQuery = {
-            text: `SELECT COUNT(*) as count FROM t_access WHERE "parkingId" = $1 AND "exitTime" IS NULL`,
-            values: [params.parkingId],
-          };
-          const activeAccessesResult = await withClient(async (client) => {
-            return await client.query(activeAccessesQuery);
-          });
-          const activeAccessesCount = parseInt(activeAccessesResult.rows[0].count);
-
-          if (activeAccessesCount > 0) {
-            console.log("Hay accesos activos:", activeAccessesCount);
-            set.status = 400;
-            throw new ApiError("No se puede cambiar el modo de operación mientras haya vehículos con accesos activos (sin hora de salida)", 400);
-          }
-
-          // Verificar spots ocupados
-          const occupiedSpotsQuery = {
-            text: `SELECT COUNT(*) as count FROM v_element_occupancy occ WHERE occ.entry IS NOT NULL OR occ.booking IS NOT NULL OR occ.subscription IS NOT NULL`,
-            values: [],
-          };
-          const occupiedSpotsResult = await withClient(async (client) => {
-            return await client.query(occupiedSpotsQuery);
-          });
-          const occupiedSpotsCount = parseInt(occupiedSpotsResult.rows[0].count);
-
-          if (occupiedSpotsCount > 0) {
-            console.log("Hay spots ocupados:", occupiedSpotsCount);
-            set.status = 400;
-            throw new ApiError("No se puede cambiar el modo de operación mientras haya spots ocupados", 400);
-          }
-
-          console.log("Validación de cambio de modo exitosa");
-        }
-
-        console.log("Parking encontrado, actualizando...");
-        await db.parking.updateParking(params.parkingId, body);
-
-        console.log("Parking actualizado, obteniendo detalles...");
-        // get detailed
-        const detailed = await db.parking.findParkingById(params.parkingId);
-
-        if (!detailed) {
-          console.log("Error al obtener detalles del parking");
-          set.status = 500;
-          throw new InternalServerError("Error al obtener los detalles del parking");
-        }
-
-        console.log("Detalles obtenidos exitosamente");
-        return detailed;
-      } catch (error) {
-        console.error("Error en PATCH /parkings/:parkingId:", error);
-
-        // Asegurar que el error tenga un status code válido
-        if (error instanceof ApiError) {
-          set.status = error.statusCode;
-        } else {
-          set.status = 500;
-        }
-
-        throw error as Error;
+      if (!existingParking) {
+        console.log("Parking no encontrado:", params.parkingId);
+        set.status = 404;
+        throw new NotFoundError("Parking no encontrado");
       }
+
+      // Si se va a cambiar el modo de operación, validar que no haya vehículos activos
+      if (body.operationMode && body.operationMode !== existingParking.operationMode) {
+        // Verificar accesos activos (sin hora de salida)
+        const activeAccessesQuery = {
+          text: `SELECT COUNT(*) as count FROM t_access WHERE "parkingId" = $1 AND "exitTime" IS NULL`,
+          values: [params.parkingId],
+        };
+        const activeAccessesResult = await withClient(async (client) => {
+          return await client.query(activeAccessesQuery);
+        });
+        const activeAccessesCount = parseInt(activeAccessesResult.rows[0].count);
+
+        if (activeAccessesCount > 0) {
+          console.log("Hay accesos activos:", activeAccessesCount);
+          set.status = 400;
+          throw new ApiError("No se puede cambiar el modo de operación mientras haya vehículos con accesos activos (sin hora de salida)", 400);
+        }
+
+        // Verificar spots ocupados
+        const occupiedSpotsQuery = {
+          text: `SELECT COUNT(*) as count FROM v_element_occupancy occ WHERE occ.entry IS NOT NULL OR occ.booking IS NOT NULL OR occ.subscription IS NOT NULL`,
+          values: [],
+        };
+        const occupiedSpotsResult = await withClient(async (client) => {
+          return await client.query(occupiedSpotsQuery);
+        });
+        const occupiedSpotsCount = parseInt(occupiedSpotsResult.rows[0].count);
+
+        if (occupiedSpotsCount > 0) {
+          console.log("Hay spots ocupados:", occupiedSpotsCount);
+          set.status = 400;
+          throw new ApiError("No se puede cambiar el modo de operación mientras haya spots ocupados", 400);
+        }
+      }
+      return await db.parking.update(params.parkingId, body);
     },
     {
       body: ParkingUpdateSchema,
@@ -141,7 +106,7 @@ export const parkingController = new Elysia({
           "Actualiza un registro de parking existente con los datos proporcionados.",
       },
       response: {
-        200: ParkingSchema,
+        200: ParkingResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -150,8 +115,8 @@ export const parkingController = new Elysia({
   .delete(
     "/:parkingId",
     async ({ params }) => {
-      const res = await db.parking.deleteParking(params.parkingId);
-      return res as Parking;
+      const res = await db.parking.delete(params.parkingId);
+      return await db.parking.findById(params.parkingId);
     },
     {
       detail: {
@@ -159,7 +124,7 @@ export const parkingController = new Elysia({
         description: "Elimina un registro de parking basado en su ID.",
       },
       response: {
-        200: ParkingSchema,
+        200: ParkingResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -168,7 +133,7 @@ export const parkingController = new Elysia({
   .get(
     "/:parkingId",
     async ({ params, user }) => {
-      const res = await db.parking.getDetailedParking(params.parkingId, user.id);
+      const res = await db.parking.getDetailed(params.parkingId, user.id);
       console.log("res", res);
       return res;
     },
@@ -178,7 +143,7 @@ export const parkingController = new Elysia({
         description: "Retorna una lista de todos los parkings registrados.",
       },
       response: {
-        // 200: ParkingDetailedResponseSchema,
+        200: ParkingDetailedResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -191,7 +156,7 @@ export const parkingController = new Elysia({
       .post(
         "/",
         async ({ params, body }) => {
-          const area = await db.area.create(body, params.parkingId);
+          const area = await db.parking.createArea(body, params.parkingId);
           return area;
         },
         {
@@ -210,7 +175,7 @@ export const parkingController = new Elysia({
       .get(
         "/",
         async ({ params }) => {
-          const areas = await db.area.findByParkingId(params.parkingId);
+          const areas = await db.parking.findAreasByParkingId(params.parkingId);
           return areas;
         },
         {
@@ -228,7 +193,7 @@ export const parkingController = new Elysia({
       .get(
         "/:areaId",
         async ({ params }) => {
-          const area = await db.area.findById(params.areaId);
+          const area = await db.parking.findAreaById(params.areaId);
           if (!area) {
             throw new NotFoundError("Área no encontrada");
           }
@@ -250,7 +215,7 @@ export const parkingController = new Elysia({
       .patch(
         "/:areaId",
         async ({ params, body }) => {
-          const area = await db.area.update(params.areaId, body);
+          const area = await db.parking.updateArea(params.areaId, body);
           return area;
         },
         {
@@ -270,7 +235,7 @@ export const parkingController = new Elysia({
       .delete(
         "/:areaId",
         async ({ params }) => {
-          const area = await db.area.delete(params.areaId);
+          const area = await db.parking.deleteArea(params.areaId);
           return area;
         },
         {
@@ -292,7 +257,7 @@ export const parkingController = new Elysia({
           .get(
             "/",
             async ({ params }) => {
-              const elements = await db.element.findByAreaId(params.areaId);
+              const elements = await db.parking.findElementsByAreaId(params.areaId);
               return elements;
             },
             {
@@ -316,7 +281,7 @@ export const parkingController = new Elysia({
       .post(
         "/",
         async ({ params, body }) => {
-          const element = await db.element.create(body);
+          const element = await db.parking.createElement(body);
           return element;
         },
         {
@@ -335,7 +300,7 @@ export const parkingController = new Elysia({
       .get(
         "/",
         async ({ params }) => {
-          const elements = await db.element.findByParkingId(params.parkingId);
+          const elements = await db.parking.findElementsByParkingId(params.parkingId);
           return elements;
         },
         {
@@ -353,7 +318,7 @@ export const parkingController = new Elysia({
       .get(
         "/:elementId",
         async ({ params }) => {
-          const element = await db.element.findById(params.elementId);
+          const element = await db.parking.findElementById(params.elementId);
           if (!element) {
             throw new NotFoundError("Elemento no encontrado");
           }
@@ -375,7 +340,7 @@ export const parkingController = new Elysia({
       .patch(
         "/:elementId",
         async ({ params, body }) => {
-          const element = await db.element.update(params.elementId, body);
+          const element = await db.parking.updateElement(params.elementId, body);
           return element;
         },
         {
@@ -395,7 +360,7 @@ export const parkingController = new Elysia({
       .delete(
         "/:elementId",
         async ({ params }) => {
-          const element = await db.element.delete(params.elementId);
+          const element = await db.parking.deleteElement(params.elementId);
           return element;
         },
         {

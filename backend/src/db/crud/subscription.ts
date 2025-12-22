@@ -5,13 +5,13 @@ import { getSchemaValidator } from "elysia";
 import { VehicleCreateSchema } from "../../models/vehicle";
 import { randomUUID } from "crypto";
 
-export const subscriptionCrud = {
+class SubscriptionCrud {
   // ===== OPERACIONES BÁSICAS =====
-  
+
   /**
    * Crear una nueva suscripción
    */
-  async createSubscription(data: SubscriptionCreateRequest, parkingId: string, employeeId: string): Promise<Subscription> {
+  async create(data: SubscriptionCreateRequest, parkingId: string, employeeId: string): Promise<Subscription> {
     const subscription = await withTransaction(async (client) => {
       const { vehiclePlate, vehicleType, vehicleColor, ownerName, ownerDocument, ownerPhone, spotId, startDate, period, amount, notes } = data;
       
@@ -100,12 +100,12 @@ export const subscriptionCrud = {
       return result.rows[0];
     });
 
-    const result = await this.getSubscriptionById(subscription.id);
+    const result = await this.getById(subscription.id);
     if (!result) {
       throw new BadRequestError("Error al crear la suscripción");
     }
     return result;
-  },
+  }
 
   /**
    * Renovar una suscripción
@@ -114,7 +114,7 @@ export const subscriptionCrud = {
     const { period, amount, notes } = data;
     
     // Obtener la suscripción actual
-    const currentSubscription = await this.getSubscriptionById(id);
+    const currentSubscription = await this.getById(id);
     if (!currentSubscription) {
       throw new BadRequestError("Suscripción no encontrada");
     }
@@ -134,10 +134,10 @@ export const subscriptionCrud = {
       notes,
     };
 
-    const newSubscription = await this.createSubscription(renewalData, currentSubscription.parkingId, currentSubscription.employeeId);
+    const newSubscription = await this.create(renewalData, currentSubscription.parkingId, currentSubscription.employeeId);
 
     // Actualizar la suscripción anterior como renovada
-    await this.updateSubscription(id, {
+    await this.update(id, {
       status: SUBSCRIPTION_STATUS.RENEWED,
       isActive: false,
     });
@@ -149,17 +149,17 @@ export const subscriptionCrud = {
       WHERE "id" = $3
     `, [id, new Date().toISOString(), newSubscription.id]);
 
-    const result = await this.getSubscriptionById(newSubscription.id);
+    const result = await this.getById(newSubscription.id);
     if (!result) {
       throw new BadRequestError("Error al renovar la suscripción");
     }
     return result;
-  },
+  }
 
   /**
-   * Buscar suscripciones por filtros
-   */
-  async findSubscriptions(filters: {
+    * Buscar suscripciones por filtros
+    */
+  async find(filters: {
     id?: string;
     parkingId?: string;
     employeeId?: string;
@@ -269,23 +269,23 @@ export const subscriptionCrud = {
     `, values);
 
     return result.rows;
-  },
+  }
 
   /**
    * Obtener una suscripción por ID
    */
-  async getSubscriptionById(id: string): Promise<Subscription | null> {
-    const subscriptions = await this.findSubscriptions({ id: id });
+  async getById(id: string): Promise<Subscription | null> {
+    const subscriptions = await this.find({ id: id });
     if (subscriptions.length === 0) {
       return null;
     }
     return subscriptions[0];
-  },
+  }
 
   /**
-   * Actualizar una suscripción
-   */
-  async updateSubscription(id: string, data: SubscriptionUpdate): Promise<Subscription | null> {
+    * Actualizar una suscripción
+    */
+  async update(id: string, data: SubscriptionUpdate): Promise<Subscription | null> {
     const updates: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -302,7 +302,7 @@ export const subscriptionCrud = {
     });
 
     if (updates.length === 1) { // Solo updatedAt
-      return this.getSubscriptionById(id);
+      return this.getById(id);
     }
 
     values.push(id);
@@ -314,139 +314,28 @@ export const subscriptionCrud = {
     `, values);
 
     return result.rows[0] || null;
-  },
+  }
 
   /**
-   * Eliminar una suscripción
-   */
-  async deleteSubscription(id: string): Promise<boolean> {
+    * Eliminar una suscripción
+    */
+  async delete(id: string): Promise<boolean> {
     const result = await pool.query(`
       DELETE FROM t_subscription WHERE "id" = $1
     `, [id]);
 
     return result.rowCount ? result.rowCount > 0 : false;
-  },
+  }
 
-  // ===== OPERACIONES ESPECÍFICAS =====
-
-  /**
-   * Obtener suscripciones activas para un spot
-   */
-  async getActiveSubscriptionsForSpot(spotId: string): Promise<Subscription[]> {
-    const result = await pool.query(`
-      SELECT * FROM t_subscription 
-      WHERE "spotId" = $1 
-        AND "status" = 'active'
-        AND "isActive" = true
-        AND "endDate" >= NOW()
-      ORDER BY "startDate" DESC
-    `, [spotId]);
-
-    return result.rows;
-  },
-
-  /**
-   * Obtener suscripciones activas para un vehículo
-   */
-  async getActiveSubscriptionsForVehicle(vehicleId: string): Promise<Subscription[]> {
-    const result = await pool.query(`
-      SELECT * FROM t_subscription 
-      WHERE "vehicleId" = $1 
-        AND "status" = 'active'
-        AND "isActive" = true
-        AND "endDate" >= NOW()
-      ORDER BY "startDate" DESC
-    `, [vehicleId]);
-
-    return result.rows;
-  },
-
-  /**
-   * Obtener suscripciones que expiran pronto
-   */
-  async getExpiringSubscriptions(days: number = 7): Promise<Subscription[]> {
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + days);
-
-    const result = await pool.query(`
-      SELECT * FROM t_subscription 
-      WHERE "status" = 'active'
-        AND "isActive" = true
-        AND "endDate" <= $1
-        AND "endDate" >= NOW()
-      ORDER BY "endDate" ASC
-    `, [expiryDate.toISOString()]);
-
-    return result.rows;
-  },
-
-  /**
-   * Obtener estadísticas de suscripciones por parking
-   */
-  async getSubscriptionStats(parkingId: string, startDate?: string, endDate?: string): Promise<{
-    total: number;
-    active: number;
-    expired: number;
-    suspended: number;
-    byPeriod: { [key: string]: number };
-  }> {
-    const conditions = [`"parkingId" = $1`];
-    const values = [parkingId];
-    let paramIndex = 2;
-
-    if (startDate) {
-      conditions.push(`"startDate" >= $${paramIndex++}`);
-      values.push(startDate);
-    }
-
-    if (endDate) {
-      conditions.push(`"startDate" <= $${paramIndex++}`);
-      values.push(endDate);
-    }
-
-    const whereClause = conditions.join(" AND ");
-
-    const result = await pool.query(`
-      SELECT 
-        COUNT(*) as total,
-        COUNT(CASE WHEN "status" = 'active' AND "isActive" = true THEN 1 END) as active,
-        COUNT(CASE WHEN "status" = 'expired' THEN 1 END) as expired,
-        COUNT(CASE WHEN "status" = 'suspended' THEN 1 END) as suspended,
-        "period"
-      FROM t_subscription 
-      WHERE ${whereClause}
-      GROUP BY "period"
-    `, values);
-
-    const stats = {
-      total: 0,
-      active: 0,
-      expired: 0,
-      suspended: 0,
-      byPeriod: {} as { [key: string]: number }
-    };
-
-    result.rows.forEach(row => {
-      stats.total += parseInt(row.total);
-      stats.active += parseInt(row.active);
-      stats.expired += parseInt(row.expired);
-      stats.suspended += parseInt(row.suspended);
-      stats.byPeriod[row.period] = parseInt(row.total);
-    });
-
-    return stats;
-  },
-
-  /**
-   * Generar número único para una suscripción
-   */
   async generateSubscriptionNumber(parkingId: string): Promise<number> {
     const result = await pool.query(`
       SELECT COALESCE(MAX("number"), 0) + 1 as next_number
-      FROM t_subscription 
+      FROM t_subscription
       WHERE "parkingId" = $1
     `, [parkingId]);
 
     return result.rows[0].next_number;
-  },
-};
+  }
+}
+
+export const subscriptionCrud = new SubscriptionCrud();

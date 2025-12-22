@@ -8,7 +8,7 @@ import '../models/parking_elements.dart';
 /// Inspirado en MonoGame/Godot/Unity pero simplificado para el sistema de parking
 class GameEngine {
   // Estado del mundo de parkeo
-  final ParkingState _parkingState;
+  final ParkingMapState _parkingMapState;
 
   // Ticker para el bucle principal
   Ticker? _ticker;
@@ -30,8 +30,8 @@ class GameEngine {
   final VoidCallback? onUpdate;
 
   // Constructor
-  GameEngine({required ParkingState parkingState, this.onUpdate})
-    : _parkingState = parkingState;
+  GameEngine({required ParkingMapState parkingMapState, this.onUpdate})
+    : _parkingMapState = parkingMapState;
 
   // Getters
   bool get isRunning => _isRunning;
@@ -133,7 +133,7 @@ class GameEngine {
   /// Actualizar la lógica del juego
   void _update() {
     // Actualizar todos los elementos del parkeo
-    for (final element in _parkingState.allElements) {
+    for (final element in _parkingMapState.allElements) {
       _updateElement(element);
     }
   }

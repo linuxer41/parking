@@ -49,8 +49,8 @@ class ParkingSpot extends ParkingElement {
       status: _status,
     );
 
-    // Esta función debe ser llamada desde un contexto donde se tenga acceso a ParkingState
-    // El ParkingState debe actualizar este elemento usando updateElement(this, newSpot)
+    // Esta función debe ser llamada desde un contexto donde se tenga acceso a ParkingMapState
+    // El ParkingMapState debe actualizar este elemento usando updateElement(this, newSpot)
     notifyListeners();
   }
 
@@ -98,10 +98,10 @@ class ParkingSpot extends ParkingElement {
     String status = 'available',
     this.isActive = true,
   }) : _isOccupied = isOccupied,
-        _entry = entry,
-        _booking = booking,
-        _subscription = subscription,
-        _status = status {
+       _entry = entry,
+       _booking = booking,
+       _subscription = subscription,
+       _status = status {
     // Iniciar el temporizador si el spot está ocupado
     _updateElapsedTime();
     if (_isOccupied && _entry != null) {
@@ -496,10 +496,7 @@ class ParkingSpot extends ParkingElement {
         );
 
         final platePainter = TextPainter(
-          text: TextSpan(
-            text: _entry!.vehiclePlate,
-            style: plateStyle,
-          ),
+          text: TextSpan(text: _entry!.vehiclePlate, style: plateStyle),
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.center,
         );
@@ -565,10 +562,7 @@ class ParkingSpot extends ParkingElement {
       );
 
       final platePainter = TextPainter(
-        text: TextSpan(
-          text: _booking!.vehiclePlate,
-          style: plateStyle,
-        ),
+        text: TextSpan(text: _booking!.vehiclePlate, style: plateStyle),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       );
@@ -631,10 +625,7 @@ class ParkingSpot extends ParkingElement {
       );
 
       final platePainter = TextPainter(
-        text: TextSpan(
-          text: _subscription!.vehiclePlate,
-          style: plateStyle,
-        ),
+        text: TextSpan(text: _subscription!.vehiclePlate, style: plateStyle),
         textDirection: TextDirection.ltr,
         textAlign: TextAlign.center,
       );

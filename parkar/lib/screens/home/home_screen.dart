@@ -7,8 +7,6 @@ import '../../widgets/responsive_layout.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../parking/parking_screen.dart' show ParkingScreen;
 
-// Notificador para el modo de edición
-final ValueNotifier<bool> isEditorModeActive = ValueNotifier<bool>(false);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,16 +50,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     // Usar ValueListenableBuilder para escuchar cambios en el modo de edición
-    return ValueListenableBuilder<bool>(
-      valueListenable: isEditorModeActive,
-      builder: (context, isEditorMode, child) {
+    return Builder(
+      builder: (context) {
         // Contenido para móviles
         final mobileContent = Scaffold(
           extendBody: false,
           extendBodyBehindAppBar: true,
           body: SafeArea(child: _screens[_selectedIndex]),
-          bottomNavigationBar: !isEditorMode
-              ? Container(
+          bottomNavigationBar: Container(
                   decoration: BoxDecoration(
                     color: colorScheme.surface,
                     boxShadow: [
@@ -106,8 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
-                )
-              : null,
+                ),
         );
 
         // Contenido para tablets y escritorio

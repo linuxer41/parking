@@ -3,14 +3,15 @@ import { getConnection, withClient } from "../connection";
 import { Vehicle, VehicleCreate, VehicleUpdate, VehicleCreateSchema, VehicleUpdateSchema, VehicleCreateRequest, VehicleUpdateRequest } from "../../models/vehicle";
 import { getSchemaValidator } from "elysia";
 
-const TABLE_NAME = "t_vehicle";
+class VehicleCrud {
+  private TABLE_NAME = "t_vehicle";
 
-// ===== CRUD OPERATIONS =====
+  // ===== CRUD OPERATIONS =====
 
-/**
- * Crear un nuevo vehículo
- */
-export async function createVehicle(input: VehicleCreateRequest): Promise<Vehicle> {
+  /**
+   * Crear un nuevo vehículo
+   */
+  async create(input: VehicleCreateRequest): Promise<Vehicle> {
   const validator = getSchemaValidator(VehicleCreateSchema);
   const data = validator.parse({
     ...input,
@@ -30,7 +31,7 @@ export async function createVehicle(input: VehicleCreateRequest): Promise<Vehicl
   const placeholders = values.map((_, i) => `$${i + 1}`).join(", ");
   
   const query = {
-    text: `INSERT INTO ${TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
+    text: `INSERT INTO ${this.TABLE_NAME} (${columns}) VALUES (${placeholders}) RETURNING *`,
     values: values,
   };
   
@@ -43,9 +44,9 @@ export async function createVehicle(input: VehicleCreateRequest): Promise<Vehicl
 /**
  * Buscar un vehículo por ID
  */
-export async function findVehicleById(id: string): Promise<Vehicle | undefined> {
+async findById(id: string): Promise<Vehicle | undefined> {
   const query = {
-    text: `SELECT * FROM ${TABLE_NAME} WHERE id = $1 LIMIT 1`,
+    text: `SELECT * FROM ${this.TABLE_NAME} WHERE id = $1 LIMIT 1`,
     values: [id],
   };
   
@@ -58,13 +59,13 @@ export async function findVehicleById(id: string): Promise<Vehicle | undefined> 
 /**
  * Buscar vehículos por criterios
  */
-export async function findVehicles(where: Partial<Vehicle> = {}): Promise<Vehicle[]> {
+async find(where: Partial<Vehicle> = {}): Promise<Vehicle[]> {
   const conditions = Object.entries(where)
     .map(([key, value], i) => `"${key}" = $${i + 1}`)
     .join(" AND ");
   
   const query = {
-    text: `SELECT * FROM ${TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+    text: `SELECT * FROM ${this.TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
     values: Object.values(where),
   };
   
@@ -77,7 +78,7 @@ export async function findVehicles(where: Partial<Vehicle> = {}): Promise<Vehicl
 /**
  * Actualizar un vehículo
  */
-export async function updateVehicle(id: string, input: VehicleUpdateRequest): Promise<Vehicle> {
+async update(id: string, input: VehicleUpdateRequest): Promise<Vehicle> {
   const validator = getSchemaValidator(VehicleUpdateSchema);
   const data = validator.parse(input);
   
@@ -90,7 +91,7 @@ export async function updateVehicle(id: string, input: VehicleUpdateRequest): Pr
   );
   
   const query = {
-    text: `UPDATE ${TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
+    text: `UPDATE ${this.TABLE_NAME} SET ${setClause}, "updatedAt" = NOW() WHERE id = $${Object.keys(data).length + 1} RETURNING *`,
     values: [...values, id],
   };
   
@@ -105,22 +106,25 @@ export async function updateVehicle(id: string, input: VehicleUpdateRequest): Pr
   });
 }
 
-/**
- * Eliminar un vehículo
- */
-export async function deleteVehicle(id: string): Promise<Vehicle> {
-  const query = {
-    text: `DELETE FROM ${TABLE_NAME} WHERE id = $1 RETURNING *`,
-    values: [id],
-  };
-  
-  return withClient(async (client) => {
-    const res = await client.query<Vehicle>(query);
-    
-    if (!res.rows || res.rows.length === 0) {
-      throw new Error(`No se encontró el vehículo con ID ${id} para eliminar`);
-    }
-    
-    return res.rows[0];
-  });
+  /**
+   * Eliminar un vehículo
+   */
+  async delete(id: string): Promise<Vehicle> {
+    const query = {
+      text: `DELETE FROM ${this.TABLE_NAME} WHERE id = $1 RETURNING *`,
+      values: [id],
+    };
+
+    return withClient(async (client) => {
+      const res = await client.query<Vehicle>(query);
+
+      if (!res.rows || res.rows.length === 0) {
+        throw new Error(`No se encontró el vehículo con ID ${id} para eliminar`);
+      }
+
+      return res.rows[0];
+    });
+  }
 }
+
+export const vehicleCrud = new VehicleCrud();

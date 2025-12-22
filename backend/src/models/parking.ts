@@ -356,7 +356,7 @@ export const RateSchema = t.Object(
   },
 );
 
-export const ParkingDynamicSchema = t.Object({
+export const ParkingAditionalSelectSchema = t.Object({
   areas: t.Array(AreaResponseSchema, {
     description: "Áreas del parking",
     required: true,
@@ -373,20 +373,8 @@ export const ParkingDynamicSchema = t.Object({
     description: "Cantidad total de áreas",
     required: true,
   }),
-  totalSpots: t.Integer({
-    description: "Cantidad total de spots",
-    required: true,
-  }),
-  occupiedSpots: t.Integer({
-    description: "Cantidad de spots ocupados",
-    required: true,
-  }),
-  availableSpots: t.Integer({
-    description: "Cantidad de spots disponibles",
-    required: true,
-  }),
   }, {
-    description: "Esquema adicional: ParkingDynamicSchema",
+    description: "Esquema adicional: ParkingAditionalSelectSchema",
   },
 );
 
@@ -459,14 +447,14 @@ export const ParkingSchema = t.Composite([
 // ===== ESQUEMA DE RESPUESTA DE PARKING =====
 export const ParkingResponseSchema = t.Composite([
   t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]),
-  t.Pick(ParkingDynamicSchema, ["isOwner", "areaCount", "totalSpots", "occupiedSpots", "availableSpots"]),
+  t.Pick(ParkingAditionalSelectSchema, ["isOwner", "areaCount", ]),
 ], {
   description: "Esquema de respuesta para operaciones de Parking",
 });
 
 export const ParkingDetailedResponseSchema = t.Composite([
   t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]),
-  ParkingDynamicSchema,
+  ParkingAditionalSelectSchema,
 ], {
   description: "Esquema de respuesta para operaciones de Parking",
 });
@@ -494,7 +482,7 @@ export const ParkingUpdateRequestSchema = t.Partial(t.Pick(ParkingSchema, ["name
 // ===== ESQUEMAS ADICIONALES =====
 export const ParkingPreviewSchema = t.Pick(ParkingSchema, ["id", "name", "address", "location", "logoUrl", "params"]);
 
-export const ParkingSimpleSchema = t.Pick(ParkingSchema, ["id", "name", "address", "location", "logoUrl", "params", "rates", "status", "isOwner", "isActive", "areaCount", "totalSpots", "occupiedSpots", "availableSpots"], {
+export const ParkingSimpleSchema = t.Pick(ParkingSchema, ["id", "name", "address", "location", "logoUrl", "params", "rates", "status", "isOwner", "isActive", "areaCount", ], {
   description: "Esquema para la vista de un Parking",
 });
 

@@ -46,7 +46,7 @@ export const userController = new Elysia({
   .post(
     "/",
     async ({ body }) => {
-      const res = await db.user.createUser(body);
+      const res = await db.user.create(body);
       return res as User;
     },
     {
@@ -66,7 +66,7 @@ export const userController = new Elysia({
   .get(
     "/:id",
     async ({ params }) => {
-      const res = await db.user.findUserById(params.id);
+      const res = await db.user.findById(params.id);
       if (!res) {
         throw new NotFoundError("Usuario no encontrado");
       }
@@ -87,7 +87,7 @@ export const userController = new Elysia({
   .patch(
     "/:id",
     async ({ params, body }) => {
-      const res = await db.user.updateUser(params.id, body);
+      const res = await db.user.update(params.id, body);
       return res as User;
     },
     {
@@ -107,7 +107,7 @@ export const userController = new Elysia({
   .delete(
     "/:id",
     async ({ params }) => {
-      const res = await db.user.deleteUser(params.id);
+      const res = await db.user.delete(params.id);
       return res as User;
     },
     {

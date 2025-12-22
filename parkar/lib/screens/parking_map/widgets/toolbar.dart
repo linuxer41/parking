@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../core/parking_state.dart';
+import '../core/parking_state_container.dart';
 import '../models/enums.dart';
 
 /// Widget que muestra la barra de herramientas vertical del sistema de parkeo
@@ -63,12 +63,13 @@ class _ParkingToolbarState extends State<ParkingToolbar>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final parkingMapState = ParkingMapStateContainer.of(context);
 
     return SafeArea(
-      child: Consumer<ParkingState>(
-        builder: (context, parkingState, child) {
+      child: Builder(
+        builder: (context) {
           // No mostrar la barra de herramientas si no está en modo edición
-          if (!parkingState.isEditMode) {
+          if (!parkingMapState.isEditMode) {
             return const SizedBox.shrink();
           }
 
@@ -84,10 +85,10 @@ class _ParkingToolbarState extends State<ParkingToolbar>
               : colorScheme.outlineVariant;
 
           // Verificar si hay elementos seleccionados
-          final hasSelection = parkingState.selectedElements.isNotEmpty;
+          final hasSelection = parkingMapState.selectedElements.isNotEmpty;
 
           // Verificar si hay elementos en el clipboard
-          final hasClipboardItems = parkingState.clipboardManager.hasItems;
+          final hasClipboardItems = parkingMapState.clipboardManager.hasItems;
 
           // Calcular la altura del panel superior
           // Valor fijo que asegura que no haya sobreposición con el panel superior
@@ -130,7 +131,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                         label: 'Libre',
                         tooltip: 'Edición libre',
                         mode: EditorMode.free,
-                        parkingState: parkingState,
+                        parkingMapState: parkingMapState,
                         colorScheme: colorScheme,
                       ),
                       _buildBlenderStyleButton(
@@ -139,7 +140,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                         label: 'Selección',
                         tooltip: 'Selección por bloques',
                         mode: EditorMode.select,
-                        parkingState: parkingState,
+                        parkingMapState: parkingMapState,
                         colorScheme: colorScheme,
                       ),
 
@@ -176,7 +177,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                               icon: Icons.center_focus_strong,
                               label: 'Centro',
                               tooltip: 'Centrar vista',
-                              onPressed: () => parkingState.resetCamera(),
+                              onPressed: () => parkingMapState.resetCamera(),
                               colorScheme: colorScheme,
                             ),
                             // Botones de zoom (activados)
@@ -191,7 +192,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   MediaQuery.of(context).size.width / 2,
                                   MediaQuery.of(context).size.height / 2,
                                 );
-                                parkingState.zoomCamera(
+                                parkingMapState.zoomCamera(
                                   1.2,
                                   screenCenter,
                                 ); // Factor 1.2 = +20%
@@ -209,7 +210,7 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   MediaQuery.of(context).size.width / 2,
                                   MediaQuery.of(context).size.height / 2,
                                 );
-                                parkingState.zoomCamera(
+                                parkingMapState.zoomCamera(
                                   0.8,
                                   screenCenter,
                                 ); // Factor 0.8 = -20%
@@ -231,24 +232,26 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   icon: Icons.undo_rounded,
                                   label: 'Deshacer',
                                   tooltip: 'Deshacer última acción',
-                                  onPressed: parkingState.historyManager.canUndo
-                                      ? () => parkingState.undoLastAction()
+                                  onPressed:
+                                      parkingMapState.historyManager.canUndo
+                                      ? () => parkingMapState.undoLastAction()
                                       : null,
                                   colorScheme: colorScheme,
                                   isDisabled:
-                                      !parkingState.historyManager.canUndo,
+                                      !parkingMapState.historyManager.canUndo,
                                 ),
                                 _buildBlenderStyleButton(
                                   context,
                                   icon: Icons.redo_rounded,
                                   label: 'Rehacer',
                                   tooltip: 'Rehacer última acción',
-                                  onPressed: parkingState.historyManager.canRedo
-                                      ? () => parkingState.redoLastAction()
+                                  onPressed:
+                                      parkingMapState.historyManager.canRedo
+                                      ? () => parkingMapState.redoLastAction()
                                       : null,
                                   colorScheme: colorScheme,
                                   isDisabled:
-                                      !parkingState.historyManager.canRedo,
+                                      !parkingMapState.historyManager.canRedo,
                                 ),
                               ],
                             ),
@@ -267,9 +270,10 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   onPressed: hasSelection
                                       ? () {
                                           // Implementar copia al clipboard
-                                          parkingState.clipboardManager
+                                          parkingMapState.clipboardManager
                                               .copyElements(
-                                                parkingState.selectedElements,
+                                                parkingMapState
+                                                    .selectedElements,
                                               );
                                           // Mostrar snackbar con tema personalizado
                                           final snackBar = SnackBar(
@@ -302,16 +306,20 @@ class _ParkingToolbarState extends State<ParkingToolbar>
                                   onPressed: hasClipboardItems
                                       ? () {
                                           // Pegar en la posición del cursor
-                                          final elements = parkingState
+                                          final elements = parkingMapState
                                               .clipboardManager
                                               .pasteElements(
-                                                parkingState.cursorPosition.x,
-                                                parkingState.cursorPosition.y,
+                                                parkingMapState
+                                                    .cursorPosition
+                                                    .x,
+                                                parkingMapState
+                                                    .cursorPosition
+                                                    .y,
                                               );
 
                                           // Añadir los elementos pegados al estado
                                           for (final element in elements) {
-                                            parkingState.addElement(element);
+                                            parkingMapState.addElement(element);
                                           }
 
                                           // Mostrar snackbar con tema personalizado
@@ -394,14 +402,15 @@ class _ParkingToolbarState extends State<ParkingToolbar>
     bool isDisabled = false,
     VoidCallback? onPressed,
     EditorMode? mode,
-    ParkingState? parkingState,
+    ParkingMapState? parkingMapState,
     required ColorScheme colorScheme,
   }) {
     // Si se proporciona un modo, verificar si está seleccionado
-    if (mode != null && parkingState != null) {
-      isSelected = parkingState.isEditMode && parkingState.editorMode == mode;
-      onPressed = parkingState.isEditMode
-          ? () => parkingState.editorMode = mode
+    if (mode != null && parkingMapState != null) {
+      isSelected =
+          parkingMapState.isEditMode && parkingMapState.editorMode == mode;
+      onPressed = parkingMapState.isEditMode
+          ? () => parkingMapState.editorMode = mode
           : null;
     }
 

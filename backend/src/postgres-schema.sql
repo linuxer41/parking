@@ -289,14 +289,19 @@ CREATE TABLE t_cash_register (
   "employeeId" uuid not null references t_employee(id) on delete cascade,
   "startDate" timestamptz not null,
   "endDate" timestamptz,
-  "status" text not null default 'open', -- 'open', 'closed'
+  "initialAmount" decimal(10,2) not null default 0,
+  "status" text not null default 'active', -- 'active',  'verified'
+  "comment" text,
+  "observation" text,
   "createdAt" timestamptz default now() not null,
   "updatedAt" timestamptz,
   "deletedAt" timestamptz
 );
 
 COMMENT ON TABLE t_cash_register IS 'Cajas registradoras de los estacionamientos';
-COMMENT ON COLUMN t_cash_register."status" IS 'Estado de la caja: open (abierta), closed (cerrada)';
+COMMENT ON COLUMN t_cash_register."status" IS 'Estado de la caja: active (abierta), verified (verificada por dueño)';
+COMMENT ON COLUMN t_cash_register."comment" IS 'Comentario que hace el empleado sobre la caja';
+COMMENT ON COLUMN t_cash_register."observation" IS 'Observación que agrega el administrador al verificar la caja';
 
 -- Tabla de movimientos de caja
 DROP TABLE IF EXISTS t_movement CASCADE;

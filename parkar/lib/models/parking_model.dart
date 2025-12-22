@@ -96,7 +96,8 @@ class ElementActivityModel extends JsonConvertible<ElementActivityModel> {
 
 /// Element Occupancy Info Model
 @JsonSerializable()
-class ElementOccupancyInfoModel extends JsonConvertible<ElementOccupancyInfoModel> {
+class ElementOccupancyInfoModel
+    extends JsonConvertible<ElementOccupancyInfoModel> {
   final String id;
   final String vehiclePlate;
   final String ownerName;
@@ -533,7 +534,7 @@ class AreaDetailModel implements JsonConvertible<AreaDetailModel> {
 }
 
 @JsonSerializable()
-class ParkingSimpleModel extends JsonConvertible<ParkingSimpleModel> {
+class ParkingModel extends JsonConvertible<ParkingModel> {
   final String id;
   final String name;
   final String? email;
@@ -547,11 +548,8 @@ class ParkingSimpleModel extends JsonConvertible<ParkingSimpleModel> {
   final ParkingOperationMode operationMode;
   final bool isOwner;
   final int areaCount;
-  final int totalSpots;
-  final int occupiedSpots;
-  final int availableSpots;
 
-  ParkingSimpleModel({
+  ParkingModel({
     required this.id,
     required this.name,
     this.email,
@@ -565,13 +563,10 @@ class ParkingSimpleModel extends JsonConvertible<ParkingSimpleModel> {
     required this.operationMode,
     required this.isOwner,
     required this.areaCount,
-    required this.totalSpots,
-    required this.occupiedSpots,
-    required this.availableSpots,
   });
 
-  factory ParkingSimpleModel.fromParkingModel(ParkingModel parking) =>
-      ParkingSimpleModel(
+  factory ParkingModel.fromParkingModel(ParkingModelDetailed parking) =>
+      ParkingModel(
         id: parking.id,
         name: parking.name,
         email: parking.email,
@@ -585,12 +580,9 @@ class ParkingSimpleModel extends JsonConvertible<ParkingSimpleModel> {
         operationMode: parking.operationMode ?? ParkingOperationMode.map,
         isOwner: parking.isOwner ?? false,
         areaCount: parking.areaCount ?? 0,
-        totalSpots: parking.totalSpots ?? 0,
-        occupiedSpots: parking.occupiedSpots ?? 0,
-        availableSpots: parking.availableSpots ?? 0,
       );
 
-  factory ParkingSimpleModel.fromJson(Map<String, dynamic> json) =>
+  factory ParkingModel.fromJson(Map<String, dynamic> json) =>
       _$ParkingSimpleModelFromJson(json);
 
   @override
@@ -598,7 +590,7 @@ class ParkingSimpleModel extends JsonConvertible<ParkingSimpleModel> {
 }
 
 @JsonSerializable()
-class ParkingModel extends JsonConvertible<ParkingModel> {
+class ParkingModelDetailed extends JsonConvertible<ParkingModelDetailed> {
   final String id;
   final String name;
   final String? email;
@@ -613,19 +605,13 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
   final UserModel? owner;
   final List<RateModel> rates;
   final ParkingParamsModel params;
-  final List<AreaModel>? areas;
+  final List<AreaModel> areas;
   final List<EmployeeModel>? employees;
-
-  // Additional fields for maps and availability
   final ParkingLocationModel? location;
-  final int? totalSpots;
-  final int? availableSpots;
-  final int? occupiedSpots;
   final int? areaCount;
   final ParkingOperationMode? operationMode;
-  final double? capacity;
 
-  ParkingModel({
+  ParkingModelDetailed({
     required this.id,
     required this.name,
     this.email,
@@ -640,19 +626,15 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     this.owner,
     required this.rates,
     required this.params,
-    this.areas,
+    required this.areas,
     this.employees,
     this.location,
-    this.totalSpots,
-    this.availableSpots,
-    this.occupiedSpots,
     this.areaCount,
     this.operationMode,
-    this.capacity,
   });
 
-  /// Create a copy of this ParkingModel but with the given fields replaced with the new values
-  ParkingModel copyWith({
+  /// Create a copy of this ParkingModelDetailed but with the given fields replaced with the new values
+  ParkingModelDetailed copyWith({
     String? id,
     String? name,
     String? email,
@@ -677,7 +659,7 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     String? operationMode,
     double? capacity,
   }) {
-    return ParkingModel(
+    return ParkingModelDetailed(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
@@ -695,17 +677,13 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
       areas: areas ?? this.areas,
       employees: employees ?? this.employees,
       location: location ?? this.location,
-      totalSpots: totalSpots ?? this.totalSpots,
-      availableSpots: availableSpots ?? this.availableSpots,
-      occupiedSpots: occupiedSpots ?? this.occupiedSpots,
       areaCount: areaCount ?? this.areaCount,
       operationMode:
           operationMode as ParkingOperationMode? ?? this.operationMode,
-      capacity: capacity ?? this.capacity,
     );
   }
 
-  factory ParkingModel.fromJson(Map<String, dynamic> json) =>
+  factory ParkingModelDetailed.fromJson(Map<String, dynamic> json) =>
       _$ParkingModelFromJson(json);
 
   @override

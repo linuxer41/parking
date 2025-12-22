@@ -33,7 +33,7 @@ class SpotCheckModel extends JsonConvertible<SpotCheckModel> {
 class VehicleModel extends JsonConvertible<VehicleModel> {
   final String id;
   final String parkingId;
-  final ParkingModel? parking;
+  final ParkingModelDetailed? parking;
   final String? type;
   final String plate;
   final String? color;
@@ -92,7 +92,7 @@ class VehicleCreateModel extends JsonConvertible<VehicleCreateModel> {
   final String plate;
   final String? ownerName;
   final String? ownerDocument;
-  final String? ownerPhone; 
+  final String? ownerPhone;
   final String? spotNumber;
   final double? fee;
 
@@ -172,7 +172,8 @@ class VehiclePreviewModel extends JsonConvertible<VehiclePreviewModel> {
 }
 
 @JsonSerializable()
-class VehicleDetailsRequestModel extends JsonConvertible<VehicleDetailsRequestModel> {
+class VehicleDetailsRequestModel
+    extends JsonConvertible<VehicleDetailsRequestModel> {
   final String vehiclePlate;
   final String? vehicleType;
   final String? vehicleColor;

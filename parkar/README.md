@@ -51,7 +51,7 @@ class ParkingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ParkingState(),
+      create: (_) => ParkingMapState(),
       child: Scaffold(
         appBar: AppBar(title: Text('Gestión de Estacionamientos')),
         body: ParkingCanvas(),
@@ -89,10 +89,10 @@ enum FacilityType { elevator, stairs, bathroom, paymentStation, chargingStation,
 
 ### Gestión de Estado
 
-El estado del sistema se maneja a través de la clase `ParkingState` que actúa como un controlador central:
+El estado del sistema se maneja a través de la clase `ParkingMapState` que actúa como un controlador central:
 
 ```dart
-final parkingState = ParkingState();
+final parkingMapState = ParkingMapState();
 
 // Agregar un espacio de estacionamiento
 final newSpot = ElementFactory.createSpot(
@@ -100,13 +100,13 @@ final newSpot = ElementFactory.createSpot(
   type: SpotType.vehicle,
   label: 'A-01',
 );
-parkingState.addElement(newSpot);
+parkingMapState.addElement(newSpot);
 
 // Seleccionar un elemento
-parkingState.selectElement(element);
+parkingMapState.selectElement(element);
 
 // Cambiar el modo de edición
-parkingState.setEditorMode(EditorMode.select);
+parkingMapState.setEditorMode(EditorMode.select);
 ```
 
 ### Personalización del Renderizado
@@ -115,7 +115,7 @@ El sistema utiliza la clase `ParkingRenderer` para dibujar los elementos. Puede 
 
 ```dart
 final renderer = ParkingRenderer(
-  state: parkingState,
+  state: parkingMapState,
   canvasSize: Size(800, 600),
   showGrid: true,
   gridSize: 20.0,
@@ -161,36 +161,36 @@ El sistema proporciona métodos convenientes para utilizar animaciones en divers
 
 ```dart
 // Añadir un elemento con animación de aparición
-await parkingState.addElementWithAnimation(
+await parkingMapState.addElementWithAnimation(
   newElement,
   this, // Debe ser un TickerProvider (normalmente un State<StatefulWidget>)
 );
 
 // Mover elementos con animación
-await parkingState.moveElementsWithAnimation(
-  parkingState.selectedElements,
+await parkingMapState.moveElementsWithAnimation(
+  parkingMapState.selectedElements,
   vector_math.Vector2(50, 0), // Delta de movimiento
   this,
 );
 
 // Animar la rotación de un elemento
-await parkingState.rotateElementWithAnimation(
+await parkingMapState.rotateElementWithAnimation(
   element,
   math.pi / 4, // 45 grados
   this,
 );
 
 // Eliminar un elemento con animación de desvanecimiento
-await parkingState.removeElementWithAnimation(
+await parkingMapState.removeElementWithAnimation(
   element,
   this,
 );
 
 // Animar el zoom de la cámara
-await parkingState.zoomToWithAnimation(2.0, this);
+await parkingMapState.zoomToWithAnimation(2.0, this);
 
 // Centrar la vista en un punto con animación
-await parkingState.centerViewOnPointWithAnimation(
+await parkingMapState.centerViewOnPointWithAnimation(
   vector_math.Vector2(100, 100),
   this,
   targetZoom: 1.5,
@@ -231,11 +231,11 @@ import 'package:parkar/services/parking_service.dart';
 
 // Guardar el diseño actual
 final parkingService = ParkingService();
-await parkingService.saveParkingLayout(parkingState.toJson());
+await parkingService.saveParkingLayout(parkingMapState.toJson());
 
 // Cargar un diseño existente
 final layout = await parkingService.getParkingLayout(layoutId);
-parkingState.loadFromJson(layout);
+parkingMapState.loadFromJson(layout);
 ```
 
 ### Extensión del Sistema
@@ -311,7 +311,7 @@ class ParkingBarrier extends ParkingElement {
 ### Crear un Estacionamiento Básico
 
 ```dart
-void createBasicParking(ParkingState state) {
+void createBasicParking(ParkingMapState state) {
   // Crear una fila de espacios para automóviles
   final spots = ElementFactory.generateSpotRow(
     startPosition: vector_math.Vector2(100, 100),

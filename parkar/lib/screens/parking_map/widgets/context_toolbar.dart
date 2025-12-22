@@ -8,7 +8,7 @@ import 'dart:developer' as developer;
 /// Widget que muestra una barra de herramientas contextual
 /// para elementos seleccionados en el sistema de parkeo
 class ContextToolbar extends StatelessWidget {
-  final ParkingState parkingState;
+  final ParkingMapState parkingMapState;
   final VoidCallback onRotateClockwise;
   final VoidCallback onRotateCounterClockwise;
   final VoidCallback onCopy;
@@ -30,7 +30,7 @@ class ContextToolbar extends StatelessWidget {
 
   const ContextToolbar({
     super.key,
-    required this.parkingState,
+    required this.parkingMapState,
     required this.onRotateClockwise,
     required this.onRotateCounterClockwise,
     required this.onCopy,
@@ -49,27 +49,29 @@ class ContextToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (parkingState.selectedElements.isEmpty ||
+    if (parkingMapState.selectedElements.isEmpty ||
         selectedElementPosition == null) {
       return const SizedBox.shrink();
     }
 
     // Obtener elemento seleccionado
-    final element = parkingState.selectedElements.first;
+    final element = parkingMapState.selectedElements.first;
 
     // Usar la posición proporcionada desde fuera
     final position = selectedElementPosition!;
 
     // Construir la barra de herramientas adecuada
-    final toolbar = parkingState.selectedElements.length > 1
+    final toolbar = parkingMapState.selectedElements.length > 1
         ? _buildMultipleElementsToolbar(context)
         : _buildSingleElementToolbar(context);
 
     // Debug: Imprimir información de posiciones
-    developer
-        .log('DEBUG: Elemento seleccionado - Tipo: ${element.runtimeType}');
     developer.log(
-        'DEBUG: Posición elemento (proporcionada) - X: ${position.dx}, Y: ${position.dy}');
+      'DEBUG: Elemento seleccionado - Tipo: ${element.runtimeType}',
+    );
+    developer.log(
+      'DEBUG: Posición elemento (proporcionada) - X: ${position.dx}, Y: ${position.dy}',
+    );
 
     // Posicionar la barra exactamente en la posición indicada
     return Positioned(
@@ -87,9 +89,10 @@ class ContextToolbar extends StatelessWidget {
   /// Construye la barra de herramientas para un solo elemento
   Widget _buildSingleElementToolbar(BuildContext context) {
     // Verificar si el elemento seleccionado es una señal
-    final isSignage = parkingState.selectedElements.isNotEmpty && 
-                     parkingState.selectedElements.first is ParkingSignage;
-                     
+    final isSignage =
+        parkingMapState.selectedElements.isNotEmpty &&
+        parkingMapState.selectedElements.first is ParkingSignage;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -226,7 +229,7 @@ class ContextToolbar extends StatelessWidget {
           ),
 
           // Tercera fila: Distribución (si hay más de 2 elementos)
-          if (parkingState.selectedElements.length > 2)
+          if (parkingMapState.selectedElements.length > 2)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -283,11 +286,7 @@ class ContextToolbar extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: Container(
             padding: const EdgeInsets.all(6),
-            child: Icon(
-              icon,
-              size: 20,
-              color: color ?? Colors.black54,
-            ),
+            child: Icon(icon, size: 20, color: color ?? Colors.black54),
           ),
         ),
       ),

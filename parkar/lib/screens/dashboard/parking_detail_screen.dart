@@ -28,7 +28,7 @@ class ParkingDetailScreen extends StatefulWidget {
 class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
-  ParkingModel? _parking;
+  ParkingModelDetailed? _parking;
 
   @override
   void initState() {
@@ -119,7 +119,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
       );
     }
 
-
     if (_parking == null) {
       return Center(
         child: Padding(
@@ -169,11 +168,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
       padding: const EdgeInsets.all(24.0),
       children: [
         // Sección de información general
-        _buildSectionHeader(
-          context,
-          'Información General',
-          Icons.info_outline,
-        ),
+        _buildSectionHeader(context, 'Información General', Icons.info_outline),
         Card(
           margin: const EdgeInsets.only(bottom: 24),
           elevation: 0,
@@ -311,7 +306,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
             ),
           ),
         ),
-
 
         // Botón de layout solo si el modo de operación es map
         if (_parking?.operationMode == ParkingOperationMode.map)
@@ -652,7 +646,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     return String.fromCharCodes(codePoints);
   }
 
-
   // Método para construir filas de información con iconos
   Widget _buildInfoRowWithIcon(
     BuildContext context,
@@ -698,7 +691,11 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     );
   }
 
-  Widget _buildCountrySelector(BuildContext context, String? selectedCountryCode, ValueChanged<String?> onChanged) {
+  Widget _buildCountrySelector(
+    BuildContext context,
+    String? selectedCountryCode,
+    ValueChanged<String?> onChanged,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -759,7 +756,8 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonFormField<String>(
-              value: selectedCountryCode != null &&
+              value:
+                  selectedCountryCode != null &&
                       countries.any((c) => c['code'] == selectedCountryCode)
                   ? selectedCountryCode
                   : null,
@@ -803,7 +801,11 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     );
   }
 
-  Widget _buildTimeZoneSelector(BuildContext context, String? selectedTimeZone, ValueChanged<String?> onChanged) {
+  Widget _buildTimeZoneSelector(
+    BuildContext context,
+    String? selectedTimeZone,
+    ValueChanged<String?> onChanged,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -871,7 +873,9 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonFormField<String>(
-              value: selectedTimeZone != null && timeZones.contains(selectedTimeZone)
+              value:
+                  selectedTimeZone != null &&
+                      timeZones.contains(selectedTimeZone)
                   ? selectedTimeZone
                   : null,
               decoration: InputDecoration(
@@ -911,7 +915,11 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     );
   }
 
-  Widget _buildCurrencySelector(BuildContext context, String? selectedCurrency, ValueChanged<String?> onChanged) {
+  Widget _buildCurrencySelector(
+    BuildContext context,
+    String? selectedCurrency,
+    ValueChanged<String?> onChanged,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -987,7 +995,8 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonFormField<String>(
-              value: selectedCurrency != null &&
+              value:
+                  selectedCurrency != null &&
                       currencies.any((c) => c['code'] == selectedCurrency)
                   ? selectedCurrency
                   : null,
@@ -1048,10 +1057,11 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
         labelText: label,
         hintText: hintText,
         prefixIcon: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
       keyboardType: keyboardType,
       style: textTheme.bodyMedium,
@@ -1065,7 +1075,9 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
     // Controladores para los campos
     String? selectedCurrency = _parking!.params.currency;
-    final decimalPlacesController = TextEditingController(text: _parking!.params.decimalPlaces.toString());
+    final decimalPlacesController = TextEditingController(
+      text: _parking!.params.decimalPlaces.toString(),
+    );
     String? selectedTimeZone = _parking!.params.timeZone;
     String? selectedCountryCode = _parking!.params.countryCode;
     bool isLoading = false;
@@ -1077,7 +1089,10 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
       useRootNavigator: true,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: SingleChildScrollView(
@@ -1103,12 +1118,18 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: colorScheme.errorContainer.withValues(alpha: 127),
+                        color: colorScheme.errorContainer.withValues(
+                          alpha: 127,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+                          Icon(
+                            Icons.error_outline,
+                            color: colorScheme.error,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1128,13 +1149,19 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                       child: Center(child: CircularProgressIndicator()),
                     )
                   else ...[
-                    _buildCountrySelector(dialogContext, selectedCountryCode, (value) {
+                    _buildCountrySelector(dialogContext, selectedCountryCode, (
+                      value,
+                    ) {
                       setState(() => selectedCountryCode = value);
                     }),
-                    _buildTimeZoneSelector(dialogContext, selectedTimeZone, (value) {
+                    _buildTimeZoneSelector(dialogContext, selectedTimeZone, (
+                      value,
+                    ) {
                       setState(() => selectedTimeZone = value);
                     }),
-                    _buildCurrencySelector(dialogContext, selectedCurrency, (value) {
+                    _buildCurrencySelector(dialogContext, selectedCurrency, (
+                      value,
+                    ) {
                       setState(() => selectedCurrency = value);
                     }),
                     Padding(
@@ -1168,63 +1195,86 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        onPressed: isLoading ? null : () async {
-                          // Validar campos requeridos
-                          if (selectedCurrency == null || selectedCurrency!.isEmpty || decimalPlacesController.text.isEmpty) {
-                            setState(() {
-                              error = 'Por favor completa los campos requeridos';
-                            });
-                            return;
-                          }
+                        onPressed: isLoading
+                            ? null
+                            : () async {
+                                // Validar campos requeridos
+                                if (selectedCurrency == null ||
+                                    selectedCurrency!.isEmpty ||
+                                    decimalPlacesController.text.isEmpty) {
+                                  setState(() {
+                                    error =
+                                        'Por favor completa los campos requeridos';
+                                  });
+                                  return;
+                                }
 
-                          // Validar decimales
-                          final decimalPlaces = int.tryParse(decimalPlacesController.text);
-                          if (decimalPlaces == null || decimalPlaces < 0 || decimalPlaces > 4) {
-                            setState(() {
-                              error = 'Los decimales deben ser un número entre 0 y 4';
-                            });
-                            return;
-                          }
+                                // Validar decimales
+                                final decimalPlaces = int.tryParse(
+                                  decimalPlacesController.text,
+                                );
+                                if (decimalPlaces == null ||
+                                    decimalPlaces < 0 ||
+                                    decimalPlaces > 4) {
+                                  setState(() {
+                                    error =
+                                        'Los decimales deben ser un número entre 0 y 4';
+                                  });
+                                  return;
+                                }
 
-                          setState(() {
-                            isLoading = true;
-                            error = null;
-                          });
+                                setState(() {
+                                  isLoading = true;
+                                  error = null;
+                                });
 
-                          try {
-                            // Crear modelo de actualización de parámetros
-                            final updatedParams = ParkingParamsModel(
-                              theme: _parking!.params.theme, // Mantener el tema actual
-                              currency: selectedCurrency!,
-                              timeZone: selectedTimeZone?.isNotEmpty == true ? selectedTimeZone! : '',
-                              countryCode: selectedCountryCode?.isNotEmpty == true ? selectedCountryCode! : '',
-                              decimalPlaces: decimalPlaces,
-                              slogan: _parking!.params.slogan, // Mantener el slogan actual
-                            );
+                                try {
+                                  // Crear modelo de actualización de parámetros
+                                  final updatedParams = ParkingParamsModel(
+                                    theme: _parking!
+                                        .params
+                                        .theme, // Mantener el tema actual
+                                    currency: selectedCurrency!,
+                                    timeZone:
+                                        selectedTimeZone?.isNotEmpty == true
+                                        ? selectedTimeZone!
+                                        : '',
+                                    countryCode:
+                                        selectedCountryCode?.isNotEmpty == true
+                                        ? selectedCountryCode!
+                                        : '',
+                                    decimalPlaces: decimalPlaces,
+                                    slogan: _parking!
+                                        .params
+                                        .slogan, // Mantener el slogan actual
+                                  );
 
-                            // Actualizar parámetros en el parking
-                            await _parkingService.updateParking(
-                              _parking!.id.toString(),
-                              ParkingUpdateModel(params: updatedParams),
-                            );
+                                  // Actualizar parámetros en el parking
+                                  await _parkingService.updateParking(
+                                    _parking!.id.toString(),
+                                    ParkingUpdateModel(params: updatedParams),
+                                  );
 
-                            if (mounted) {
-                              Navigator.of(dialogContext).pop();
-                              await _refreshParkingDetails();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Parámetros actualizados correctamente'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            setState(() {
-                              error = 'Error al actualizar parámetros: ${e.toString()}';
-                              isLoading = false;
-                            });
-                          }
-                        },
+                                  if (mounted) {
+                                    Navigator.of(dialogContext).pop();
+                                    await _refreshParkingDetails();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Parámetros actualizados correctamente',
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setState(() {
+                                    error =
+                                        'Error al actualizar parámetros: ${e.toString()}';
+                                    isLoading = false;
+                                  });
+                                }
+                              },
                         child: isLoading
                             ? const SizedBox(
                                 width: 20,
@@ -1247,7 +1297,6 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     );
   }
 
-
   // Navegar a la pantalla de diseño
   void _navigateToDesign() {
     // Establecer el parking actual en el AppState
@@ -1255,9 +1304,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
     // Actualizar el estado con el parking seleccionado
     if (_parking != null) {
-      appState.setCurrentParking(
-        ParkingSimpleModel.fromParkingModel(_parking!),
-      );
+      appState.setCurrentParking(_parking!);
 
       // Si hay áreas disponibles, seleccionar la primera
       if (_parking!.areas != null && _parking!.areas!.isNotEmpty) {
@@ -1290,7 +1337,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
 // Pantalla para editar información del estacionamiento
 class _EditParkingScreen extends StatefulWidget {
-  final ParkingModel parking;
+  final ParkingModelDetailed parking;
   final VoidCallback onSave;
 
   const _EditParkingScreen({required this.parking, required this.onSave});
@@ -1378,7 +1425,6 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
                         children: [
                           const SizedBox(height: 24),
 
-
                           // Campo de nombre del aparcamiento
                           _buildModernTextField(
                             controller: nameController,
@@ -1419,7 +1465,9 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
                                   controller: latitudeController,
                                   label: 'Latitud',
                                   icon: Icons.location_on_outlined,
-                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType: TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -1428,7 +1476,9 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
                                   controller: longitudeController,
                                   label: 'Longitud',
                                   icon: Icons.location_on_outlined,
-                                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                  keyboardType: TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1693,7 +1743,8 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
 
       // Crear el modelo de ubicación actualizado
       ParkingLocationModel? location;
-      if (latitudeController.text.isNotEmpty && longitudeController.text.isNotEmpty) {
+      if (latitudeController.text.isNotEmpty &&
+          longitudeController.text.isNotEmpty) {
         final lat = double.tryParse(latitudeController.text);
         final lng = double.tryParse(longitudeController.text);
         if (lat != null && lng != null) {

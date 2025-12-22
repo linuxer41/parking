@@ -9,13 +9,14 @@ class ManageSubscriptionScreen extends StatefulWidget {
   const ManageSubscriptionScreen({super.key});
 
   @override
-  State<ManageSubscriptionScreen> createState() => _ManageSubscriptionScreenState();
+  State<ManageSubscriptionScreen> createState() =>
+      _ManageSubscriptionScreenState();
 }
 
 class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
-  ParkingModel? _currentParking;
+  ParkingModelDetailed? _currentParking;
 
   // Mock data for subscription plans (since functionality is not active yet)
   final List<Map<String, dynamic>> _subscriptionPlans = [
@@ -99,10 +100,12 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
       }
 
       // Load full parking data to get company information
-      final parking = await _parkingService.getParkingById(currentParking.id).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('Tiempo de espera agotado'),
-      );
+      final parking = await _parkingService
+          .getParkingById(currentParking.id)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception('Tiempo de espera agotado'),
+          );
 
       if (mounted) {
         setState(() {
@@ -117,7 +120,9 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar información de la empresa: ${e.toString()}'),
+            content: Text(
+              'Error al cargar información de la empresa: ${e.toString()}',
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
             action: SnackBarAction(
               label: 'Cerrar',
@@ -304,11 +309,7 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.star,
-                        color: colorScheme.primary,
-                        size: 24,
-                      ),
+                      Icon(Icons.star, color: colorScheme.primary, size: 24),
                       const SizedBox(width: 12),
                       Text(
                         'Plan Actual: Básico',
@@ -328,7 +329,10 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: colorScheme.primary,
                       borderRadius: BorderRadius.circular(20),
@@ -438,8 +442,8 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
           color: isCurrent
               ? colorScheme.primary.withOpacity(0.5)
               : isPopular
-                  ? colorScheme.primary.withOpacity(0.3)
-                  : colorScheme.outlineVariant.withOpacity(0.3),
+              ? colorScheme.primary.withOpacity(0.3)
+              : colorScheme.outlineVariant.withOpacity(0.3),
           width: isCurrent ? 2 : 1,
         ),
       ),
@@ -482,7 +486,10 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
                     if (isCurrent) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
@@ -549,9 +556,7 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: isCurrent
-                        ? null
-                        : () => _upgradeToPlan(plan),
+                    onPressed: isCurrent ? null : () => _upgradeToPlan(plan),
                     style: FilledButton.styleFrom(
                       backgroundColor: isCurrent
                           ? colorScheme.onSurfaceVariant
@@ -580,9 +585,7 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
       color: colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: colorScheme.outlineVariant.withOpacity(0.3),
-        ),
+        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.3)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -617,7 +620,13 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
     );
   }
 
-  Widget _buildStatItem(String title, String value, IconData icon, Color color, double progress) {
+  Widget _buildStatItem(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    double progress,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 

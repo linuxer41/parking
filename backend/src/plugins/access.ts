@@ -38,7 +38,7 @@ const authPlugin = new Elysia()
     }
 
 
-    const parkings = await db.parking.findParkings({ id: tenant });
+    const parkings = await db.parking.find({ id: tenant });
     const parking = parkings[0];
 
     if (!parking) {

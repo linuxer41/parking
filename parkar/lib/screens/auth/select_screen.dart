@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/services/user_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
@@ -9,6 +10,7 @@ class SelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userService = AppStateContainer.di(context).resolve<UserService>();
+    final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
     final state = AppStateContainer.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -203,8 +205,8 @@ class SelectScreen extends StatelessWidget {
                                     );
 
                                     try {
-                                      // Establecer el estacionamiento detallado en el estado
-                                      state.setCurrentParking(parking);
+                                      final detailedParking = await parkingService.getParkingById(parking.id);
+                                      state.setCurrentParking(detailedParking);
 
                                       if (context.mounted) {
                                         Navigator.of(

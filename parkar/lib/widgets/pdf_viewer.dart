@@ -5,7 +5,6 @@ import 'package:pdf/pdf.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'custom_snackbar.dart';
 
 /// Visualizador moderno de documentos PDF con opciones para imprimir y compartir
 class PdfViewer extends StatelessWidget {

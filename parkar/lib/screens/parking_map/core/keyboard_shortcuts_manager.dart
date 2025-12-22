@@ -7,7 +7,7 @@ import 'clipboard_manager.dart';
 /// Gestor de atajos de teclado para el editor
 class KeyboardShortcutsManager {
   // Estado del estacionamiento
-  final ParkingState parkingState;
+  final ParkingMapState parkingMapState;
 
   // Gestor de portapapeles
   final ClipboardManager clipboardManager;
@@ -17,7 +17,7 @@ class KeyboardShortcutsManager {
 
   // Constructor
   KeyboardShortcutsManager({
-    required this.parkingState,
+    required this.parkingMapState,
     required this.clipboardManager,
     required this.onActionPerformed,
   });
@@ -25,7 +25,7 @@ class KeyboardShortcutsManager {
   /// Maneja un evento de tecla
   bool handleKeyEvent(KeyEvent event) {
     // Si no estamos en modo edición, no procesar atajos
-    if (!parkingState.isEditMode) return false;
+    if (!parkingMapState.isEditMode) return false;
 
     // Solo procesar eventos de tecla hacia abajo para evitar doble ejecución
     if (event is! KeyDownEvent) return false;
@@ -122,7 +122,7 @@ class KeyboardShortcutsManager {
 
   /// Deshacer la última acción
   void _undoAction() {
-    final action = parkingState.historyManager.undo();
+    final action = parkingMapState.historyManager.undo();
     if (action != null) {
       onActionPerformed('Deshacer: ${action.toString()}');
     }
@@ -130,7 +130,7 @@ class KeyboardShortcutsManager {
 
   /// Rehacer la última acción deshecha
   void _redoAction() {
-    final action = parkingState.historyManager.redo();
+    final action = parkingMapState.historyManager.redo();
     if (action != null) {
       onActionPerformed('Rehacer: ${action.toString()}');
     }
@@ -138,25 +138,25 @@ class KeyboardShortcutsManager {
 
   /// Copiar elementos seleccionados al portapapeles
   void _copySelectedElements() {
-    if (parkingState.selectedElements.isEmpty) return;
+    if (parkingMapState.selectedElements.isEmpty) return;
 
-    clipboardManager.copyElements(parkingState.selectedElements);
+    clipboardManager.copyElements(parkingMapState.selectedElements);
     onActionPerformed(
-      '${parkingState.selectedElements.length} elementos copiados',
+      '${parkingMapState.selectedElements.length} elementos copiados',
     );
   }
 
   /// Cortar elementos seleccionados
   void _cutSelectedElements() {
-    if (parkingState.selectedElements.isEmpty) return;
+    if (parkingMapState.selectedElements.isEmpty) return;
 
     // Primero copiar al portapapeles
-    clipboardManager.copyElements(parkingState.selectedElements);
+    clipboardManager.copyElements(parkingMapState.selectedElements);
 
     // Luego eliminar los elementos
-    final count = parkingState.selectedElements.length;
-    for (final element in List.from(parkingState.selectedElements)) {
-      parkingState.removeElement(element);
+    final count = parkingMapState.selectedElements.length;
+    for (final element in List.from(parkingMapState.selectedElements)) {
+      parkingMapState.removeElement(element);
     }
 
     onActionPerformed('$count elementos cortados');
@@ -167,7 +167,7 @@ class KeyboardShortcutsManager {
     if (!clipboardManager.hasItems) return;
 
     // Obtener la posición del cursor para pegar allí
-    final cursorPosition = parkingState.cursorPosition;
+    final cursorPosition = parkingMapState.cursorPosition;
 
     // Generar elementos pegados utilizando el método pasteElements
     final pastedElements = clipboardManager.pasteElements(
@@ -177,27 +177,27 @@ class KeyboardShortcutsManager {
 
     // Añadir los elementos al estado
     for (final element in pastedElements) {
-      parkingState.addElement(element);
+      parkingMapState.addElement(element);
     }
 
     // Limpiar selección actual
-    parkingState.clearSelection();
+    parkingMapState.clearSelection();
 
     // Seleccionar los elementos recién pegados
-    parkingState.selectMultipleElements(pastedElements);
+    parkingMapState.selectMultipleElements(pastedElements);
 
     onActionPerformed('${pastedElements.length} elementos pegados');
   }
 
   /// Eliminar elementos seleccionados
   void _deleteSelectedElements() {
-    if (parkingState.selectedElements.isEmpty) return;
+    if (parkingMapState.selectedElements.isEmpty) return;
 
-    final count = parkingState.selectedElements.length;
+    final count = parkingMapState.selectedElements.length;
 
     // Eliminar elementos seleccionados
-    for (final element in List.from(parkingState.selectedElements)) {
-      parkingState.removeElement(element);
+    for (final element in List.from(parkingMapState.selectedElements)) {
+      parkingMapState.removeElement(element);
     }
 
     onActionPerformed('$count elementos eliminados');
@@ -206,20 +206,20 @@ class KeyboardShortcutsManager {
   /// Seleccionar todos los elementos
   void _selectAllElements() {
     // Deseleccionar todo primero
-    parkingState.clearSelection();
+    parkingMapState.clearSelection();
 
     // Seleccionar todos los elementos
-    parkingState.selectMultipleElements(parkingState.allElements);
+    parkingMapState.selectMultipleElements(parkingMapState.allElements);
 
     onActionPerformed(
-      '${parkingState.selectedElements.length} elementos seleccionados',
+      '${parkingMapState.selectedElements.length} elementos seleccionados',
     );
   }
 
   /// Deseleccionar todos los elementos
   void _deselectAllElements() {
-    final count = parkingState.selectedElements.length;
-    parkingState.clearSelection();
+    final count = parkingMapState.selectedElements.length;
+    parkingMapState.clearSelection();
 
     if (count > 0) {
       onActionPerformed('$count elementos deseleccionados');
@@ -228,10 +228,10 @@ class KeyboardShortcutsManager {
 
   /// Mover elementos seleccionados con precisión
   void _moveSelectedElements(double dx, double dy) {
-    if (parkingState.selectedElements.isEmpty) return;
+    if (parkingMapState.selectedElements.isEmpty) return;
 
     // Verificar si hay elementos bloqueados
-    final lockedElements = parkingState.selectedElements
+    final lockedElements = parkingMapState.selectedElements
         .where((element) => element.isLocked)
         .toList();
 
@@ -247,7 +247,7 @@ class KeyboardShortcutsManager {
     final Map<String, vector_math.Vector2> newPositions = {};
 
     // Mover cada elemento
-    for (final element in parkingState.selectedElements) {
+    for (final element in parkingMapState.selectedElements) {
       // Guardar posición original
       oldPositions[element.id] = element.position;
 
@@ -264,30 +264,30 @@ class KeyboardShortcutsManager {
     }
 
     // Registrar la acción en el historial
-    if (parkingState.selectedElements.length == 1) {
-      final element = parkingState.selectedElements.first;
-      parkingState.historyManager.moveElementAction(
+    if (parkingMapState.selectedElements.length == 1) {
+      final element = parkingMapState.selectedElements.first;
+      parkingMapState.historyManager.moveElementAction(
         element,
         oldPositions[element.id]!,
         newPositions[element.id]!,
       );
     } else {
-      parkingState.historyManager.moveMultipleElementsAction(
-        parkingState.selectedElements,
+      parkingMapState.historyManager.moveMultipleElementsAction(
+        parkingMapState.selectedElements,
         oldPositions,
         newPositions,
       );
     }
 
     onActionPerformed(
-      '${parkingState.selectedElements.length} elementos movidos ${dx != 0 ? (dx > 0 ? 'derecha' : 'izquierda') : ''} '
+      '${parkingMapState.selectedElements.length} elementos movidos ${dx != 0 ? (dx > 0 ? 'derecha' : 'izquierda') : ''} '
       '${dy != 0 ? (dy > 0 ? 'abajo' : 'arriba') : ''}',
     );
   }
 
   /// Ajustar vista a los elementos seleccionados
   void _fitViewToSelection() {
-    if (parkingState.selectedElements.isEmpty) {
+    if (parkingMapState.selectedElements.isEmpty) {
       // Si no hay selección, ajustar a todos los elementos
       _fitViewToAllElements();
       return;
@@ -299,7 +299,7 @@ class KeyboardShortcutsManager {
     double maxX = double.negativeInfinity;
     double maxY = double.negativeInfinity;
 
-    for (final element in parkingState.selectedElements) {
+    for (final element in parkingMapState.selectedElements) {
       final size = element.getSize();
       final halfWidth = size.width * element.scale / 2;
       final halfHeight = size.height * element.scale / 2;
@@ -318,8 +318,8 @@ class KeyboardShortcutsManager {
 
     // Añadir un margen
     const margin = 50.0;
-    final viewportWidth = parkingState.canvasSize.width - margin * 2;
-    final viewportHeight = parkingState.canvasSize.height - margin * 2;
+    final viewportWidth = parkingMapState.canvasSize.width - margin * 2;
+    final viewportHeight = parkingMapState.canvasSize.height - margin * 2;
 
     // Calcular el zoom necesario
     final zoomX = viewportWidth / width;
@@ -327,12 +327,12 @@ class KeyboardShortcutsManager {
     final newZoom = math.min(zoomX, zoomY);
 
     // Aplicar el zoom y la posición
-    parkingState.zoom = newZoom;
-    parkingState.cameraPosition = _calculateCameraPosition(
+    parkingMapState.zoom = newZoom;
+    parkingMapState.cameraPosition = _calculateCameraPosition(
       centerX,
       centerY,
       newZoom,
-      parkingState.canvasSize,
+      parkingMapState.canvasSize,
     );
 
     onActionPerformed('Vista ajustada a los elementos seleccionados');
@@ -340,10 +340,10 @@ class KeyboardShortcutsManager {
 
   /// Ajustar vista a todos los elementos
   void _fitViewToAllElements() {
-    final elements = parkingState.allElements;
+    final elements = parkingMapState.allElements;
     if (elements.isEmpty) {
       // Si no hay elementos, centrar en el origen
-      parkingState.centerViewOnOrigin(parkingState.canvasSize);
+      parkingMapState.centerViewOnOrigin(parkingMapState.canvasSize);
       onActionPerformed('Vista centrada en el origen');
       return;
     }
@@ -373,8 +373,8 @@ class KeyboardShortcutsManager {
 
     // Añadir un margen
     const margin = 50.0;
-    final viewportWidth = parkingState.canvasSize.width - margin * 2;
-    final viewportHeight = parkingState.canvasSize.height - margin * 2;
+    final viewportWidth = parkingMapState.canvasSize.width - margin * 2;
+    final viewportHeight = parkingMapState.canvasSize.height - margin * 2;
 
     // Calcular el zoom necesario
     final zoomX = viewportWidth / width;
@@ -382,12 +382,12 @@ class KeyboardShortcutsManager {
     final newZoom = math.min(zoomX, zoomY);
 
     // Aplicar el zoom y la posición
-    parkingState.zoom = newZoom;
-    parkingState.cameraPosition = _calculateCameraPosition(
+    parkingMapState.zoom = newZoom;
+    parkingMapState.cameraPosition = _calculateCameraPosition(
       centerX,
       centerY,
       newZoom,
-      parkingState.canvasSize,
+      parkingMapState.canvasSize,
     );
 
     onActionPerformed('Vista ajustada a todos los elementos');

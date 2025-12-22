@@ -6,44 +6,46 @@ import 'dart:math';
 class ParkingService extends BaseService {
   ParkingService() : super(path: AppConfig.apiEndpoints['parking']!);
 
-  Future<ParkingModel> getParkingById(String id) async {
-    return get<ParkingModel>(
+  Future<ParkingModelDetailed> getParkingById(String id) async {
+    return get<ParkingModelDetailed>(
       endpoint: '/$id',
-      parser: (json) => parseModel(json, ParkingModel.fromJson),
+      parser: (json) => parseModel(json, ParkingModelDetailed.fromJson),
     );
   }
 
-  Future<ParkingModel> createParking(ParkingCreateModel model) async {
-    return post<ParkingModel>(
+  Future<ParkingModelDetailed> createParking(ParkingCreateModel model) async {
+    return post<ParkingModelDetailed>(
       endpoint: '',
       body: model,
-      parser: (json) => parseModel(json, ParkingModel.fromJson),
+      parser: (json) => parseModel(json, ParkingModelDetailed.fromJson),
     );
   }
 
-  Future<ParkingModel> updateParking(
+  Future<ParkingModelDetailed> updateParking(
     String id,
     ParkingUpdateModel model,
   ) async {
-    return patch<ParkingModel>(
+    return patch<ParkingModelDetailed>(
       endpoint: '/$id',
       body: model,
-      parser: (json) => parseModel(json, ParkingModel.fromJson),
+      parser: (json) => parseModel(json, ParkingModelDetailed.fromJson),
     );
   }
 
-  Future<List<ParkingModel>> getUserParkings() async {
-    return get<List<ParkingModel>>(
+  Future<List<ParkingModelDetailed>> getUserParkings() async {
+    return get<List<ParkingModelDetailed>>(
       endpoint: '',
-      parser: (json) => parseModelList(json, ParkingModel.fromJson),
+      parser: (json) => parseModelList(json, ParkingModelDetailed.fromJson),
     );
   }
 
-  Future<List<ParkingModel>> getParkingsByCompany(String companyId) async {
-    return get<List<ParkingModel>>(
+  Future<List<ParkingModelDetailed>> getParkingsByCompany(
+    String companyId,
+  ) async {
+    return get<List<ParkingModelDetailed>>(
       endpoint: '',
       additionalHeaders: {'companyId': companyId},
-      parser: (json) => parseModelList(json, ParkingModel.fromJson),
+      parser: (json) => parseModelList(json, ParkingModelDetailed.fromJson),
     );
   }
 
@@ -76,7 +78,8 @@ class ParkingService extends BaseService {
 
     return get<Map<String, dynamic>>(
       endpoint: '/paginated?$queryString',
-      parser: (json) => parsePaginatedResponse(json, ParkingModel.fromJson),
+      parser: (json) =>
+          parsePaginatedResponse(json, ParkingModelDetailed.fromJson),
     );
   }
 
@@ -256,5 +259,4 @@ class ParkingService extends BaseService {
       ],
     };
   }
-
 }

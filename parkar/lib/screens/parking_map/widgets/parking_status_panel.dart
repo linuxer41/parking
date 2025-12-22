@@ -5,7 +5,7 @@ import '../models/parking_spot.dart';
 
 /// Panel inferior reutilizable con información del estado del parking
 class ParkingStatusPanel extends StatelessWidget {
-  final ParkingState state;
+  final ParkingMapState state;
   final double? cashTotal;
   final VoidCallback? onCashTap;
 
@@ -126,6 +126,26 @@ class ParkingStatusPanel extends StatelessWidget {
             ),
 
             // Separador vertical
+            if (cashTotal != null)
+              Container(
+                height: 40,
+                width: 1,
+                color: colorScheme.outlineVariant,
+              ),
+
+            // Total de Caja (solo si hay datos) - movido al lado de Ocupados
+            if (cashTotal != null)
+              _buildStatusItem(
+                icon: Icons.attach_money,
+                iconColor: Colors.green,
+                label: 'Caja',
+                value: 'Monto total actual: \$${cashTotal!.toStringAsFixed(0)}',
+                theme: theme,
+                colorScheme: colorScheme,
+                onTap: onCashTap,
+              ),
+
+            // Separador vertical
             Container(height: 40, width: 1, color: colorScheme.outlineVariant),
 
             // Porcentaje de Ocupación
@@ -137,21 +157,6 @@ class ParkingStatusPanel extends StatelessWidget {
               theme: theme,
               colorScheme: colorScheme,
             ),
-
-            // Separador vertical
-            if (cashTotal != null) Container(height: 40, width: 1, color: colorScheme.outlineVariant),
-
-            // Total de Caja (solo si hay datos)
-            if (cashTotal != null)
-              _buildStatusItem(
-                icon: Icons.attach_money,
-                iconColor: Colors.green,
-                label: 'Caja',
-                value: '\$${cashTotal!.toStringAsFixed(0)}',
-                theme: theme,
-                colorScheme: colorScheme,
-                onTap: onCashTap,
-              ),
           ],
         ),
       ),
