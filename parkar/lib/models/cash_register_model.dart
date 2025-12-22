@@ -81,3 +81,17 @@ class CashRegisterCloseModel extends JsonConvertible<CashRegisterCloseModel> {
   @override
   Map<String, dynamic> toJson() => _$CashRegisterCloseModelToJson(this);
 }
+
+@JsonSerializable()
+class CashRegisterPreviewModel extends JsonConvertible<CashRegisterPreviewModel> {
+  final String id;
+  final int number;
+
+  CashRegisterPreviewModel({required this.id, required this.number});
+
+  factory CashRegisterPreviewModel.fromJson(Map<String, dynamic> json) =>
+      _$CashRegisterPreviewModelFromJson(json);
+
+  @override
+  Map<String, dynamic> toJson() => _$CashRegisterPreviewModelToJson(this);
+}

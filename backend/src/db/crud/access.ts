@@ -5,8 +5,31 @@ import { getSchemaValidator } from "elysia";
 import { VehicleCreateSchema } from "../../models/vehicle";
 import { calculateParkingFee } from "../../utils/common";
 import { randomUUID } from "crypto";
+import { cashRegisterCrud } from "./cash-register";
+import { movementCrud } from "./movement";
+import { parkingCrud } from "./parking";
+import { SPOT_SUBTYPES } from "../../models/parking";
 
 class AccessCrud {
+  /**
+   * Map vehicle type string to vehicle category integer
+   */
+  private mapVehicleTypeToCategory(vehicleType: string): number {
+    switch (vehicleType.toLowerCase()) {
+      case 'bicycle':
+      case 'bycicle': // in case of typo
+        return SPOT_SUBTYPES.BYCICLE;
+      case 'motorcycle':
+        return SPOT_SUBTYPES.MOTORCYCLE;
+      case 'car':
+        return SPOT_SUBTYPES.CAR;
+      case 'truck':
+        return SPOT_SUBTYPES.TRUCK;
+      default:
+        return SPOT_SUBTYPES.CAR; // default to car
+    }
+  }
+
   generateNumber = async (parkingId: string): Promise<number> => {
     const result = await pool.query(`
       SELECT COALESCE(MAX("number"), 0) + 1 as next_number
@@ -48,22 +71,22 @@ class AccessCrud {
     let paramIndex = 1;
 
     if (filters.id) {
-      conditions.push(`ee."id" = $${paramIndex++}`);
+      conditions.push(`a."id" = $${paramIndex++}`);
       values.push(filters.id);
     }
 
     if (filters.parkingId) {
-      conditions.push(`ee."parkingId" = $${paramIndex++}`);
+      conditions.push(`a."parkingId" = $${paramIndex++}`);
       values.push(filters.parkingId);
     }
 
     if (filters.employeeId) {
-      conditions.push(`ee."employeeId" = $${paramIndex++}`);
+      conditions.push(`a."employeeId" = $${paramIndex++}`);
       values.push(filters.employeeId);
     }
 
     if (filters.vehicleId) {
-      conditions.push(`ee."vehicleId" = $${paramIndex++}`);
+      conditions.push(`a."vehicleId" = $${paramIndex++}`);
       values.push(filters.vehicleId);
     }
 
@@ -73,59 +96,62 @@ class AccessCrud {
     }
 
     if (filters.spotId) {
-      conditions.push(`ee."spotId" = $${paramIndex++}`);
+      conditions.push(`a."spotId" = $${paramIndex++}`);
       values.push(filters.spotId);
     }
 
     if (filters.status) {
-      conditions.push(`ee."status" = $${paramIndex++}`);
+      conditions.push(`a."status" = $${paramIndex++}`);
       values.push(filters.status);
     }
 
     if (filters.startDate) {
-      conditions.push(`ee."entryTime" >= $${paramIndex++}`);
+      conditions.push(`a."entryTime" >= $${paramIndex++}`);
       values.push(filters.startDate);
     }
 
     if (filters.endDate) {
-      conditions.push(`ee."entryTime" <= $${paramIndex++}`);
+      conditions.push(`a."entryTime" <= $${paramIndex++}`);
       values.push(filters.endDate);
     }
     if (filters.inParking) {
-      conditions.push(`ee."exitTime" IS NULL`);
+      conditions.push(`a."exitTime" IS NULL`);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const result = await pool.query(`
       SELECT
-        ee.id,
-        ee."entryTime",
-        ee."exitTime",
-        ee."status",
-        ee."amount",
-        ee."number",
-        ee."notes",
+        a.id,
+        a."entryTime",
+        a."exitTime",
+        a."status",
+        a."amount",
+        a."number",
+        a."notes",
         json_build_object(
-          'id', ee."parkingId",
-          'name', p."name"
+          'id', a."parkingId",
+          'name', p."name",
+          'address', p."address"
         ) as parking,
         json_build_object(
-          'id', ee."employeeId",
+          'id', a."employeeId",
           'name', u."name",
           'email', u."email",
-          'phone', u."phone"
+          'phone', u."phone",
+          'role', e."role"
         ) as employee,
         (
-          case when ee."exitEmployeeId" is null then null else json_build_object(
-            'id', ee."exitEmployeeId",
+          case when a."exitEmployeeId" is null then null else json_build_object(
+            'id', a."exitEmployeeId",
+            'role', ee."role",
             'name', eu."name",
             'email', eu."email",
             'phone', eu."phone"
           ) end
         ) as "exitEmployee",
         json_build_object(
-          'id', ee."vehicleId",
+          'id', a."vehicleId",
           'plate', v."plate",
           'type', v."type",
           'color', v."color",
@@ -133,16 +159,25 @@ class AccessCrud {
           'ownerDocument', v."ownerDocument",
           'ownerPhone', v."ownerPhone",
           'isSubscribed', v."isSubscribed"
-        ) as vehicle
-      FROM t_access ee
-      LEFT JOIN t_vehicle v ON ee."vehicleId" = v.id
-      LEFT JOIN t_parking p ON ee."parkingId" = p.id
-      LEFT JOIN t_employee e ON ee."employeeId" = e.id
+        ) as vehicle,
+        ( 
+          case when a."spotId" is null then null else json_build_object(
+            'id', a."spotId",
+            'name', s."name",
+            'type', s."type",
+            'subType', s."subType"
+          ) end
+        ) as spot
+      FROM t_access a
+      LEFT JOIN t_vehicle v ON a."vehicleId" = v.id
+      LEFT JOIN t_parking p ON a."parkingId" = p.id
+      LEFT JOIN t_employee e ON a."employeeId" = e.id
       LEFT JOIN t_user u ON e."userId" = u.id
-      LEFT JOIN t_employee exit_e ON ee."exitEmployeeId" = exit_e.id
-      LEFT JOIN t_user eu ON exit_e."userId" = eu.id
+      LEFT JOIN t_employee ee ON a."exitEmployeeId" = ee.id
+      LEFT JOIN t_user eu ON ee."userId" = eu.id
+      LEFT JOIN t_element s ON a."spotId" = s.id
       ${whereClause}
-      ORDER BY ee."entryTime" DESC
+      ORDER BY a."entryTime" DESC
     `, values);
 
     return result.rows;
@@ -158,6 +193,18 @@ class AccessCrud {
       `, [vehiclePlate]);
 
       let vehicle = vehicleResult.rows[0];
+
+      // Verificar si ya existe un acceso activo para este vehículo
+      if (vehicle) {
+        const existingAccessResult = await client.query(`
+          SELECT id FROM t_access
+          WHERE "vehicleId" = $1 AND "exitTime" IS NULL AND "status" = $2
+        `, [vehicle.id, ACCESS_STATUS.VALID]);
+
+        if (existingAccessResult.rows.length > 0) {
+          throw new BadRequestError(`Ya existe un acceso activo para el vehículo con placa ${vehiclePlate}`);
+        }
+      }
 
       if (!vehicle) {
         const vehicleValidator = getSchemaValidator(VehicleCreateSchema)
@@ -198,7 +245,7 @@ class AccessCrud {
         exitTime: null,
         exitEmployeeId: null,
         amount: 0, // Se calcula al salir
-        status: ACCESS_STATUS.ENTERED,
+        status: ACCESS_STATUS.VALID,
         notes: notes || null,
       };
 
@@ -226,55 +273,90 @@ class AccessCrud {
   };
 
   /**
-   * Registrar salida de un vehículo
-   */
-  registerExit = async (id: string, exitEmployeeId: string, data: Omit<ExitRequest, 'exitEmployeeId'>): Promise<Access> => {
-    const { amount, notes } = data;
+     * Registrar salida de un vehículo
+     */
+    registerExit = async (id: string, exitEmployeeId: string, data: Omit<ExitRequest, 'exitEmployeeId'>): Promise<Access> => {
+     const { notes } = data;
 
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
+     return await withTransaction(async (client) => {
+       // Get the access record to calculate the fee
+       const access = await this.getById(id);
+       if (!access) {
+         throw new BadRequestError("Acceso no encontrado");
+       }
 
-    updates.push(`"exitTime" = $${paramIndex++}`);
-    values.push(new Date().toISOString());
+       // Get parking rates
+       const parking = await parkingCrud.findById(access.parking.id);
+       if (!parking || !parking.rates) {
+         throw new BadRequestError("No se encontraron tarifas para el estacionamiento");
+       }
 
-    updates.push(`"exitEmployeeId" = $${paramIndex++}`);
-    values.push(exitEmployeeId);
+       // Map vehicle type to category
+       const vehicleCategory = this.mapVehicleTypeToCategory(access.vehicle.type);
 
-    if (amount !== undefined) {
-      updates.push(`"amount" = $${paramIndex++}`);
-      values.push(amount);
-    }
+       // Calculate parking fee
+       const entryTimeStr = typeof access.entryTime === 'string' ? access.entryTime : access.entryTime.toISOString();
+       const calculatedAmount = calculateParkingFee(entryTimeStr, parking.rates, vehicleCategory) || 2;
+       console.log({ calculatedAmount });
+       const updates: string[] = [];
+       const values: any[] = [];
+       let paramIndex = 1;
 
-    if (notes !== undefined) {
-      updates.push(`"notes" = $${paramIndex++}`);
-      values.push(notes);
-    }
+       updates.push(`"exitTime" = $${paramIndex++}`);
+       values.push(new Date().toISOString());
 
-    updates.push(`"status" = $${paramIndex++}`);
+       updates.push(`"exitEmployeeId" = $${paramIndex++}`);
+       values.push(exitEmployeeId);
 
-    updates.push(`"updatedAt" = $${paramIndex++}`);
-    values.push(new Date().toISOString());
+       updates.push(`"amount" = $${paramIndex++}`);
+       values.push(calculatedAmount);
 
-    values.push(id);
+       if (notes !== undefined) {
+         updates.push(`"notes" = $${paramIndex++}`);
+         values.push(notes);
+       }
 
-    const result = await pool.query(`
-      UPDATE t_access
-      SET ${updates.join(", ")}
-      WHERE "id" = $${paramIndex}
-      RETURNING *
-    `, values);
+       updates.push(`"status" = $${paramIndex++}`);
+       values.push(ACCESS_STATUS.VALID);
 
-    if (result.rows.length === 0) {
-      throw new BadRequestError("Acceso no encontrado");
-    }
+       updates.push(`"updatedAt" = $${paramIndex++}`);
+       values.push(new Date().toISOString());
 
-    const updatedAccess = await this.getById(id);
-    if (!updatedAccess) {
-      throw new BadRequestError("Error al obtener el acceso actualizado");
-    }
-    return updatedAccess;
-  };
+       values.push(id);
+
+       const result = await client.query(`
+         UPDATE t_access
+         SET ${updates.join(", ")}
+         WHERE "id" = $${paramIndex}
+         RETURNING *
+       `, values);
+
+       if (result.rows.length === 0) {
+         throw new BadRequestError("Acceso no encontrado");
+       }
+
+       // Crear movimiento de caja si hay caja registradora activa y monto > 0
+       if (calculatedAmount > 0) {
+         const currentCashRegister = await cashRegisterCrud.getCurrentByEmployee(exitEmployeeId);
+         if (currentCashRegister) {
+           await movementCrud.create({
+             cashRegisterId: currentCashRegister.id,
+             originId: id,
+             type: 'income',
+             originType: 'access',
+             amount: calculatedAmount,
+             description: `cobro a vehiculo: ${access.vehicle.plate}`,
+           });
+         }
+       }
+
+       const updatedAccess = await this.getById(id);
+       if (!updatedAccess) {
+         throw new BadRequestError("Error al obtener el acceso actualizado");
+       }
+       return updatedAccess;
+     });
+   };
 
   /**
    * Actualizar un acceso
@@ -350,8 +432,8 @@ class AccessCrud {
     const result = await pool.query(`
       SELECT
         COUNT(*) as total,
-        COUNT(CASE WHEN "status" = 'entered' THEN 1 END) as entered,
-        COUNT(CASE WHEN "status" = 'exited' THEN 1 END) as exited,
+        COUNT(CASE WHEN "status" = 'valid' AND "exitTime" IS NULL THEN 1 END) as entered,
+        COUNT(CASE WHEN "status" = 'valid' AND "exitTime" IS NOT NULL THEN 1 END) as exited,
         COUNT(CASE WHEN "status" = 'cancelled' THEN 1 END) as cancelled
       FROM t_access
       WHERE ${whereClause}

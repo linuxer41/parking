@@ -68,12 +68,12 @@ class PrintService {
     if (forceView || settings.processingMode == ProcessingMode.viewPdf) {
       // Mostrar PDF
       try {
-        final pdfData = await pdfGenerator();
+        final pdfData = await pdfGenerator().timeout(const Duration(seconds: 10), onTimeout: () => Uint8List(0));
         if (pdfData.isEmpty) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Error: El ticket generado está vacío'),
+                content: Text('Error: El ticket generado está vacío o timeout'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -89,7 +89,7 @@ class PrintService {
             filename: filename,
             onPrintPressed: settings.printMethod == PrintMethod.bluetooth
                 ? () async {
-                    final success = await bluetoothPrinter();
+                    final success = await bluetoothPrinter().timeout(const Duration(seconds: 5), onTimeout: () => false);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -117,7 +117,7 @@ class PrintService {
     } else {
       // Imprimir directamente según configuración
       if (settings.printMethod == PrintMethod.bluetooth) {
-        final success = await bluetoothPrinter();
+        final success = await bluetoothPrinter().timeout(const Duration(seconds: 5), onTimeout: () => false);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -131,7 +131,18 @@ class PrintService {
       } else {
         // Para nativo silencioso, mostrar PDF
         try {
-          final pdfData = await pdfGenerator();
+          final pdfData = await pdfGenerator().timeout(const Duration(seconds: 10), onTimeout: () => Uint8List(0));
+          if (pdfData.isEmpty) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Error: El ticket generado está vacío o timeout'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
           if (context.mounted) {
             PdfViewer.show(
               context,
@@ -140,7 +151,7 @@ class PrintService {
               filename: filename,
               onPrintPressed: settings.printMethod == PrintMethod.bluetooth
                   ? () async {
-                      final success = await bluetoothPrinter();
+                      final success = await bluetoothPrinter().timeout(const Duration(seconds: 5), onTimeout: () => false);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -171,17 +182,17 @@ class PrintService {
 
   // Imprimir ticket de entrada
   Future<void> printEntryTicket({
-    required AccessModel booking,
+    required AccessModel access,
     required BuildContext context,
     bool isSimpleMode = false,
     bool forceView = false,
   }) async {
     final appState = AppStateContainer.of(context);
     await _handlePrint(
-      pdfGenerator: () => _pdfService.generateEntryTicket(booking: booking),
-      bluetoothPrinter: () => _bluetoothService.printEntryTicket(booking, appState.printSettings.printerType),
+      pdfGenerator: () => _pdfService.generateEntryTicket(access: access),
+      bluetoothPrinter: () => _bluetoothService.printEntryTicket(access, appState.printSettings.printerType),
       title: 'Ticket de Entrada',
-      filename: 'entrada_${booking.vehicle.plate.replaceAll(' ', '_')}',
+      filename: 'entrada_${access.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
       forceView: forceView,
     );
@@ -189,16 +200,16 @@ class PrintService {
 
   // Imprimir ticket de salida
   Future<void> printExitTicket({
-    required AccessModel booking,
+    required AccessModel access,
     required BuildContext context,
     bool isSimpleMode = false,
     bool forceView = false,
   }) async {
     await _handlePrint(
-      pdfGenerator: () => _pdfService.generateExitTicket(booking: booking),
-      bluetoothPrinter: () => _bluetoothService.printExitTicket(booking),
+      pdfGenerator: () => _pdfService.generateExitTicket(access: access),
+      bluetoothPrinter: () => _bluetoothService.printExitTicket(access),
       title: 'Ticket de Salida',
-      filename: 'salida_${booking.vehicle.plate.replaceAll(' ', '_')}',
+      filename: 'salida_${access.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
       forceView: forceView,
     );
@@ -234,15 +245,15 @@ class PrintService {
 
   // Imprimir recibo de suscripción
   Future<void> printSubscriptionReceipt({
-    required SubscriptionModel booking,
+    required SubscriptionModel subscription,
     required BuildContext context,
     bool forceView = false,
   }) async {
     await _handlePrint(
-      pdfGenerator: () => _pdfService.generateSubscriptionReceipt(booking: booking),
-      bluetoothPrinter: () => _bluetoothService.printSubscriptionReceipt(booking),
+      pdfGenerator: () => _pdfService.generateSubscriptionReceipt(subscription: subscription),
+      bluetoothPrinter: () => _bluetoothService.printSubscriptionReceipt(subscription),
       title: 'Recibo de Suscripción',
-      filename: 'suscripcion_${booking.vehicle.plate.replaceAll(' ', '_')}',
+      filename: 'suscripcion_${subscription.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
       forceView: forceView,
     );

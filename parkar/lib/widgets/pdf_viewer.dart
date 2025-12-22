@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Visualizador moderno de documentos PDF con opciones para imprimir y compartir
 class PdfViewer extends StatelessWidget {
@@ -54,6 +55,7 @@ class PdfViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
     return Column(
       children: [
@@ -129,42 +131,11 @@ class PdfViewer extends StatelessWidget {
           color: colorScheme.outlineVariant.withOpacity(0.5),
         ),
 
-        // PDF Preview
+        // PDF Preview or Desktop Message
         Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: PdfPreview(
-                build: (format) => pdfData,
-                canChangeOrientation: false,
-                canChangePageFormat: false,
-                canDebug: false,
-                maxPageWidth: 700,
-                actions: const [],
-                pdfPreviewPageDecoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                scrollViewDecoration: const BoxDecoration(color: Colors.white),
-                previewPageMargin: const EdgeInsets.all(8),
-                useActions: false,
-                initialPageFormat: PdfPageFormat.a4,
-                pdfFileName: filename,
-              ),
-            ),
-          ),
+          child: isDesktop
+              ? _buildDesktopView(context, colorScheme)
+              : _buildMobileView(context, colorScheme),
         ),
 
         // Action buttons
@@ -224,6 +195,91 @@ class PdfViewer extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMobileView(BuildContext context, ColorScheme colorScheme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: PdfPreview(
+          build: (format) => pdfData,
+          canChangeOrientation: false,
+          canChangePageFormat: false,
+          canDebug: false,
+          maxPageWidth: 700,
+          actions: const [],
+          pdfPreviewPageDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          scrollViewDecoration: const BoxDecoration(color: Colors.white),
+          previewPageMargin: const EdgeInsets.all(8),
+          useActions: false,
+          initialPageFormat: PdfPageFormat.a4,
+          pdfFileName: filename,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopView(BuildContext context, ColorScheme colorScheme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.desktop_windows_rounded,
+            size: 48,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Vista previa de PDF en escritorio',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'El PDF se ha generado correctamente. Use los botones abajo para imprimir, compartir o descargar el documento.',
+            style: TextStyle(
+              fontSize: 14,
+              color: colorScheme.onSurface.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Tamaño del archivo: ${(pdfData.length / 1024).toStringAsFixed(1)} KB',
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurface.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -61,8 +61,8 @@ class BluetoothPrintService {
 ^FO20,270^FDColor: ${booking.vehicle.color ?? '--'}^FS
 ''';
 
-    if (booking.spotId?.isNotEmpty == true) {
-      zpl += '^FO20,300^FDEspacio: ${booking.spotId}^FS\n';
+    if (booking.spot?.name?.isNotEmpty == true) {
+      zpl += '^FO20,300^FDEspacio: ${booking.spot?.name}^FS\n';
     }
 
     zpl += '''
@@ -82,6 +82,9 @@ class BluetoothPrintService {
   String _generateExitTicketZPL(AccessModel booking) {
     final ticketNumber = 'S${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
+    final exitTime = booking.exitTime ?? DateTime.now();
+    final duration = exitTime.difference(booking.entryTime);
+
     String zpl = '''
 ^XA
 ^CF0,25
@@ -95,11 +98,11 @@ class BluetoothPrintService {
 ^FO20,210^FDPlaca: ${booking.vehicle.plate.toUpperCase()}^FS
 ^FO20,240^FDEntrada: ${DateFormat('dd/MM/yyyy HH:mm').format(booking.entryTime)}^FS
 ^FO20,270^FDSalida: ${DateFormat('dd/MM/yyyy HH:mm').format(booking.exitTime ?? DateTime.now())}^FS
-^FO20,300^FDDuracion: ${_formatDuration(booking.duration ?? Duration.zero)}^FS
+^FO20,300^FDDuracion: ${_formatDuration(duration)}^FS
 ''';
 
-    if (booking.spotId?.isNotEmpty == true) {
-      zpl += '^FO20,330^FDEspacio: ${booking.spotId}^FS\n';
+    if (booking.spot?.id.isNotEmpty == true) {
+      zpl += '^FO20,330^FDEspacio: ${booking.spot?.name}^FS\n';
     }
 
     zpl += '''

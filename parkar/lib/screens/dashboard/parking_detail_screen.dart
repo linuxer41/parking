@@ -1317,7 +1317,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const ParkingScreen(startInEditMode: true),
+          builder: (context) => const ParkingScreen(),
         ),
       ).then((_) => _refreshParkingDetails());
     }

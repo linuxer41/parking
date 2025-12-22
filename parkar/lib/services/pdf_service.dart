@@ -13,7 +13,7 @@ class PdfService {
     required String title,
     required String parkingName,
     required String parkingAddress,
-    required String ticketNumber,
+    required int ticketNumber,
     required DateTime dateTime,
     required Map<String, String> vehicleInfo,
     Map<String, String>? ownerInfo,
@@ -195,31 +195,34 @@ class PdfService {
   }
 
   // Generar ticket de entrada
-  Future<Uint8List> generateEntryTicket({
-    required AccessModel booking,
-  }) async {
+  Future<Uint8List> generateEntryTicket({required AccessModel access}) async {
     // Generar número de ticket único basado en timestamp
-    final ticketNumber =
-        'E${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final ticketNumber = access.number;
 
     // Información básica del vehículo (solo facturación)
     final vehicleInfo = <String, String>{
-      'Placa': booking.vehicle.plate.isNotEmpty ? booking.vehicle.plate.toUpperCase() : '--',
-      'Tipo': booking.vehicle.type.isNotEmpty ? _formatVehicleType(booking.vehicle.type) : '--',
-      'Color': booking.vehicle.color?.isNotEmpty == true ? booking.vehicle.color! : '--',
+      'Placa': access.vehicle.plate.isNotEmpty
+          ? access.vehicle.plate.toUpperCase()
+          : '--',
+      'Tipo': access.vehicle.type.isNotEmpty
+          ? _formatVehicleType(access.vehicle.type)
+          : '--',
+      'Color': access.vehicle.color?.isNotEmpty == true
+          ? access.vehicle.color!
+          : '--',
     };
 
     // Solo agregar información del espacio si no está vacío
-    if (booking.spotId != null && booking.spotId!.isNotEmpty) {
-      vehicleInfo['Espacio'] = booking.spotId!;
+    if (access.spot?.id != null) {
+      vehicleInfo['Espacio'] = access.spot?.name ?? '--';
     }
 
     return _createUnifiedTicket(
       title: 'TICKET DE ENTRADA',
-      parkingName: booking.parking.name,
-      parkingAddress: booking.parking.address ?? '',
+      parkingName: access.parking.name,
+      parkingAddress: access.parking.address ?? '',
       ticketNumber: ticketNumber,
-      dateTime: booking.entryTime,
+      dateTime: access.entryTime,
       vehicleInfo: vehicleInfo,
       footerMessage:
           'CONSERVE ESTE TICKET\nRequerido para la salida del vehículo',
@@ -231,15 +234,20 @@ class PdfService {
     required BookingModel booking,
   }) async {
     // Generar número de ticket único basado en timestamp
-    final ticketNumber =
-        'R${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final ticketNumber = booking.number;
     // Información del vehículo y reserva
     final vehicleInfo = <String, String>{
-      'Placa': booking.vehicle.plate.isNotEmpty ? booking.vehicle.plate.toUpperCase() : '--',
-      'Tipo': booking.vehicle.type.isNotEmpty ? _formatVehicleType(booking.vehicle.type) : '--',
+      'Placa': booking.vehicle.plate.isNotEmpty
+          ? booking.vehicle.plate.toUpperCase()
+          : '--',
+      'Tipo': booking.vehicle.type.isNotEmpty
+          ? _formatVehicleType(booking.vehicle.type)
+          : '--',
       'Acceso': 'Reserva',
       'Inicio': DateFormat('dd/MM/yyyy HH:mm').format(booking.startDate),
-      'Fin': DateFormat('dd/MM/yyyy HH:mm').format(booking.endDate ?? DateTime.now()),
+      'Fin': DateFormat(
+        'dd/MM/yyyy HH:mm',
+      ).format(booking.endDate ?? DateTime.now()),
       'Duración': '${booking.duration?.inHours ?? 0} horas',
     };
 
@@ -250,9 +258,15 @@ class PdfService {
 
     // Información del propietario (siempre mostrar, usar "--" para valores nulos)
     final ownerInfo = <String, String>{
-      'Nombre': booking.vehicle.ownerName?.isNotEmpty == true ? booking.vehicle.ownerName! : '--',
-      'Documento': booking.vehicle.ownerDocument?.isNotEmpty == true ? booking.vehicle.ownerDocument! : '--',
-      'Teléfono': booking.vehicle.ownerPhone?.isNotEmpty == true ? booking.vehicle.ownerPhone! : '--',
+      'Nombre': booking.vehicle.ownerName?.isNotEmpty == true
+          ? booking.vehicle.ownerName!
+          : '--',
+      'Documento': booking.vehicle.ownerDocument?.isNotEmpty == true
+          ? booking.vehicle.ownerDocument!
+          : '--',
+      'Teléfono': booking.vehicle.ownerPhone?.isNotEmpty == true
+          ? booking.vehicle.ownerPhone!
+          : '--',
     };
 
     return _createUnifiedTicket(
@@ -270,39 +284,46 @@ class PdfService {
 
   // Generar recibo de suscripción
   Future<Uint8List> generateSubscriptionReceipt({
-    required SubscriptionModel booking,
+    required SubscriptionModel subscription,
   }) async {
     // Generar número de ticket único basado en timestamp
-    final ticketNumber =
-        'S${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final ticketNumber = subscription.number;
 
     // Información de la suscripción
     final vehicleInfo = {
-      'Placa': booking.vehicle.plate.isNotEmpty ? booking.vehicle.plate.toUpperCase() : '--',
+      'Placa': subscription.vehicle.plate.isNotEmpty
+          ? subscription.vehicle.plate.toUpperCase()
+          : '--',
       'Acceso': 'Suscripción',
-      // 'Plan': booking.subscription?.plan.isNotEmpty == true ? _formatSubscriptionType(booking.subscription!.plan) : '--',
-      'Inicio': DateFormat('dd/MM/yyyy').format(booking.startDate),
-      'Fin': DateFormat('dd/MM/yyyy').format(booking.endDate ?? DateTime.now()),
+      // 'Plan': subscription.subscription?.plan.isNotEmpty == true ? _formatSubscriptionType(subscription.subscription!.plan) : '--',
+      'Inicio': DateFormat('dd/MM/yyyy').format(subscription.startDate),
+      'Fin': DateFormat('dd/MM/yyyy').format(subscription.endDate ?? DateTime.now()),
     };
 
     // Información del propietario (siempre mostrar, usar "--" para valores nulos)
     final ownerInfo = <String, String>{
-      'Nombre': booking.vehicle.ownerName?.isNotEmpty == true ? booking.vehicle.ownerName! : '--',
-      'Documento': booking.vehicle.ownerDocument?.isNotEmpty == true ? booking.vehicle.ownerDocument! : '--',
-      'Teléfono': booking.vehicle.ownerPhone?.isNotEmpty == true ? booking.vehicle.ownerPhone! : '--',
+      'Nombre': subscription.vehicle.ownerName?.isNotEmpty == true
+          ? subscription.vehicle.ownerName!
+          : '--',
+      'Documento': subscription.vehicle.ownerDocument?.isNotEmpty == true
+          ? subscription.vehicle.ownerDocument!
+          : '--',
+      'Teléfono': subscription.vehicle.ownerPhone?.isNotEmpty == true
+          ? subscription.vehicle.ownerPhone!
+          : '--',
     };
 
     // Información de pago
     final paymentInfo = {
-      'Monto': '\$${booking.amount.toStringAsFixed(2)}',
+      'Monto': '\$${subscription.amount.toStringAsFixed(2)}',
       'Método': 'Efectivo',
       'Estado': 'Pagado',
     };
 
     return _createUnifiedTicket(
       title: 'RECIBO DE SUSCRIPCIÓN',
-      parkingName: booking.parking.name,
-      parkingAddress: booking.parking.address ?? '',
+      parkingName: subscription.parking.name,
+      parkingAddress: subscription.parking.address ?? '',
       ticketNumber: ticketNumber,
       dateTime: DateTime.now(),
       vehicleInfo: vehicleInfo,
@@ -314,44 +335,49 @@ class PdfService {
   }
 
   // Generar ticket de salida
-  Future<Uint8List> generateExitTicket({
-    required AccessModel booking,
-  }) async {
+  Future<Uint8List> generateExitTicket({required AccessModel access}) async {
     // Generar número de ticket único basado en timestamp
-    final ticketNumber =
-        'S${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final exitTime = access.exitTime ?? DateTime.now();
+    final duration = exitTime.difference(access.entryTime);
+    final ticketNumber = access.number;
 
     // Estandarizar el tipo de acceso
-    final standardAccessType = _standardizeAccessType('access'); // Always 'access' for exits
+    final standardAccessType = _standardizeAccessType(
+      'access',
+    ); // Always 'access' for exits
 
     // Información del vehículo y estancia
     final vehicleInfo = <String, String>{
-      'Placa': booking.vehicle.plate.isNotEmpty ? booking.vehicle.plate.toUpperCase() : '--',
+      'Placa': access.vehicle.plate.isNotEmpty
+          ? access.vehicle.plate.toUpperCase()
+          : '--',
       'Acceso': standardAccessType,
-      'Entrada': DateFormat('dd/MM/yyyy HH:mm').format(booking.entryTime),
-      'Salida': DateFormat('dd/MM/yyyy HH:mm').format(booking.exitTime ?? DateTime.now()),
-      'Duración': _formatDuration(booking.duration ?? Duration.zero),
+      'Entrada': DateFormat('dd/MM/yyyy HH:mm').format(access.entryTime),
+      'Salida': DateFormat(
+        'dd/MM/yyyy HH:mm',
+      ).format(access.exitTime ?? DateTime.now()),
+      'Duración': _formatDuration(duration ?? Duration.zero),
     };
 
     // Solo agregar información del espacio si no está vacío
-    if (booking.spotId?.isNotEmpty == true) {
-      vehicleInfo['Espacio'] = booking.spotId!;
+    if (access.spot?.id.isNotEmpty == true) {
+      vehicleInfo['Espacio'] = access.spot?.name ?? '';
     }
 
     // Información de pago
-    final paymentInfo = {
-      'Tarifa': '\$${booking.amount.toStringAsFixed(2)}',
-    };
+    final paymentInfo = {'Tarifa': '\$${access.amount.toStringAsFixed(2)}'};
 
     // Añadir empleado (siempre mostrar, usar "--" si no está disponible)
-    paymentInfo['Atendido por'] = booking.employee?.name.isNotEmpty == true ? booking.employee!.name : '--';
+    paymentInfo['Atendido por'] = access.employee?.name.isNotEmpty == true
+        ? access.employee!.name
+        : '--';
 
     return _createUnifiedTicket(
       title: 'TICKET DE SALIDA',
-      parkingName: booking.parking.name,
-      parkingAddress: booking.parking.address ?? '',
+      parkingName: access.parking.name,
+      parkingAddress: access.parking.address ?? '',
       ticketNumber: ticketNumber,
-      dateTime: booking.exitTime ?? DateTime.now(),
+      dateTime: access.exitTime ?? DateTime.now(),
       vehicleInfo: vehicleInfo,
       paymentInfo: paymentInfo,
       footerMessage:

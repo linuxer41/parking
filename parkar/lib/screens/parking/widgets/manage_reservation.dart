@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../services/booking_service.dart';
-import '../../services/access_service.dart';
-import '../../state/app_state_container.dart';
-import '../../models/access_model.dart';
-import '../../models/booking_model.dart';
-import '../../models/parking_model.dart';
-import '../../models/employee_model.dart';
-import '../../models/vehicle_model.dart';
-import '../../models/parking_model.dart';
-import '../models/parking_spot.dart';
-import '../../services/print_service.dart';
-import '../../widgets/print_method_dialog.dart';
-import 'components/index.dart';
+import '../../../services/booking_service.dart';
+import '../../../services/access_service.dart';
+import '../../../state/app_state_container.dart';
+import '../../../models/access_model.dart';
+import '../../../models/booking_model.dart';
+import '../../../models/parking_model.dart';
+import '../../../models/employee_model.dart';
+import '../../../models/vehicle_model.dart';
+import '../../../models/parking_model.dart';
+import '../../../parking_map/models/parking_spot.dart';
+import '../../../services/print_service.dart';
+import '../../../widgets/print_method_dialog.dart';
+import 'components/action_buttons.dart';
+import 'components/error_container.dart';
+import 'components/manage_layout.dart';
+import 'components/reservation_info_card.dart';
+import 'components/vehicle_info_card.dart';
 
 /// Modal para manejar spots con reserva
 class ManageReservation extends StatefulWidget {
@@ -154,7 +158,7 @@ class _ManageReservationState extends State<ManageReservation> {
       ).resolve<PrintService>();
       final appState = AppStateContainer.of(context);
       await printService.printEntryTicket(
-        booking: entry,
+        access: entry,
         context: context,
         isSimpleMode:
             appState.currentParking?.operationMode == ParkingOperationMode.list,

@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../services/booking_service.dart';
-import '../../services/access_service.dart';
-import '../../services/subscription_service.dart';
-import '../../state/app_state_container.dart';
-import '../../models/access_model.dart';
-import '../../models/booking_model.dart';
-import '../../models/parking_model.dart';
-import '../../models/employee_model.dart';
-import '../../models/vehicle_model.dart';
-import '../../models/parking_model.dart';
-import '../models/parking_spot.dart';
-import '../../services/print_service.dart';
-import '../../widgets/print_method_dialog.dart';
-import 'components/index.dart';
+import '../../../services/booking_service.dart';
+import '../../../services/access_service.dart';
+import '../../../services/subscription_service.dart';
+import '../../../state/app_state_container.dart';
+import '../../../models/access_model.dart';
+import '../../../models/booking_model.dart';
+import '../../../models/parking_model.dart';
+import '../../../models/employee_model.dart';
+import '../../../models/vehicle_model.dart';
+import '../../../models/parking_model.dart';
+import '../../../parking_map/models/parking_spot.dart';
+import '../../../services/print_service.dart';
+import '../../../widgets/print_method_dialog.dart';
+import 'components/action_buttons.dart';
+import 'components/error_container.dart';
+import 'components/manage_layout.dart';
+import 'components/subscription_info_card.dart';
+import 'components/vehicle_info_card.dart';
 
 /// Modal para manejar spots con suscripción
 class ManageSubscription extends StatefulWidget {
@@ -167,7 +171,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
         context,
       ).resolve<PrintService>();
       await printService.printEntryTicket(
-        booking: entry,
+        access: entry,
         context: context,
         isSimpleMode:
             appState.currentParking?.operationMode == ParkingOperationMode.list,
@@ -290,7 +294,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
 
     if (fullSubscription != null) {
       // Siempre mostrar PDF para "Ver Ticket"
-      printService.printSubscriptionReceipt(booking: fullSubscription, context: context, forceView: true);
+      printService.printSubscriptionReceipt(subscription: fullSubscription, context: context, forceView: true);
     }
   }
 }

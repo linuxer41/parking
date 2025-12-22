@@ -56,7 +56,7 @@ class CashRegisterCrud {
           'email', u."email",
           'phone', u."phone"
         ) as employee,
-        COALESCE((
+        cr."initialAmount" + COALESCE((
           SELECT SUM(CASE WHEN m."type" = 'income' THEN m."amount" WHEN m."type" = 'expense' THEN -m."amount" ELSE 0 END)
           FROM t_movement m
           WHERE m."cashRegisterId" = cr."id" AND m."deletedAt" IS NULL
@@ -98,7 +98,7 @@ class CashRegisterCrud {
           'email', u."email",
           'phone', u."phone"
         ) as employee,
-        COALESCE((
+        cr."initialAmount" + COALESCE((
           SELECT SUM(CASE WHEN m."type" = 'income' THEN m."amount" WHEN m."type" = 'expense' THEN -m."amount" ELSE 0 END)
           FROM t_movement m
           WHERE m."cashRegisterId" = cr."id" AND m."deletedAt" IS NULL
@@ -152,6 +152,44 @@ class CashRegisterCrud {
         throw new Error(`Failed to retrieve updated cash register with ID ${id}`);
       }
       return result;
+    });
+  }
+
+  /**
+   * Obtener la caja registradora activa de un empleado
+   */
+  async getCurrentByEmployee(employeeId: string): Promise<CashRegisterResponse | undefined> {
+    const sql = `
+      SELECT
+        cr."id", cr."createdAt", cr."updatedAt", cr."deletedAt", cr."number", cr."parkingId", cr."employeeId", cr."startDate", cr."endDate", cr."initialAmount", cr."status", cr."comment", cr."observation",
+        json_build_object(
+          'id', e."id",
+          'role', e."role",
+          'name', u."name",
+          'email', u."email",
+          'phone', u."phone"
+        ) as employee,
+        cr."initialAmount" + COALESCE((
+          SELECT SUM(CASE WHEN m."type" = 'income' THEN m."amount" WHEN m."type" = 'expense' THEN -m."amount" ELSE 0 END)
+          FROM t_movement m
+          WHERE m."cashRegisterId" = cr."id" AND m."deletedAt" IS NULL
+        ), 0) as "totalAmount"
+      FROM ${this.TABLE_NAME} cr
+      INNER JOIN t_employee e ON e."id" = cr."employeeId"
+      INNER JOIN t_user u ON u."id" = e."userId"
+      WHERE cr."employeeId" = $1 AND cr."status" = 'active' AND cr."endDate" IS NULL AND cr."deletedAt" IS NULL
+      ORDER BY cr."startDate" DESC
+      LIMIT 1
+    `;
+
+    const query = {
+      text: sql,
+      values: [employeeId],
+    };
+
+    return withClient(async (client) => {
+      const res = await client.query<CashRegisterResponse>(query);
+      return res.rows[0];
     });
   }
 

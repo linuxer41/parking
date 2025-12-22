@@ -210,6 +210,11 @@ export const ElementUpdateRequestSchema = t.Partial(t.Pick(ElementSchema, ["name
   description: "Esquema de request para actualizar un Element",
 });
 
+
+export const ElementPreviewSchema = t.Partial(t.Pick(ElementSchema, ["id", "name", "type", "subType"]), {
+  description: "Esquema de request para actualizar un Element",
+});
+
 // ===== ESQUEMAS DE AREA =====
 export const AreaSchema = t.Composite([
   BaseSchema,
@@ -556,6 +561,7 @@ export type ElementCreate = typeof ElementCreateSchema.static;
 export type ElementCreateRequest = typeof ElementCreateRequestSchema.static;
 export type ElementUpdate = typeof ElementUpdateSchema.static;
 export type ElementUpdateRequest = typeof ElementUpdateRequestSchema.static;
+export type ElementPreview = typeof ElementPreviewSchema.static;
 
 // Tipos de Area
 export type Area = typeof AreaSchema.static;

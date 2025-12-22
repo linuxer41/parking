@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/parking_spot.dart';
+import '../../../parking_map/models/parking_spot.dart';
 
 /// Widget para mostrar una tabla de spots ocupados en modo list
 class VehicleListTable extends StatefulWidget {

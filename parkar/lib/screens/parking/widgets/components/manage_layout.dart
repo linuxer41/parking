@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/custom_snackbar.dart';
+import '../../../../widgets/custom_snackbar.dart';
 
 /// Layout común para todos los bottom sheets modales
 class ManageLayout extends StatelessWidget {
@@ -54,7 +54,7 @@ class ManageLayout extends StatelessWidget {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: const BoxConstraints(maxWidth: 450),
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height * 0.6,
         decoration: BoxDecoration(

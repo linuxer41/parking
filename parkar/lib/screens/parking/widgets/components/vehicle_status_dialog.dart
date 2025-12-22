@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../models/vehicle_model.dart';
+import '../../../../models/vehicle_model.dart';
 
 /// Diálogo para mostrar el estado de un vehículo
 class VehicleStatusDialog extends StatelessWidget {

@@ -8,31 +8,23 @@ part of 'access_model.dart';
 
 AccessModel _$AccessModelFromJson(Map<String, dynamic> json) => AccessModel(
   id: json['id'] as String,
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
-      ? null
-      : DateTime.parse(json['updatedAt'] as String),
   number: (json['number'] as num).toInt(),
-  parkingId: json['parkingId'] as String,
   parking: ParkingPreviewModel.fromJson(
     json['parking'] as Map<String, dynamic>,
   ),
-  employeeId: json['employeeId'] as String,
   employee: EmployeePreviewModel.fromJson(
     json['employee'] as Map<String, dynamic>,
   ),
-  vehicleId: json['vehicleId'] as String,
   vehicle: VehiclePreviewModel.fromJson(
     json['vehicle'] as Map<String, dynamic>,
   ),
-  spotId: json['spotId'] as String?,
   entryTime: DateTime.parse(json['entryTime'] as String),
+  spot: json['spot'] == null
+      ? null
+      : SpotPreviewModel.fromJson(json['spot'] as Map<String, dynamic>),
   exitTime: json['exitTime'] == null
       ? null
       : DateTime.parse(json['exitTime'] as String),
-  exitEmployeeId: json['exitEmployeeId'] as String?,
   exitEmployee: json['exitEmployee'] == null
       ? null
       : EmployeePreviewModel.fromJson(
@@ -46,28 +38,21 @@ AccessModel _$AccessModelFromJson(Map<String, dynamic> json) => AccessModel(
 Map<String, dynamic> _$AccessModelToJson(AccessModel instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'createdAt': instance.createdAt?.toIso8601String(),
-      'updatedAt': instance.updatedAt?.toIso8601String(),
       'number': instance.number,
-      'parkingId': instance.parkingId,
       'parking': instance.parking,
-      'employeeId': instance.employeeId,
       'employee': instance.employee,
-      'vehicleId': instance.vehicleId,
       'vehicle': instance.vehicle,
-      'spotId': instance.spotId,
       'entryTime': instance.entryTime.toIso8601String(),
       'exitTime': instance.exitTime?.toIso8601String(),
-      'exitEmployeeId': instance.exitEmployeeId,
       'exitEmployee': instance.exitEmployee,
+      'spot': instance.spot,
       'amount': instance.amount,
       'status': _$AccessStatusEnumMap[instance.status]!,
       'notes': instance.notes,
     };
 
 const _$AccessStatusEnumMap = {
-  AccessStatus.entered: 'entered',
-  AccessStatus.exited: 'exited',
+  AccessStatus.valid: 'valid',
   AccessStatus.cancelled: 'cancelled',
 };
 

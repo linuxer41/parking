@@ -47,7 +47,7 @@ class BaseService {
   ]) {
     if (kDebugMode) {
       print('📤 REQUEST: $method ${uri.toString()}');
-      print('📋 Headers: $headers');
+      // print('📋 Headers: $headers');
       if (body != null) {
         try {
           final prettyBody = const JsonEncoder.withIndent(
@@ -57,22 +57,6 @@ class BaseService {
         } catch (e) {
           print('📦 Body: $body');
         }
-      }
-    }
-  }
-
-  /// Log response details
-  void _logResponse(http.Response response) {
-    if (kDebugMode) {
-      print('📥 RESPONSE: ${response.statusCode} ${response.reasonPhrase}');
-      print('📋 Headers: ${response.headers}');
-      try {
-        final prettyBody = const JsonEncoder.withIndent(
-          '  ',
-        ).convert(json.decode(response.body));
-        print('📦 Body: $prettyBody');
-      } catch (e) {
-        print('📦 Body: ${response.body}');
       }
     }
   }

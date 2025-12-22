@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:parkar/models/parking_model.dart';
 import 'package:parkar/parking_map/core/parking_state.dart';
 import 'package:parkar/parking_map/core/parking_state_container.dart';
+import 'package:parkar/services/cash_register_service.dart';
 import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
@@ -10,10 +11,8 @@ import 'parking_map_view.dart';
 
 /// Pantalla principal del sistema de parkeo
 class ParkingScreen extends StatefulWidget {
-  /// Flag para iniciar en modo edición automáticamente
-  final bool startInEditMode;
 
-  const ParkingScreen({super.key, this.startInEditMode = false});
+  const ParkingScreen({super.key});
 
   @override
   State<ParkingScreen> createState() => _ParkingScreenState();
@@ -21,6 +20,7 @@ class ParkingScreen extends StatefulWidget {
 
 class _ParkingScreenState extends State<ParkingScreen> {
    late ParkingService _parkingService;
+   late CashRegisterService _cashRegisterService;
   bool _isLoading = true;
   ParkingDetailedModel? _parking;
   String? _error;
@@ -34,6 +34,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+    _cashRegisterService = AppStateContainer.di(context).resolve<CashRegisterService>();
     _loadParkingDetails();
   }
 
@@ -64,9 +65,23 @@ class _ParkingScreenState extends State<ParkingScreen> {
       final parking = await _parkingService
           .getParkingDetailed(currentParking.id)
           .timeout(
-            const Duration(seconds: 10),
+            const Duration(seconds: 30),
             onTimeout: () => throw Exception('Tiempo de espera agotado'),
           );
+          try {
+            
+          
+            final cashRegister = await _cashRegisterService
+                .getCurrentCashRegister()
+                .timeout(
+                  const Duration(seconds: 30),
+                  onTimeout: () => throw Exception('Tiempo de espera agotado'),
+                );
+            appState.setCurrentCashRegister(cashRegister);
+            print('Cajero: $cashRegister');
+          } catch (e) {
+            print('Error al cargar datos del cajero: $e');
+          }
 
       if (mounted) {
         setState(() {

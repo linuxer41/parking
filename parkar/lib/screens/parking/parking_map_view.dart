@@ -287,8 +287,6 @@ class _ParkingMapViewState extends State<ParkingMapView> {
                           onAreaChanged: _onAreaChanged,
                           searchController: searchController,
                           onSearchChanged: (String value) => _onSearchChanged(),
-                          onEditAreaName: _showEditAreaNameDialog,
-                          onAddArea: _showAddAreaDialog,
                           onCashPressed: _navigateToCashRegister,
                         ),
                       ),

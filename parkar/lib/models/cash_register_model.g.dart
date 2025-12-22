@@ -89,3 +89,14 @@ Map<String, dynamic> _$CashRegisterCloseModelToJson(
   'comment': instance.comment,
   'endDate': instance.endDate?.toIso8601String(),
 };
+
+CashRegisterPreviewModel _$CashRegisterPreviewModelFromJson(
+  Map<String, dynamic> json,
+) => CashRegisterPreviewModel(
+  id: json['id'] as String,
+  number: (json['number'] as num).toInt(),
+);
+
+Map<String, dynamic> _$CashRegisterPreviewModelToJson(
+  CashRegisterPreviewModel instance,
+) => <String, dynamic>{'id': instance.id, 'number': instance.number};

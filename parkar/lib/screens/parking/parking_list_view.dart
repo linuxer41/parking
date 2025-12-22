@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:parkar/models/access_model.dart';
 import 'package:parkar/models/parking_model.dart';
 import 'package:parkar/screens/cash_register/cash_register_screen.dart';
-import 'package:parkar/parking_map/widgets/access_list_table.dart';
 import 'package:parkar/screens/parking/parking_info_panel.dart';
+import 'package:parkar/screens/parking/widgets/access_list_table.dart';
+import 'package:parkar/screens/parking/widgets/components/manage_layout.dart';
+import 'package:parkar/screens/parking/widgets/manage_access.dart';
+import 'package:parkar/screens/parking/widgets/register_occupancy.dart';
 import 'package:parkar/services/access_service.dart';
-import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/state/app_state_container.dart';
+import 'package:parkar/widgets/cash_register_dialogs.dart';
 
 class ParkingListView extends StatefulWidget {
   final ParkingDetailedModel parking;
-
   const ParkingListView({super.key, required this.parking});
 
   @override
@@ -93,102 +95,41 @@ class _ParkingListViewState extends State<ParkingListView> {
     await _loadData();
   }
 
-  void _showVisualEntryDialog(BuildContext context, {String? initialPlate}) {
-    // TODO: Implement visual entry dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Visual entry dialog not implemented yet')),
-    );
-  }
 
   void _onAccessAction(AccessModel access) {
-    // TODO: Implement access action (show details or manage exit)
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Access action for ${access.vehicle.plate}')),
+    // Create a ParkingSpot from the AccessModel to show the exit management screen
+    final entryInfo = ElementOccupancyInfoModel(
+      id: access.id,
+      vehiclePlate: access.vehicle.plate,
+      ownerName: access.vehicle.ownerName ?? '',
+      ownerPhone: access.vehicle.ownerPhone ?? '',
+      startDate: access.entryTime.toIso8601String(),
+      amount: access.amount,
     );
-  }
 
-  void _showEditAreaNameDialog(AreaModel area) {
-    final TextEditingController nameController = TextEditingController(
-      text: area.name,
-    );
-
-    showDialog(
+    ManageLayout.show(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Editar nombre del área'),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(labelText: 'Nombre del área'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final newName = nameController.text.trim();
-                if (newName.isNotEmpty && newName != area.name) {
-                  // TODO: Implement area update
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Area update not implemented yet'),
-                    ),
-                  );
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        );
-      },
+      child: ManageAccess(
+        parking: widget.parking, access: access, 
+        onExitSuccess: () {
+        print('--------------- Salida exitosa, Refreshing list');
+        _loadData();
+      }),
     );
   }
 
-  void _showAddAreaDialog() {
-    final TextEditingController nameController = TextEditingController();
+  void _navigateToCashRegister() async {
+    final appState = AppStateContainer.of(context);
+    final cashRegister = appState.currentCashRegister;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Agregar nueva área'),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(labelText: 'Nombre del área'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isNotEmpty) {
-                  // TODO: Implement area creation
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Area creation not implemented yet'),
-                    ),
-                  );
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Crear'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _navigateToCashRegister() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const CashRegisterScreen()));
+    if (cashRegister != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CashRegisterScreen()));
+    } else {
+      final openedCashRegister = await CashRegisterDialogs.showOpenCashRegisterDialog(context);
+      if (openedCashRegister != null) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CashRegisterScreen()));
+      }
+    }
   }
 
   void _onAreaChanged(String id) {
@@ -201,6 +142,8 @@ class _ParkingListViewState extends State<ParkingListView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final appSate = AppStateContainer.of(context);
+    final cashRegister = appSate.currentCashRegister;
 
     return Scaffold(
       body: Stack(
@@ -216,9 +159,8 @@ class _ParkingListViewState extends State<ParkingListView> {
                   onAreaChanged: _onAreaChanged,
                   searchController: searchController,
                   onSearchChanged: (String value) => _onSearchChanged(),
-                  onEditAreaName: _showEditAreaNameDialog,
-                  onAddArea: _showAddAreaDialog,
                   onCashPressed: _navigateToCashRegister,
+                  cashRegister: cashRegister,
                 ),
 
                 // Panel sticky con botón de entrada
@@ -261,11 +203,15 @@ class _ParkingListViewState extends State<ParkingListView> {
                         ),
                         elevation: 1,
                       ),
-                      onPressed: () => _showVisualEntryDialog(
+                      onPressed: () => RegisterOccupancy.show(
                         context,
+                        null,
                         initialPlate: searchController.text.isNotEmpty
                             ? searchController.text
                             : null,
+                        onEntrySuccess: () {
+                          _loadData();
+                        },
                       ),
                     ),
                   ),

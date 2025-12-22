@@ -17,7 +17,6 @@ async create(input: MovementCreateRequest): Promise<Movement> {
     ...input,
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
-    // updatedAt: new Date().toISOString(),
   });
 
   const columns = Object.keys(data)
@@ -61,11 +60,16 @@ async findById(id: string): Promise<Movement | undefined> {
  */
 async find(where: Partial<Movement> = {}): Promise<Movement[]> {
   const conditions = Object.entries(where)
-    .map(([key, value], i) => `"${key}" = $${i + 1}`)
+    .map(([key, value], i) => `m."${key}" = $${i + 1}`)
     .join(" AND ");
   
   const query = {
-    text: `SELECT * FROM ${this.TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
+    text: `
+    SELECT m.*,
+    json_build_object('id', cr."id", 'number', cr."number") as "cashRegister"
+    FROM ${this.TABLE_NAME} m
+    INNER JOIN t_cash_register cr ON m."cashRegisterId" = cr."id"
+    ${conditions ? `WHERE ${conditions}` : ""}`,
     values: Object.values(where),
   };
   

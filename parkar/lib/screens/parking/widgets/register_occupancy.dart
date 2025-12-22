@@ -1,23 +1,23 @@
 // ignore_for_file: sized_box_for_whitespace
 
 import 'package:flutter/material.dart';
-import '../../services/booking_service.dart';
-import '../../services/access_service.dart';
-import '../../services/subscription_service.dart';
-import '../../services/vehicle_service.dart';
-import '../../state/app_state_container.dart';
-import '../../state/app_state.dart';
-import '../../models/booking_model.dart';
-import '../../models/access_model.dart';
-import '../../models/subscription_model.dart';
-import '../../models/parking_model.dart';
-import '../../models/employee_model.dart';
-import '../models/parking_spot.dart';
-import '../../services/print_service.dart';
-import '../../widgets/print_method_dialog.dart';
-import 'components/index.dart';
-import '../../models/vehicle_model.dart';
-import '../../widgets/custom_snackbar.dart';
+import 'package:flutter/services.dart';
+
+import '../../../models/access_model.dart';
+import '../../../models/booking_model.dart';
+import '../../../models/parking_model.dart';
+import '../../../models/subscription_model.dart';
+import '../../../models/vehicle_model.dart';
+import '../../../services/access_service.dart';
+import '../../../services/booking_service.dart';
+import '../../../services/print_service.dart';
+import '../../../services/subscription_service.dart';
+import '../../../services/vehicle_service.dart';
+import '../../../state/app_state.dart';
+import '../../../state/app_state_container.dart';
+import '../../../widgets/custom_snackbar.dart';
+import '../../../parking_map/models/parking_spot.dart';
+import 'components/vehicle_status_dialog.dart';
 
 /// Excepción personalizada para errores de validación
 class ValidationException implements Exception {
@@ -475,7 +475,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
         context,
       ).resolve<PrintService>();
       await printService.printEntryTicket(
-        booking: entry,
+        access: entry,
         context: context,
         isSimpleMode:
             appState.currentParking?.operationMode == ParkingOperationMode.list,
@@ -626,7 +626,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
           appState.currentParking?.operationMode == ParkingOperationMode.list;
 
       await printService.printEntryTicket(
-        booking: entry,
+        access: entry,
         context: context,
         isSimpleMode: isSimpleMode,
       );
@@ -1111,7 +1111,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
       ).resolve<PrintService>();
 
       await printService.printSubscriptionReceipt(
-        booking: subscription,
+        subscription: subscription,
         context: context,
       );
     } catch (e) {
@@ -2049,6 +2049,10 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
           controller: plateController,
           autofocus: autofocus,
           textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9\-]')),
+            LengthLimitingTextInputFormatter(10),
+          ],
           decoration: InputDecoration(
             labelText: 'Placa *',
             hintText: 'ABC-123',
@@ -2059,6 +2063,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
             ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             prefixIcon: const Icon(Icons.directions_car, size: 16),
+            
           ),
         ),
       ),

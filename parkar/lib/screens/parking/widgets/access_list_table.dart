@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/access_model.dart';
+import '../../../models/access_model.dart';
 
 /// Widget para mostrar una tabla de accesos en modo list
 class AccessListTable extends StatefulWidget {
@@ -178,27 +178,27 @@ class _AccessListTableState extends State<AccessListTable> {
                     ),
 
                     // Botón de actualizar
-                    if (widget.onRefresh != null)
-                      IconButton(
-                        onPressed: widget.isLoading ? null : widget.onRefresh,
-                        icon: widget.isLoading
-                            ? SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: colorScheme.primary,
-                                ),
-                              )
-                            : Icon(
-                                Icons.refresh,
-                                size: 20,
-                                color: colorScheme.primary,
-                              ),
-                        tooltip: 'Actualizar',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
+                    // if (widget.onRefresh != null)
+                    //   IconButton(
+                    //     onPressed: widget.isLoading ? null : widget.onRefresh,
+                    //     icon: widget.isLoading
+                    //         ? SizedBox(
+                    //             width: 16,
+                    //             height: 16,
+                    //             child: CircularProgressIndicator(
+                    //               strokeWidth: 2,
+                    //               color: colorScheme.primary,
+                    //             ),
+                    //           )
+                    //         : Icon(
+                    //             Icons.refresh,
+                    //             size: 20,
+                    //             color: colorScheme.primary,
+                    //           ),
+                    //     tooltip: 'Actualizar',
+                    //     padding: EdgeInsets.zero,
+                    //     constraints: const BoxConstraints(),
+                    //   ),
                   ],
                 ),
               ],
@@ -323,14 +323,14 @@ class _AccessListTableState extends State<AccessListTable> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Badge de estado más prominente
+                  // Badge de monto a pagar
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(access.status, colorScheme),
+                      color: colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: colorScheme.outline.withValues(alpha: 0.5),
@@ -338,18 +338,16 @@ class _AccessListTableState extends State<AccessListTable> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _getStatusColor(access.status, colorScheme).withValues(alpha: 0.3),
+                          color: colorScheme.primary.withValues(alpha: 0.3),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Text(
-                      access.status == AccessStatus.entered
-                          ? '\$${access.amount.toStringAsFixed(2)}'
-                          : _getStatusText(access.status),
+                      '\$${access.amount.toStringAsFixed(2)}',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: _getStatusTextColor(access.status, colorScheme),
+                        color: colorScheme.onPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 11,
                       ),
@@ -423,39 +421,6 @@ class _AccessListTableState extends State<AccessListTable> {
     );
   }
 
-
-  Color _getStatusColor(AccessStatus status, ColorScheme colorScheme) {
-    switch (status) {
-      case AccessStatus.entered:
-        return colorScheme.primaryContainer;
-      case AccessStatus.exited:
-        return colorScheme.secondaryContainer;
-      case AccessStatus.cancelled:
-        return colorScheme.errorContainer;
-    }
-  }
-
-  Color _getStatusTextColor(AccessStatus status, ColorScheme colorScheme) {
-    switch (status) {
-      case AccessStatus.entered:
-        return colorScheme.onPrimaryContainer;
-      case AccessStatus.exited:
-        return colorScheme.onSecondaryContainer;
-      case AccessStatus.cancelled:
-        return colorScheme.onErrorContainer;
-    }
-  }
-
-  String _getStatusText(AccessStatus status) {
-    switch (status) {
-      case AccessStatus.entered:
-        return 'Activo';
-      case AccessStatus.exited:
-        return 'Salido';
-      case AccessStatus.cancelled:
-        return 'Cancelado';
-    }
-  }
 
   String _getVehicleTypeName(String type) {
     switch (type.toLowerCase()) {

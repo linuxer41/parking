@@ -2,6 +2,7 @@ import { t } from "elysia";
 import { BaseSchema } from "./base-model";
 import { EmployeeResponseSchema } from "./employee";
 import { VehiclePreviewSchema } from "./vehicle";
+import { ElementPreviewSchema, ElementUpdateRequestSchema } from "./parking";
 
 // ===== BASIC SCHEMAS FOR RESPONSE =====
 export const ParkingBasicSchema = t.Object({
@@ -18,7 +19,7 @@ export const EmployeeBasicSchema = t.Object({
 
 // ===== TIPOS DE ACCESO =====
 export const ACCESS_STATUS = {
-  ENTERED: "valid",
+  VALID: "valid",
   CANCELLED: "cancelled"
 } as const;
 
@@ -84,16 +85,17 @@ export const AccessSchema = t.Composite([
       required: false,
       format: "uuid",
     })]),
-    exitEmployee: t.Union([t.Null(), EmployeeResponseSchema]),
+    exitEmployee: t.Nullable(EmployeeResponseSchema),
+    spot: t.Nullable(ElementPreviewSchema),
     amount: t.Numeric({
       description: "Monto a pagar",
       required: true,
     }),
-    status: t.Union([t.String({ enum: ACCESS_STATUS }), t.Null()]),
-    notes: t.Optional(t.String({
+    status: t.String({ enum: ACCESS_STATUS }),
+    notes: t.Optional(t.Nullable(t.String({
       description: "Notas adicionales del acceso",
       required: false,
-    })),
+    }))),
   }),
 ], {
   description: "Esquema principal para la entidad Access (Acceso)",
@@ -171,7 +173,7 @@ export const AccessUpdateSchema = t.Partial(t.Pick(AccessSchema, [
 });
 
 export const AccessResponseSchema = t.Pick(AccessSchema, [
-  "id", "number", "parking", "employee", "vehicle", 
+  "id", "number", "parking", "employee", "exitEmployee", "vehicle", "spot", 
   "entryTime", "exitTime", "amount", "status", "notes"
 ], {
   description: "Esquema para la respuesta de un Acceso",

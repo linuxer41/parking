@@ -1,14 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:parkar/constants/constants.dart';
+import 'package:flutter/services.dart';
 import 'package:parkar/models/cash_register_model.dart';
 import 'package:parkar/models/parking_model.dart';
 
 class ParkingInfoPanel extends StatelessWidget {
   final Function(String) onAreaChanged;
-  final Function(AreaModel) onEditAreaName;
-  final Function() onAddArea;
   final TextEditingController? searchController;
   final Function(String)? onSearchChanged;
   final VoidCallback? onSettingsPressed;
@@ -20,8 +18,6 @@ class ParkingInfoPanel extends StatelessWidget {
   const ParkingInfoPanel({
     super.key,
     required this.onAreaChanged,
-    required this.onEditAreaName,
-    required this.onAddArea,
     required this.parking,
     required this.selectedAreaId,
     this.cashRegister,
@@ -100,6 +96,49 @@ class ParkingInfoPanel extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                // Botones de configuración y caja
+                Row(
+                  children: [
+                    if (onSettingsPressed != null)
+                      IconButton(
+                        onPressed: onSettingsPressed,
+                        icon: Icon(Icons.settings, size: 20),
+                        tooltip: 'Configuraciones',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                    if (onCashPressed != null)
+                      GestureDetector(
+                        onTap: onCashPressed,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                cashRegister != null
+                                    ? 'Caja: ${cashRegister!.totalAmount.toStringAsFixed(2)} Bs.'
+                                    : 'Caja no abierta',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 16,
+                                color: colorScheme.primary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -215,12 +254,26 @@ class ParkingInfoPanel extends StatelessWidget {
                       : null,
                 ),
                 textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[A-Z0-9\-]')),
+                  LengthLimitingTextInputFormatter(10),
+                ],
                 onChanged: onSearchChanged,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }

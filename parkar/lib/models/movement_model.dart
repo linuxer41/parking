@@ -1,4 +1,3 @@
-
 import 'package:json_annotation/json_annotation.dart';
 import '_base_model.dart';
 import 'cash_register_model.dart';
@@ -9,22 +8,26 @@ part 'movement_model.g.dart';
 class MovementModel extends JsonConvertible<MovementModel> {
   final String id;
   final String cashRegisterId;
-  final CashRegisterModel cashRegister;
+  final CashRegisterPreviewModel cashRegister;
   final String type;
+  final String originId;
+  final String originType;
   final double amount;
   final String description;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 
   MovementModel({
     required this.id,
     required this.cashRegisterId,
     required this.cashRegister,
     required this.type,
+    required this.originId,
+    required this.originType,
     required this.amount,
     required this.description,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
   });
 
   factory MovementModel.fromJson(Map<String, dynamic> json) =>
@@ -61,11 +64,7 @@ class MovementUpdateModel extends JsonConvertible<MovementUpdateModel> {
   final double? amount;
   final String? description;
 
-  MovementUpdateModel({
-    this.type,
-    this.amount,
-    this.description,
-  });
+  MovementUpdateModel({this.type, this.amount, this.description});
 
   factory MovementUpdateModel.fromJson(Map<String, dynamic> json) =>
       _$MovementUpdateModelFromJson(json);
@@ -73,5 +72,3 @@ class MovementUpdateModel extends JsonConvertible<MovementUpdateModel> {
   @override
   Map<String, dynamic> toJson() => _$MovementUpdateModelToJson(this);
 }
-
-

@@ -308,7 +308,8 @@ DROP TABLE IF EXISTS t_movement CASCADE;
 CREATE TABLE t_movement (
   "id" uuid  primary key not null default gen_random_uuid(),
   "cashRegisterId" uuid not null references t_cash_register(id) on delete cascade,
-  "type" text not null, -- 'income', 'expense', 'refund'
+  "originId" uuid not null, -- ID del access, booking o subscription
+  "type" text not null check ("type" in ('access', 'booking', 'subscription')), -- 'access', 'booking', 'subscription'
   "amount" numeric not null,
   "description" text not null,
   "createdAt" timestamptz default now() not null,
@@ -317,7 +318,8 @@ CREATE TABLE t_movement (
 );
 
 COMMENT ON TABLE t_movement IS 'Movimientos de dinero en las cajas registradoras';
-COMMENT ON COLUMN t_movement."type" IS 'Tipo de movimiento: income (ingreso), expense (gasto), refund (reembolso)';
+COMMENT ON COLUMN t_movement."type" IS 'Tipo de origen del movimiento: access (acceso), booking (reserva), subscription (suscripción)';
+COMMENT ON COLUMN t_movement."originId" IS 'ID de la entidad origen (access, booking o subscription)';
 
 -- =====================================================
 -- TABLAS DE NOTIFICACIONES

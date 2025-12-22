@@ -11,10 +11,10 @@ import '../models/parking_elements.dart';
 import '../models/parking_signage.dart';
 import '../models/parking_spot.dart';
 import 'context_toolbar.dart';
-import 'register_occupancy.dart';
-import 'manage_access.dart';
-import 'manage_reservation.dart';
-import 'manage_subscription.dart';
+import '../../screens/parking/widgets/register_occupancy.dart';
+import '../../screens/parking/widgets/manage_access.dart';
+import '../../screens/parking/widgets/manage_reservation.dart';
+import '../../screens/parking/widgets/manage_subscription.dart';
 
 /// Widget que renderiza el canvas del sistema de parkeo
 class ParkingCanvas extends StatefulWidget {

@@ -42,6 +42,24 @@ export const movementController = new Elysia({
       },
     },
   )
+  .get(
+    "/cash-register/:id",
+    async ({ params }) => {
+      const res = await db.movement.find({ cashRegisterId: params.id });
+      return res as Movement[];
+    },
+    {
+      detail: {
+        summary: "Obtener movimientos de una caja registradora",
+        description: "Retorna una lista de movimientos para una caja registradora específica.",
+      },
+      response: {
+        200: t.Array(MovementSchema),
+        400: t.String(),
+        500: t.String(),
+      },
+    },
+  )
   .post(
     "/",
     async ({ body }) => {
