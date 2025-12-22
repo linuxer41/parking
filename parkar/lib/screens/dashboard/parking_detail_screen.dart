@@ -28,7 +28,7 @@ class ParkingDetailScreen extends StatefulWidget {
 class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
-  ParkingModelDetailed? _parking;
+  ParkingDetailedModel? _parking;
 
   @override
   void initState() {
@@ -50,7 +50,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
     try {
       // Obtener detalles completos del parking
-      final parkingDetails = await _parkingService.getParkingById(
+      final parkingDetails = await _parkingService.getParkingDetailed(
         widget.parkingId,
       );
 
@@ -1304,7 +1304,9 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
     // Actualizar el estado con el parking seleccionado
     if (_parking != null) {
-      appState.setCurrentParking(_parking!);
+      appState.setCurrentParking(
+        ParkingModel.fromParkingDetailedModel(_parking!),
+      );
 
       // Si hay áreas disponibles, seleccionar la primera
       if (_parking!.areas != null && _parking!.areas!.isNotEmpty) {
@@ -1337,7 +1339,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
 // Pantalla para editar información del estacionamiento
 class _EditParkingScreen extends StatefulWidget {
-  final ParkingModelDetailed parking;
+  final ParkingDetailedModel parking;
   final VoidCallback onSave;
 
   const _EditParkingScreen({required this.parking, required this.onSave});

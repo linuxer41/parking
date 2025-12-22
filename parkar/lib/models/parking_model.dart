@@ -138,7 +138,6 @@ class ElementModel extends JsonConvertible<ElementModel> {
   final ElementOccupancyInfoModel? entry;
   final ElementOccupancyInfoModel? booking;
   final ElementOccupancyInfoModel? subscription;
-  final String status;
 
   ElementModel({
     required this.id,
@@ -154,7 +153,6 @@ class ElementModel extends JsonConvertible<ElementModel> {
     this.entry,
     this.booking,
     this.subscription,
-    required this.status,
   });
 
   factory ElementModel.fromJson(Map<String, dynamic> json) =>
@@ -194,7 +192,6 @@ class ElementModel extends JsonConvertible<ElementModel> {
       entry: entry ?? this.entry,
       booking: booking ?? this.booking,
       subscription: subscription ?? this.subscription,
-      status: status ?? this.status,
     );
   }
 
@@ -202,13 +199,6 @@ class ElementModel extends JsonConvertible<ElementModel> {
   bool get isSpot => type == ElementType.spot;
   bool get isSignage => type == ElementType.signage;
   bool get isFacility => type == ElementType.facility;
-
-  // Convenience getters for status checking
-  bool get isOccupied => status == ElementStatus.occupied.toString();
-  bool get isAvailable => status == ElementStatus.available.toString();
-  bool get isReserved => status == ElementStatus.reserved.toString();
-  bool get isSubscribed => status == ElementStatus.subscribed.toString();
-  bool get isMaintenance => status == ElementStatus.maintenance.toString();
 
   // Helper methods for UI display
   String getDisplayTypeName() {
@@ -461,11 +451,6 @@ class AreaModel implements JsonConvertible<AreaModel> {
   List<ElementModel> get facilities =>
       elements.where((e) => e.isFacility).toList();
 
-  // Convenience getters for available/occupied spots
-  List<ElementModel> get availableSpotsList =>
-      spots.where((s) => s.isAvailable).toList();
-  List<ElementModel> get occupiedSpotsList =>
-      spots.where((s) => s.isOccupied).toList();
 }
 
 @JsonSerializable()
@@ -565,7 +550,7 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
     required this.areaCount,
   });
 
-  factory ParkingModel.fromParkingModel(ParkingModelDetailed parking) =>
+  factory ParkingModel.fromParkingDetailedModel(ParkingDetailedModel parking) =>
       ParkingModel(
         id: parking.id,
         name: parking.name,
@@ -583,14 +568,14 @@ class ParkingModel extends JsonConvertible<ParkingModel> {
       );
 
   factory ParkingModel.fromJson(Map<String, dynamic> json) =>
-      _$ParkingSimpleModelFromJson(json);
+      _$ParkingModelFromJson(json);
 
   @override
-  Map<String, dynamic> toJson() => _$ParkingSimpleModelToJson(this);
+  Map<String, dynamic> toJson() => _$ParkingModelToJson(this);
 }
 
 @JsonSerializable()
-class ParkingModelDetailed extends JsonConvertible<ParkingModelDetailed> {
+class ParkingDetailedModel extends JsonConvertible<ParkingDetailedModel> {
   final String id;
   final String name;
   final String? email;
@@ -611,7 +596,7 @@ class ParkingModelDetailed extends JsonConvertible<ParkingModelDetailed> {
   final int? areaCount;
   final ParkingOperationMode? operationMode;
 
-  ParkingModelDetailed({
+  ParkingDetailedModel({
     required this.id,
     required this.name,
     this.email,
@@ -633,8 +618,8 @@ class ParkingModelDetailed extends JsonConvertible<ParkingModelDetailed> {
     this.operationMode,
   });
 
-  /// Create a copy of this ParkingModelDetailed but with the given fields replaced with the new values
-  ParkingModelDetailed copyWith({
+  /// Create a copy of this ParkingDetailedModel but with the given fields replaced with the new values
+  ParkingDetailedModel copyWith({
     String? id,
     String? name,
     String? email,
@@ -657,9 +642,8 @@ class ParkingModelDetailed extends JsonConvertible<ParkingModelDetailed> {
     int? occupiedSpots,
     int? areaCount,
     String? operationMode,
-    double? capacity,
   }) {
-    return ParkingModelDetailed(
+    return ParkingDetailedModel(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
@@ -683,11 +667,11 @@ class ParkingModelDetailed extends JsonConvertible<ParkingModelDetailed> {
     );
   }
 
-  factory ParkingModelDetailed.fromJson(Map<String, dynamic> json) =>
-      _$ParkingModelFromJson(json);
+  factory ParkingDetailedModel.fromJson(Map<String, dynamic> json) =>
+      _$ParkingDetailedModelFromJson(json);
 
   @override
-  Map<String, dynamic> toJson() => _$ParkingModelToJson(this);
+  Map<String, dynamic> toJson() => _$ParkingDetailedModelToJson(this);
 }
 
 @JsonSerializable()
@@ -739,7 +723,6 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
   final bool? isOpen;
   final String? openingHours;
   final ParkingOperationMode? operationMode;
-  final double? capacity;
 
   ParkingUpdateModel({
     this.name,
@@ -752,7 +735,6 @@ class ParkingUpdateModel extends JsonConvertible<ParkingUpdateModel> {
     this.isOpen,
     this.openingHours,
     this.operationMode,
-    this.capacity,
   });
 
   factory ParkingUpdateModel.fromJson(Map<String, dynamic> json) =>

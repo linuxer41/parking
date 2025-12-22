@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:parkar/models/access_model.dart';
 import 'package:parkar/models/parking_model.dart';
 import 'package:parkar/screens/cash_register/cash_register_screen.dart';
-import 'package:parkar/screens/parking_map/widgets/access_list_table.dart';
+import 'package:parkar/parking_map/widgets/access_list_table.dart';
 import 'package:parkar/screens/parking/parking_info_panel.dart';
 import 'package:parkar/services/access_service.dart';
 import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
 class ParkingListView extends StatefulWidget {
-  final ParkingModelDetailed parking;
+  final ParkingDetailedModel parking;
 
   const ParkingListView({super.key, required this.parking});
 

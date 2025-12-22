@@ -1,20 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart';
 import 'package:system_theme/system_theme.dart';
 
+import '../models/cash_register_model.dart';
 import '../models/employee_model.dart';
 import '../models/parking_model.dart';
 import '../models/user_model.dart';
-import '../models/cash_register_model.dart';
 import '../services/print_service.dart';
-import '../services/print_service.dart'; // For PrintSettings
 
 class AppState extends ChangeNotifier {
   // Token and user state
   UserModel? _currentUser;
   EmployeeModel? _employee;
-  ParkingModelDetailed? _currentParking;
+  ParkingModel? _currentParking;
   CashRegisterModel? _currentCashRegister;
   String? _authToken;
   String? _refreshToken;
@@ -43,7 +42,7 @@ class AppState extends ChangeNotifier {
   // User state getters
   UserModel? get currentUser => _currentUser;
   EmployeeModel? get employee => _employee;
-  ParkingModelDetailed? get currentParking => _currentParking;
+  ParkingModel? get currentParking => _currentParking;
   CashRegisterModel? get currentCashRegister => _currentCashRegister;
   String? get authToken => _authToken;
   String? get refreshToken => _refreshToken;
@@ -229,7 +228,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCurrentParking(ParkingModelDetailed parking) {
+  void setCurrentParking(ParkingModel parking) {
     _currentParking = parking;
     _selectedAreaId = null;
     notifyListeners();

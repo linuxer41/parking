@@ -6,83 +6,49 @@ import 'dart:math';
 class ParkingService extends BaseService {
   ParkingService() : super(path: AppConfig.apiEndpoints['parking']!);
 
-  Future<ParkingModelDetailed> getParkingById(String id) async {
-    return get<ParkingModelDetailed>(
+  Future<ParkingModel> getParkingById(String id) async {
+    return get<ParkingModel>(
       endpoint: '/$id',
-      parser: (json) => parseModel(json, ParkingModelDetailed.fromJson),
+      parser: (json) => parseModel(json, ParkingModel.fromJson),
     );
   }
 
-  Future<ParkingModelDetailed> createParking(ParkingCreateModel model) async {
-    return post<ParkingModelDetailed>(
+  Future<ParkingDetailedModel> getParkingDetailed(String id) async {
+    return get<ParkingDetailedModel>(
+      endpoint: '/$id/detailed',
+      parser: (json) => parseModel(json, ParkingDetailedModel.fromJson),
+    );
+  }
+
+  Future<ParkingModel> createParking(ParkingCreateModel model) async {
+    return post<ParkingModel>(
       endpoint: '',
       body: model,
-      parser: (json) => parseModel(json, ParkingModelDetailed.fromJson),
+      parser: (json) => parseModel(json, ParkingModel.fromJson),
     );
   }
 
-  Future<ParkingModelDetailed> updateParking(
+  Future<ParkingModel> updateParking(
     String id,
     ParkingUpdateModel model,
   ) async {
-    return patch<ParkingModelDetailed>(
+    return patch<ParkingModel>(
       endpoint: '/$id',
       body: model,
-      parser: (json) => parseModel(json, ParkingModelDetailed.fromJson),
+      parser: (json) => parseModel(json, ParkingModel.fromJson),
     );
   }
 
-  Future<List<ParkingModelDetailed>> getUserParkings() async {
-    return get<List<ParkingModelDetailed>>(
+  Future<List<ParkingModel>> getUserParkings() async {
+    return get<List<ParkingModel>>(
       endpoint: '',
-      parser: (json) => parseModelList(json, ParkingModelDetailed.fromJson),
-    );
-  }
-
-  Future<List<ParkingModelDetailed>> getParkingsByCompany(
-    String companyId,
-  ) async {
-    return get<List<ParkingModelDetailed>>(
-      endpoint: '',
-      additionalHeaders: {'companyId': companyId},
-      parser: (json) => parseModelList(json, ParkingModelDetailed.fromJson),
+      parser: (json) => parseModelList(json, ParkingModel.fromJson),
     );
   }
 
   Future<void> deleteParking(String id) async {
     return delete<void>(endpoint: '/$id', parser: (_) => null);
   }
-
-  Future<Map<String, dynamic>> getParkingsPaginated({
-    int page = 1,
-    int limit = 10,
-    String? search,
-    String? companyId,
-  }) async {
-    final queryParams = <String, String>{
-      'page': page.toString(),
-      'limit': limit.toString(),
-    };
-
-    if (search != null && search.isNotEmpty) {
-      queryParams['search'] = search;
-    }
-
-    if (companyId != null && companyId.isNotEmpty) {
-      queryParams['companyId'] = companyId;
-    }
-
-    final queryString = queryParams.entries
-        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
-        .join('&');
-
-    return get<Map<String, dynamic>>(
-      endpoint: '/paginated?$queryString',
-      parser: (json) =>
-          parsePaginatedResponse(json, ParkingModelDetailed.fromJson),
-    );
-  }
-
   Future<Map<String, dynamic>> getDashboard(String parkingId) async {
     try {
       return await get<Map<String, dynamic>>(

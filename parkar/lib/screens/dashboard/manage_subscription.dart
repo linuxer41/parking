@@ -16,7 +16,7 @@ class ManageSubscriptionScreen extends StatefulWidget {
 class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
-  ParkingModelDetailed? _currentParking;
+  ParkingDetailedModel? _currentParking;
 
   // Mock data for subscription plans (since functionality is not active yet)
   final List<Map<String, dynamic>> _subscriptionPlans = [
@@ -101,7 +101,7 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
 
       // Load full parking data to get company information
       final parking = await _parkingService
-          .getParkingById(currentParking.id)
+          .getParkingDetailed(currentParking.id)
           .timeout(
             const Duration(seconds: 10),
             onTimeout: () => throw Exception('Tiempo de espera agotado'),

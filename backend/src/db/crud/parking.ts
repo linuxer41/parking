@@ -28,7 +28,7 @@ class ParkingCrud {
       false as "isOwner",
       p."isOpen",
       (
-        SELECT COUNT(*) 
+        SELECT COUNT(*)::INTEGER
         FROM t_area 
         WHERE "parkingId" = p.id AND "deletedAt" IS NULL
       ) AS "areaCount"
@@ -154,39 +154,7 @@ class ParkingCrud {
 
   async findByUserId(ownerId: string): Promise<ParkingResponse[]> {
     const sql = `
-      WITH parking_stats AS (
-      SELECT
-        p.id as "parkingId",
-        COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "totalSpots",
-        COUNT(e.id) FILTER (WHERE e."type" = 'spot' AND e."deletedAt" IS NULL) as "availableSpots",
-        (SELECT COUNT(*) FROM t_area WHERE "parkingId" = p.id AND "deletedAt" IS NULL) as "areaCount"
-      FROM t_parking p
-      LEFT JOIN t_element e ON e."parkingId" = p.id AND e."deletedAt" IS NULL
-      WHERE (p."ownerId" = $1 OR EXISTS (SELECT 1 FROM t_employee emp WHERE emp."parkingId" = p.id AND emp."userId" = $1))
-      AND p."deletedAt" IS NULL
-      GROUP BY p.id
-    )
-    SELECT
-      p.id,
-      p.name,
-      p.phone,
-      p.address,
-      p.email,
-      p."logoUrl",
-      p.rates,
-      p.params,
-      p.location,
-      p."operationMode",
-      p.status,
-      p."isOpen",
-      CASE WHEN p."ownerId" = $1 THEN true ELSE false END as "isOwner",
-      true as "isActive",
-      ps."areaCount"::INTEGER as "areaCount",
-      ps."totalSpots"::INTEGER as "totalSpots",
-      (ps."totalSpots" - ps."availableSpots")::INTEGER as "occupiedSpots",
-      ps."availableSpots"::INTEGER as "availableSpots"
-    FROM t_parking p
-    JOIN parking_stats ps ON ps."parkingId" = p.id
+    ${this.parkingBaseQuery}
     WHERE (p."ownerId" = $1
     OR EXISTS (SELECT 1 FROM t_employee e WHERE e."parkingId" = p.id AND e."userId" = $1))
     AND p."deletedAt" IS NULL

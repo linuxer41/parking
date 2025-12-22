@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingParkingParams = false;
   String? _parkingParamsError;
   late ParkingService _parkingService;
-  ParkingModelDetailed? _currentParking;
+  ParkingDetailedModel? _currentParking;
 
   @override
   void initState() {
@@ -67,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
-      final parking = await _parkingService.getParkingById(currentParking.id);
+      final parking = await _parkingService.getParkingDetailed(currentParking.id);
 
       if (mounted) {
         setState(() {

@@ -5,7 +5,7 @@ import 'dart:math' as math;
 
 import 'enums.dart';
 import 'parking_elements.dart';
-import '../../../models/parking_model.dart';
+import '../../models/parking_model.dart';
 
 /// Implementación de una instalación de parkeo
 class ParkingFacility extends ParkingElement {
@@ -391,7 +391,6 @@ extension ParkingFacilityElementConversion on ParkingFacility {
       rotation: rotation,
       scale: scale,
       isActive: _isAvailable,
-      status: _isAvailable ? 'available' : 'maintenance',
     );
   }
 
@@ -406,7 +405,6 @@ extension ParkingFacilityElementConversion on ParkingFacility {
             FacilityType.values.length - 1,
           )], // Subtract 1 to match enum
       name: element.name,
-      isAvailable: element.status == 'available',
       rotation: element.rotation,
       scale: element.scale,
       isVisible: true,

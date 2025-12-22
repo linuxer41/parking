@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../models/vehicle_model.dart';
+import '../../../models/vehicle_model.dart';
 import 'info_components.dart';
 
 /// Componente para mostrar la información del vehículo de manera estandarizada

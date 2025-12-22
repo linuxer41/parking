@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:parkar/models/access_model.dart';
 import 'package:parkar/models/parking_model.dart';
 import 'package:parkar/screens/cash_register/cash_register_screen.dart';
-import 'package:parkar/screens/parking_map/core/parking_state.dart';
-import 'package:parkar/screens/parking_map/core/parking_state_container.dart';
-import 'package:parkar/screens/parking_map/models/enums.dart';
-import 'package:parkar/screens/parking_map/widgets/element_controls.dart';
-import 'package:parkar/screens/parking_map/widgets/parking_canvas.dart';
 import 'package:parkar/screens/parking/parking_info_panel.dart';
-import 'package:parkar/screens/parking_map/widgets/toolbar.dart';
-import 'package:parkar/services/access_service.dart';
+import 'package:parkar/parking_map/core/parking_state.dart';
+import 'package:parkar/parking_map/core/parking_state_container.dart';
+import 'package:parkar/parking_map/models/element_factory.dart';
+import 'package:parkar/parking_map/models/enums.dart';
+import 'package:parkar/parking_map/widgets/element_controls.dart';
+import 'package:parkar/parking_map/widgets/parking_canvas.dart';
+import 'package:parkar/parking_map/widgets/toolbar.dart';
 import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
 class ParkingMapView extends StatefulWidget {
-  final ParkingModelDetailed parking;
+  final ParkingDetailedModel parking;
 
   const ParkingMapView({super.key, required this.parking});
 
@@ -24,8 +23,6 @@ class ParkingMapView extends StatefulWidget {
 
 class _ParkingMapViewState extends State<ParkingMapView> {
   late TextEditingController searchController;
-  List<AccessModel> accesses = [];
-  List<AccessModel> filteredAccesses = [];
   bool isLoading = true;
   AreaModel? currentArea;
   String searchQuery = '';
@@ -35,7 +32,14 @@ class _ParkingMapViewState extends State<ParkingMapView> {
     super.initState();
     searchController = TextEditingController();
     searchController.addListener(_onSearchChanged);
-    _loadData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (currentArea == null) {
+      _loadData();
+    }
   }
 
   @override
@@ -52,20 +56,23 @@ class _ParkingMapViewState extends State<ParkingMapView> {
     try {
       final appState = AppStateContainer.of(context);
       final selectedAreaId = appState.selectedAreaId;
+
       currentArea = widget.parking.areas.firstWhere(
         (area) => area.id == selectedAreaId,
         orElse: () => widget.parking.areas.first,
       );
-
-      final accessService = AppStateContainer.di(
-        context,
-      ).resolve<AccessService>();
-      accesses = await accessService.getAccesssByParking(widget.parking.id);
-      _applySearchFilter();
+      final state = ParkingMapStateContainer.of(context);
+      state.clear();
+      
+      for (final elementModel in currentArea!.elements) {
+        final parkingElement = ElementFactory.createFromModel(elementModel);
+        if (parkingElement != null) {
+          state.addElement(parkingElement);
+        }
+      }
+      print('currentArea: $currentArea; elements: ${currentArea!.elements}');
     } catch (e) {
       debugPrint('Error loading data: $e');
-      accesses = [];
-      filteredAccesses = [];
     } finally {
       setState(() {
         isLoading = false;
@@ -76,21 +83,10 @@ class _ParkingMapViewState extends State<ParkingMapView> {
   void _onSearchChanged() {
     setState(() {
       searchQuery = searchController.text.toLowerCase();
-      _applySearchFilter();
+      // TODO: Implement search filtering for map elements if needed
     });
   }
 
-  void _applySearchFilter() {
-    if (searchQuery.isEmpty) {
-      filteredAccesses = List.from(accesses);
-    } else {
-      filteredAccesses = accesses.where((access) {
-        return access.vehicle.plate.toLowerCase().contains(searchQuery) ||
-            (access.vehicle.ownerName?.toLowerCase().contains(searchQuery) ??
-                false);
-      }).toList();
-    }
-  }
 
   void _showEditAreaNameDialog(AreaModel area) {
     final TextEditingController nameController = TextEditingController(
@@ -179,7 +175,9 @@ class _ParkingMapViewState extends State<ParkingMapView> {
   void _onAreaChanged(String id) {
     final appState = AppStateContainer.of(context);
     appState.setCurrentArea(id);
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   void _onAddSpot(SpotType type) {

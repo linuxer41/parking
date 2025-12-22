@@ -82,7 +82,6 @@ ElementModel _$ElementModelFromJson(Map<String, dynamic> json) => ElementModel(
       : ElementOccupancyInfoModel.fromJson(
           json['subscription'] as Map<String, dynamic>,
         ),
-  status: json['status'] as String,
 );
 
 Map<String, dynamic> _$ElementModelToJson(ElementModel instance) =>
@@ -100,7 +99,6 @@ Map<String, dynamic> _$ElementModelToJson(ElementModel instance) =>
       'entry': instance.entry,
       'booking': instance.booking,
       'subscription': instance.subscription,
-      'status': instance.status,
     };
 
 const _$ElementTypeEnumMap = {
@@ -263,9 +261,7 @@ Map<String, dynamic> _$AreaDetailModelToJson(AreaDetailModel instance) =>
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
 
-ParkingModel _$ParkingSimpleModelFromJson(
-  Map<String, dynamic> json,
-) => ParkingModel(
+ParkingModel _$ParkingModelFromJson(Map<String, dynamic> json) => ParkingModel(
   id: json['id'] as String,
   name: json['name'] as String,
   email: json['email'] as String?,
@@ -288,7 +284,7 @@ ParkingModel _$ParkingSimpleModelFromJson(
   areaCount: (json['areaCount'] as num).toInt(),
 );
 
-Map<String, dynamic> _$ParkingSimpleModelToJson(ParkingModel instance) =>
+Map<String, dynamic> _$ParkingModelToJson(ParkingModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
@@ -310,9 +306,9 @@ const _$ParkingOperationModeEnumMap = {
   ParkingOperationMode.list: 'list',
 };
 
-ParkingModelDetailed _$ParkingModelFromJson(
+ParkingDetailedModel _$ParkingDetailedModelFromJson(
   Map<String, dynamic> json,
-) => ParkingModelDetailed(
+) => ParkingDetailedModel(
   id: json['id'] as String,
   name: json['name'] as String,
   email: json['email'] as String?,
@@ -347,28 +343,29 @@ ParkingModelDetailed _$ParkingModelFromJson(
   ),
 );
 
-Map<String, dynamic> _$ParkingModelToJson(ParkingModelDetailed instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'name': instance.name,
-      'email': instance.email,
-      'phone': instance.phone,
-      'address': instance.address,
-      'logoUrl': instance.logoUrl,
-      'status': instance.status,
-      'ownerId': instance.ownerId,
-      'isOwner': instance.isOwner,
-      'isActive': instance.isActive,
-      'companyId': instance.companyId,
-      'owner': instance.owner,
-      'rates': instance.rates,
-      'params': instance.params,
-      'areas': instance.areas,
-      'employees': instance.employees,
-      'location': instance.location,
-      'areaCount': instance.areaCount,
-      'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
-    };
+Map<String, dynamic> _$ParkingDetailedModelToJson(
+  ParkingDetailedModel instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+  'email': instance.email,
+  'phone': instance.phone,
+  'address': instance.address,
+  'logoUrl': instance.logoUrl,
+  'status': instance.status,
+  'ownerId': instance.ownerId,
+  'isOwner': instance.isOwner,
+  'isActive': instance.isActive,
+  'companyId': instance.companyId,
+  'owner': instance.owner,
+  'rates': instance.rates,
+  'params': instance.params,
+  'areas': instance.areas,
+  'employees': instance.employees,
+  'location': instance.location,
+  'areaCount': instance.areaCount,
+  'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
+};
 
 ParkingLocationModel _$ParkingLocationModelFromJson(
   Map<String, dynamic> json,
@@ -426,7 +423,6 @@ ParkingUpdateModel _$ParkingUpdateModelFromJson(Map<String, dynamic> json) =>
         _$ParkingOperationModeEnumMap,
         json['operationMode'],
       ),
-      capacity: (json['capacity'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
@@ -441,7 +437,6 @@ Map<String, dynamic> _$ParkingUpdateModelToJson(ParkingUpdateModel instance) =>
       'isOpen': instance.isOpen,
       'openingHours': instance.openingHours,
       'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],
-      'capacity': instance.capacity,
     };
 
 ParkingPreviewModel _$ParkingPreviewModelFromJson(Map<String, dynamic> json) =>

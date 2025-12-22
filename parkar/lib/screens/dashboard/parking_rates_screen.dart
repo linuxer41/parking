@@ -23,7 +23,7 @@ class ParkingRatesScreen extends StatefulWidget {
 class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
   late ParkingService _parkingService;
   bool _isLoading = true;
-  ParkingModelDetailed? _parking;
+  ParkingDetailedModel? _parking;
   List<RateModel> _rates = [];
   String? _error;
   final _refreshKey = GlobalKey<RefreshIndicatorState>();
@@ -49,7 +49,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
 
     try {
       // Obtener detalles del parking que incluyen las tarifas
-      final parking = await _parkingService.getParkingById(
+      final parking = await _parkingService.getParkingDetailed(
         widget.parkingId.toString(),
       );
 

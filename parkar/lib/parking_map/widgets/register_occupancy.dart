@@ -1,23 +1,23 @@
 // ignore_for_file: sized_box_for_whitespace
 
 import 'package:flutter/material.dart';
-import '../../../services/booking_service.dart';
-import '../../../services/access_service.dart';
-import '../../../services/subscription_service.dart';
-import '../../../services/vehicle_service.dart';
-import '../../../state/app_state_container.dart';
-import '../../../state/app_state.dart';
-import '../../../models/booking_model.dart';
-import '../../../models/access_model.dart';
-import '../../../models/subscription_model.dart';
-import '../../../models/parking_model.dart';
-import '../../../models/employee_model.dart';
+import '../../services/booking_service.dart';
+import '../../services/access_service.dart';
+import '../../services/subscription_service.dart';
+import '../../services/vehicle_service.dart';
+import '../../state/app_state_container.dart';
+import '../../state/app_state.dart';
+import '../../models/booking_model.dart';
+import '../../models/access_model.dart';
+import '../../models/subscription_model.dart';
+import '../../models/parking_model.dart';
+import '../../models/employee_model.dart';
 import '../models/parking_spot.dart';
-import '../../../services/print_service.dart';
-import '../../../widgets/print_method_dialog.dart';
+import '../../services/print_service.dart';
+import '../../widgets/print_method_dialog.dart';
 import 'components/index.dart';
-import '../../../models/vehicle_model.dart';
-import '../../../widgets/custom_snackbar.dart';
+import '../../models/vehicle_model.dart';
+import '../../widgets/custom_snackbar.dart';
 
 /// Excepción personalizada para errores de validación
 class ValidationException implements Exception {
@@ -885,7 +885,7 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     final appState = AppStateContainer.of(context);
     final parking = appState.currentParking;
 
-    // Si no hay parking o no es ParkingModelDetailed completo, usar valores por defecto
+    // Si no hay parking o no es ParkingDetailedModel completo, usar valores por defecto
     if (parking == null) {
       switch (period) {
         case SubscriptionPeriod.weekly:
@@ -900,8 +900,8 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     // Intentar obtener las tarifas del parking
     List<RateModel>? rates;
     try {
-      // Si es ParkingModelDetailed completo, usar las tarifas
-      if (parking is ParkingModelDetailed) {
+      // Si es ParkingDetailedModel completo, usar las tarifas
+      if (parking is ParkingDetailedModel) {
         rates = parking.rates;
       }
     } catch (e) {

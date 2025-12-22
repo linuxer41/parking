@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:parkar/screens/parking_map/core/index.dart';
+import 'package:parkar/parking_map/core/index.dart';
 import 'package:vector_math/vector_math.dart' as vector_math;
 
 import '../models/enums.dart';

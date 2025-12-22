@@ -205,8 +205,7 @@ class SelectScreen extends StatelessWidget {
                                     );
 
                                     try {
-                                      final detailedParking = await parkingService.getParkingById(parking.id);
-                                      state.setCurrentParking(detailedParking);
+                                      state.setCurrentParking(parking);
 
                                       if (context.mounted) {
                                         Navigator.of(

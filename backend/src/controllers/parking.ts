@@ -133,6 +133,25 @@ export const parkingController = new Elysia({
   .get(
     "/:parkingId",
     async ({ params, user }) => {
+      const res = await db.parking.findById(params.parkingId);
+      console.log("res", res);
+      return res;
+    },
+    {
+      detail: {
+        summary: "Obtener todos los parkings",
+        description: "Retorna una lista de todos los parkings registrados.",
+      },
+      response: {
+        200: ParkingResponseSchema,
+        400: t.String(),
+        500: t.String(),
+      },
+    },
+  )
+  .get(
+    "/:parkingId/detailed",
+    async ({ params, user }) => {
       const res = await db.parking.getDetailed(params.parkingId, user.id);
       console.log("res", res);
       return res;

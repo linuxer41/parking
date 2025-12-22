@@ -6,7 +6,7 @@ import 'dart:math' as math;
 
 import 'enums.dart';
 import 'parking_elements.dart';
-import '../../../models/parking_model.dart';
+import '../../models/parking_model.dart';
 
 /// Implementación de una señalización de parkeo
 class ParkingSignage extends ParkingElement {
@@ -368,7 +368,6 @@ extension ParkingSignageElementConversion on ParkingSignage {
       rotation: rotation,
       scale: scale,
       isActive: true,
-      status: 'active',
     );
   }
 

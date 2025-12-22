@@ -19,7 +19,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   late ParkingService _parkingService;
   late EmployeeService _employeeService;
   bool _isLoading = true;
-  ParkingModelDetailed? _parking;
+  ParkingDetailedModel? _parking;
   late List<EmployeeModel> _employees;
   String? _error;
 
@@ -32,7 +32,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _parkingService = AppStateContainer.di(context).resolve<ParkingService>();
-    _employeeService = EmployeeService();
+    _employeeService = AppStateContainer.di(context).resolve<EmployeeService>();
     _loadParkingDetails();
   }
 
@@ -61,7 +61,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
       // Load full parking data like parking detail screen does
       final parking = await _parkingService
-          .getParkingById(currentParking.id)
+          .getParkingDetailed(currentParking.id)
           .timeout(
             const Duration(seconds: 10),
             onTimeout: () => throw Exception('Tiempo de espera agotado'),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../widgets/custom_snackbar.dart';
+import '../../../widgets/custom_snackbar.dart';
 
 /// Layout común para todos los bottom sheets modales
 class ManageLayout extends StatelessWidget {

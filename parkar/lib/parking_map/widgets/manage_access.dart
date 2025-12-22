@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../models/access_model.dart';
-import '../../../models/parking_model.dart';
-import '../../../models/vehicle_model.dart';
-import '../../../services/access_service.dart';
-import '../../../services/print_service.dart';
-import '../../../state/app_state_container.dart';
-import '../../../widgets/print_method_dialog.dart';
+import '../../models/access_model.dart';
+import '../../models/parking_model.dart';
+import '../../models/vehicle_model.dart';
+import '../../services/access_service.dart';
+import '../../services/print_service.dart';
+import '../../state/app_state_container.dart';
+import '../../widgets/print_method_dialog.dart';
 import '../models/parking_spot.dart';
 import 'components/index.dart';
 

@@ -5,7 +5,7 @@ import 'package:vector_math/vector_math.dart' as vector_math;
 
 import 'enums.dart';
 import 'parking_elements.dart';
-import '../../../models/parking_model.dart';
+import '../../models/parking_model.dart';
 
 /// Clase que representa un espacio de estacionamiento
 class ParkingSpot extends ParkingElement {
@@ -955,7 +955,6 @@ extension ParkingSpotElementConversion on ParkingSpot {
       entry: _entry,
       booking: _booking,
       subscription: _subscription,
-      status: _status,
     );
   }
 
@@ -970,11 +969,10 @@ extension ParkingSpotElementConversion on ParkingSpot {
             SpotType.values.length - 1,
           )], // Subtract 1 to match enum
       label: element.name,
-      isOccupied: element.status == 'occupied',
+      isOccupied: element.entry != null,
       entry: element.entry,
       booking: element.booking,
       subscription: element.subscription,
-      status: element.status,
       rotation: element.rotation,
       scale: element.scale,
       isVisible: true,

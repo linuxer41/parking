@@ -1,54 +1,53 @@
 import 'package:flutter/material.dart';
-import '../../../services/booking_service.dart';
-import '../../../services/access_service.dart';
-import '../../../services/subscription_service.dart';
-import '../../../state/app_state_container.dart';
-import '../../../models/access_model.dart';
-import '../../../models/booking_model.dart';
-import '../../../models/parking_model.dart';
-import '../../../models/employee_model.dart';
-import '../../../models/vehicle_model.dart';
-import '../../../models/parking_model.dart';
+import '../../services/booking_service.dart';
+import '../../services/access_service.dart';
+import '../../state/app_state_container.dart';
+import '../../models/access_model.dart';
+import '../../models/booking_model.dart';
+import '../../models/parking_model.dart';
+import '../../models/employee_model.dart';
+import '../../models/vehicle_model.dart';
+import '../../models/parking_model.dart';
 import '../models/parking_spot.dart';
-import '../../../services/print_service.dart';
-import '../../../widgets/print_method_dialog.dart';
+import '../../services/print_service.dart';
+import '../../widgets/print_method_dialog.dart';
 import 'components/index.dart';
 
-/// Modal para manejar spots con suscripción
-class ManageSubscription extends StatefulWidget {
+/// Modal para manejar spots con reserva
+class ManageReservation extends StatefulWidget {
   final ParkingSpot spot;
 
-  const ManageSubscription({super.key, required this.spot});
+  const ManageReservation({super.key, required this.spot});
 
   @override
-  State<ManageSubscription> createState() => _ManageSubscriptionState();
+  State<ManageReservation> createState() => _ManageReservationState();
 
   /// Mostrar el modal como un bottom sheet
   static Future<void> show(BuildContext context, ParkingSpot spot) async {
     ManageLayout.show(
       context: context,
-      child: ManageSubscription(spot: spot),
+      child: ManageReservation(spot: spot),
     );
   }
 }
 
-class _ManageSubscriptionState extends State<ManageSubscription> {
+class _ManageReservationState extends State<ManageReservation> {
   bool isLoading = false;
   String errorMessage = '';
 
   @override
   Widget build(BuildContext context) {
-    final subscription = widget.spot.subscription;
-    if (subscription == null) {
+    final reservation = widget.spot.booking;
+    if (reservation == null) {
       return const FullScreenErrorContainer(
-        message: 'No hay información de suscripción disponible',
+        message: 'No hay información de reserva disponible',
       );
     }
 
-    // Botón de cancelar suscripción
+    // Botón de cancelar reserva
     final cancelButton = CancelButton(
-      label: 'Cancelar\nSuscripción',
-      icon: Icons.card_membership_outlined,
+      label: 'Cancelar\nReserva',
+      icon: Icons.event_busy,
       onPressed: () => _showCancelConfirmation(),
       isLoading: isLoading,
     );
@@ -62,23 +61,23 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
           // Información del vehículo
           VehicleInfoCard(
             vehicle: VehiclePreviewModel(
-              id: subscription.id,
-              plate: subscription.vehiclePlate,
+              id: reservation.id,
+              plate: reservation.vehiclePlate,
               type: 'Vehículo', // Default type
               color: null,
-              ownerName: subscription.ownerName,
+              ownerName: reservation.ownerName,
               ownerDocument: null,
-              ownerPhone: subscription.ownerPhone,
+              ownerPhone: reservation.ownerPhone,
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // Información de la suscripción
-          SubscriptionInfoCard(
-            startDate: subscription.startDate,
-            endDate: subscription.endDate,
-            amount: subscription.amount ?? 0.0,
+          // Información de la reserva
+          ReservationInfoCard(
+            startDate: reservation.startDate,
+            endDate: reservation.endDate,
+            amount: reservation.amount ?? 0.0,
             employeeName: 'Empleado', // TODO: Add employee info if available
           ),
         ],
@@ -102,9 +101,9 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     ];
 
     return ManageLayout(
-      title: 'Espacio Suscrito',
+      title: 'Espacio Reservado',
       subtitle: 'Espacio ${widget.spot.label}',
-      icon: Icons.card_membership,
+      icon: Icons.bookmark,
       content: content,
       actions: actions,
       headerAction: cancelButton,
@@ -112,7 +111,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     );
   }
 
-  // Marcar entrada del vehículo suscrito
+  // Marcar entrada del vehículo reservado
   Future<void> _handleMarkEntry() async {
     setState(() {
       isLoading = true;
@@ -120,29 +119,16 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     });
 
     try {
-      final subscription = widget.spot.subscription;
-      if (subscription == null) {
-        throw Exception('No hay información de suscripción disponible');
+      final reservation = widget.spot.booking;
+      if (reservation == null) {
+        throw Exception('No hay información de reserva disponible');
       }
 
-      // Crear acceso usando el AccessService con los datos de la suscripción
+      // Registrar entrada usando el servicio de entradas y salidas
       final accessService = AppStateContainer.di(
         context,
       ).resolve<AccessService>();
-      final appState = AppStateContainer.of(context);
-
-      final accessModel = AccessCreateModel(
-        vehiclePlate: subscription.vehiclePlate,
-        vehicleType: 'Vehículo', // Default type
-        vehicleColor: null,
-        ownerName: subscription.ownerName,
-        ownerDocument: null,
-        ownerPhone: subscription.ownerPhone,
-        spotId: widget.spot.id,
-        notes: 'Entrada de suscriptor',
-      );
-
-      final entry = await accessService.createEntry(accessModel);
+      final entry = await accessService.registerEntry(reservation.id);
 
       // Actualizar el spot con los datos del acceso
       _updateSpotWithAccessData(entry);
@@ -155,17 +141,18 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Entrada registrada para ${subscription.vehiclePlate}'),
+          content: Text('Entrada registrada para ${reservation.vehiclePlate}'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
 
-      // Imprimir ticket de entrada
+      // Imprimir ticket de entrada usando la preferencia guardada
       final printService = AppStateContainer.di(
         context,
       ).resolve<PrintService>();
+      final appState = AppStateContainer.of(context);
       await printService.printEntryTicket(
         booking: entry,
         context: context,
@@ -180,28 +167,28 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
     }
   }
 
-  // Cancelar la suscripción
-  Future<void> _handleCancelSubscription() async {
+  // Cancelar la reserva
+  Future<void> _handleCancelReservation() async {
     setState(() {
       isLoading = true;
       errorMessage = '';
     });
 
     try {
-      final subscription = widget.spot.subscription;
-      if (subscription == null) {
-        throw Exception('No hay información de suscripción disponible');
+      final reservation = widget.spot.booking;
+      if (reservation == null) {
+        throw Exception('No hay información de reserva disponible');
       }
 
-      // Llamar al servicio para cancelar la suscripción
-      final subscriptionService = AppStateContainer.di(
+      // Llamar al servicio para cancelar la reserva
+      final bookingService = AppStateContainer.di(
         context,
-      ).resolve<SubscriptionService>();
-      await subscriptionService.deleteSubscription(subscription.id);
+      ).resolve<BookingService>();
+      await bookingService.deleteBooking(reservation.id);
 
       // Actualizar el spot como disponible
       widget.spot.isOccupied = false;
-      widget.spot.subscription = null;
+      widget.spot.booking = null;
       widget.spot.status = 'available';
 
       if (!mounted) return;
@@ -212,9 +199,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Suscripción cancelada para ${subscription.vehiclePlate}',
-          ),
+          content: Text('Reserva cancelada para ${reservation.vehiclePlate}'),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -222,20 +207,20 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       );
     } catch (e) {
       setState(() {
-        errorMessage = 'Error al cancelar suscripción: $e';
+        errorMessage = 'Error al cancelar reserva: $e';
         isLoading = false;
       });
     }
   }
 
   void _showCancelConfirmation() {
-    final subscription = widget.spot.subscription;
+    final reservation = widget.spot.booking;
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancelar Suscripción'),
+        title: const Text('Cancelar Reserva'),
         content: Text(
-          '¿Estás seguro de que quieres cancelar la suscripción para el vehículo ${subscription?.vehiclePlate ?? 'desconocido'}?\n\nEsta acción no se puede deshacer.',
+          '¿Estás seguro de que quieres cancelar la reserva para el vehículo ${reservation?.vehiclePlate ?? 'desconocido'}?',
         ),
         actions: [
           TextButton(
@@ -254,7 +239,7 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
       ),
     ).then((confirmed) {
       if (confirmed == true) {
-        _handleCancelSubscription();
+        _handleCancelReservation();
       }
     });
   }
@@ -279,18 +264,18 @@ class _ManageSubscriptionState extends State<ManageSubscription> {
   // Método para imprimir ticket
   Future<void> _printTicket() async {
     final printService = AppStateContainer.di(context).resolve<PrintService>();
-    final subscriptionService = AppStateContainer.di(
-      context,
-    ).resolve<SubscriptionService>();
-    final subscription = widget.spot.subscription;
+    final appState = AppStateContainer.of(context);
+    final reservation = widget.spot.booking;
 
-    if (subscription == null) return;
+    if (reservation == null) return;
 
-    final fullSubscription = await subscriptionService.getSubscription(subscription.id);
-
-    if (fullSubscription != null) {
-      // Siempre mostrar PDF para "Ver Ticket"
-      printService.printSubscriptionReceipt(booking: fullSubscription, context: context, forceView: true);
-    }
+    // Siempre mostrar PDF para "Ver Ticket"
+    printService.printReservationTicket(
+      booking: reservation as BookingModel,
+      context: context,
+      isSimpleMode:
+          appState.currentParking?.operationMode == ParkingOperationMode.list,
+      forceView: true,
+    );
   }
 }

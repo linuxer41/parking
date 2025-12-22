@@ -13,7 +13,7 @@ class ParkingInfoPanel extends StatelessWidget {
   final Function(String)? onSearchChanged;
   final VoidCallback? onSettingsPressed;
   final VoidCallback? onCashPressed;
-  final ParkingModelDetailed parking;
+  final ParkingDetailedModel parking;
   final CashRegisterModel? cashRegister;
   final String selectedAreaId;
 

@@ -31,7 +31,7 @@ VehicleModel _$VehicleModelFromJson(Map<String, dynamic> json) => VehicleModel(
   parkingId: json['parkingId'] as String,
   parking: json['parking'] == null
       ? null
-      : ParkingModelDetailed.fromJson(json['parking'] as Map<String, dynamic>),
+      : ParkingDetailedModel.fromJson(json['parking'] as Map<String, dynamic>),
   type: json['type'] as String?,
   color: json['color'] as String?,
   plate: json['plate'] as String,

@@ -180,7 +180,7 @@ export const ElementOccupancyInfoSchema = t.Object({
 
 // ===== ESQUEMA DE RESPUESTA DE ELEMENT =====
 export const ElementResponseSchema = t.Composite([
-  ElementSchema,
+  t.Pick(ElementSchema, ["id", "name", "isActive", "type", "subType", "posX", "posY", "posZ", "rotation", "scale"]),
   t.Object({
     entry: t.Nullable(ElementOccupancyInfoSchema),
     subscription: t.Nullable(ElementOccupancyInfoSchema),
@@ -447,7 +447,7 @@ export const ParkingSchema = t.Composite([
 // ===== ESQUEMA DE RESPUESTA DE PARKING =====
 export const ParkingResponseSchema = t.Composite([
   t.Pick(ParkingSchema, ["id", "name", "email", "phone", "address", "location", "logoUrl", "status", "isOpen", "params", "rates", "operationMode"]),
-  t.Pick(ParkingAditionalSelectSchema, ["isOwner", "areaCount", ]),
+  t.Pick(ParkingAditionalSelectSchema, ["isOwner", "areaCount",]),
 ], {
   description: "Esquema de respuesta para operaciones de Parking",
 });

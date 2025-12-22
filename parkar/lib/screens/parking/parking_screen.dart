@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:parkar/models/parking_model.dart';
-import 'package:parkar/screens/parking_map/core/parking_state.dart';
-import 'package:parkar/screens/parking_map/core/parking_state_container.dart';
+import 'package:parkar/parking_map/core/parking_state.dart';
+import 'package:parkar/parking_map/core/parking_state_container.dart';
 import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/state/app_state_container.dart';
-import 'package:uuid/uuid.dart';
 
 import 'parking_list_view.dart';
 import 'parking_map_view.dart';
-
-const uuid = Uuid();
 
 /// Pantalla principal del sistema de parkeo
 class ParkingScreen extends StatefulWidget {
@@ -23,26 +20,109 @@ class ParkingScreen extends StatefulWidget {
 }
 
 class _ParkingScreenState extends State<ParkingScreen> {
+   late ParkingService _parkingService;
+  bool _isLoading = true;
+  ParkingDetailedModel? _parking;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+    _loadParkingDetails();
+  }
+
+
+  Future<void> _loadParkingDetails() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final appState = AppStateContainer.of(context);
+      final currentParking = appState.currentParking;
+
+      if (currentParking == null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _error = 'No hay estacionamiento seleccionado';
+          });
+        }
+        return;
+      }
+
+      // Load full parking data like parking detail screen does
+      final parking = await _parkingService
+          .getParkingDetailed(currentParking.id)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception('Tiempo de espera agotado'),
+          );
+
+      if (mounted) {
+        setState(() {
+          _parking = parking;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Error al cargar datos del estacionamiento: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return _buildLoadingPlaceholder();
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Text(_error!),
+        ),
+      );
+    }
+
+    if (_parking == null) {
+      return _buildLoadingPlaceholder();
+    }
+
     final appState = AppStateContainer.of(context);
-    final currentParking = appState.currentParking;
 
     print(
-      'currentParking: $currentParking; selectedAreaId: ${appState.selectedAreaId}',
+      'parking: $_parking; selectedAreaId: ${appState.selectedAreaId}',
     );
-    if (currentParking == null) return _buildLoadingPlaceholder();
 
-    if (appState.selectedAreaId == null)
-      appState.setCurrentArea(currentParking.areas!.first.id);
+    if (appState.selectedAreaId == null) {
+      final areas = _parking!.areas;
+      if (areas != null && areas.isNotEmpty) {
+        appState.setCurrentArea(areas.first.id);
+      }
+    }
+
     return Builder(
       builder: (context) {
-        if (currentParking.operationMode == ParkingOperationMode.list) {
-          return ParkingListView(parking: currentParking);
+        if (_parking!.operationMode == ParkingOperationMode.list) {
+          return ParkingListView(parking: _parking!);
         } else {
           return ParkingMapStateContainer(
             state: ParkingMapState(),
-            child: ParkingMapView(parking: currentParking),
+            child: ParkingMapView(parking: _parking!),
           );
         }
       },
@@ -67,10 +147,4 @@ class _ParkingScreenState extends State<ParkingScreen> {
     );
   }
 
-  Future<ParkingModelDetailed> _loadParking() async {
-    final parkingService = AppStateContainer.di(
-      context,
-    ).resolve<ParkingService>();
-    return await parkingService.getParkingById(uuid.v4());
-  }
 }

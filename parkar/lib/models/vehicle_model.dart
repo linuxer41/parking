@@ -33,7 +33,7 @@ class SpotCheckModel extends JsonConvertible<SpotCheckModel> {
 class VehicleModel extends JsonConvertible<VehicleModel> {
   final String id;
   final String parkingId;
-  final ParkingModelDetailed? parking;
+  final ParkingDetailedModel? parking;
   final String? type;
   final String plate;
   final String? color;

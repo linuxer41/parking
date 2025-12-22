@@ -85,7 +85,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Get user parkings
-      const userParkings = await db.parking.findParkingsByUserId(user.id);
+      const userParkings = await db.parking.findByUserId(user.id);
 
       return {
         auth: {
@@ -164,7 +164,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Get user parkings
-      const userParkings = await db.parking.findParkingsByUserId(user.id);
+      const userParkings = await db.parking.findByUserId(user.id);
 
       return {
         auth: {
@@ -219,7 +219,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       });
 
       // Obtener los parkings del usuario
-      const userParkings = await db.parking.findParkingsByUserId(result.user.id);
+      const userParkings = await db.parking.findByUserId(result.user.id);
 
       return {
         auth: {
@@ -260,7 +260,7 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
       throw new UnauthorizedError("Usuario no autenticado");
     }
     // Get user parkings
-    const userParkings = await db.parking.findParkingsByUserId(user.id);
+    const userParkings = await db.parking.findByUserId(user.id);
 
     return {
       user: user,

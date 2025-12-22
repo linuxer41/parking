@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math.dart' as vector_math;
 
-import '../../../models/parking_model.dart';
+import '../../models/parking_model.dart';
 import 'enums.dart';
 import 'parking_elements.dart';
 import 'parking_spot.dart';
@@ -46,13 +46,12 @@ class ElementFactory {
       position: vector_math.Vector2(model.posX, model.posY),
       type: spotType,
       label: model.name,
-      isOccupied: model.status == 'occupied',
+      isOccupied: model.entry != null,
       rotation: model.rotation,
       scale: model.scale,
       entry: model.entry,
       booking: model.booking,
       subscription: model.subscription,
-      status: model.status,
       isActive: model.isActive,
     );
   }
@@ -119,7 +118,7 @@ class ElementFactory {
       position: vector_math.Vector2(model.posX, model.posY),
       type: facilityType,
       name: model.name,
-      isAvailable: model.status == 'available',
+      isAvailable: model.entry != null,
       rotation: model.rotation,
       scale: model.scale,
     );

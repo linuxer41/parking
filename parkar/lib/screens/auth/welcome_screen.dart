@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/state/app_state_container.dart';
-import '../../widgets/auth/auth_layout.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../widgets/auth/auth_layout.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
