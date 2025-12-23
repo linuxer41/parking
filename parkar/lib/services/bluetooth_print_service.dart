@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_bluetooth_printer/flutter_bluetooth_printer.dart';
+import '../constants/constants.dart';
 import '../models/booking_model.dart';
 import '../models/access_model.dart';
 import '../models/subscription_model.dart';
@@ -107,7 +108,7 @@ class BluetoothPrintService {
 
     zpl += '''
 ^FO20,360^FDPAGO:^FS
-^FO20,390^FDTarifa: \$${booking.amount.toStringAsFixed(2)}^FS
+^FO20,390^FDTarifa: ${CurrencyConstants.formatAmountForPdf(booking.amount, booking.parking.params?.currency ?? 'BOB', booking.parking.params?.decimalPlaces ?? 2)}^FS
 ^FO20,420^FDAtendido por: ${booking.employee?.name ?? '--'}^FS
 ^FO20,460^FDGRACIAS POR SU VISITA^FS
 ^FO20,490^FDEste documento es comprobante de pago^FS
@@ -177,7 +178,7 @@ class BluetoothPrintService {
 ^FO20,360^FDDoc: ${booking.vehicle.ownerDocument ?? '--'}^FS
 ^FO20,390^FDTel: ${booking.vehicle.ownerPhone ?? '--'}^FS
 ^FO20,420^FDPAGO:^FS
-^FO20,450^FDMonto: \$${booking.amount.toStringAsFixed(2)}^FS
+^FO20,450^FDMonto: ${CurrencyConstants.formatAmountForPdf(booking.amount, booking.parking.params?.currency ?? 'BOB', booking.parking.params?.decimalPlaces ?? 2)}^FS
 ^FO20,480^FDMetodo: Efectivo^FS
 ^FO20,510^FDEstado: Pagado^FS
 ^FO20,550^FDRECIBO OFICIAL^FS

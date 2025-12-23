@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../constants/constants.dart';
 import 'info_components.dart';
 
 /// Componente para mostrar la información de una reserva
@@ -33,7 +34,7 @@ class ReservationInfoCard extends StatelessWidget {
         InfoRow(label: 'Fecha de inicio', value: _formatDateTime(startDate)),
         if (endDate != null)
           InfoRow(label: 'Fecha de fin', value: _formatDateTime(endDate!)),
-        InfoRow(label: 'Monto', value: '\$${amount.toStringAsFixed(2)}'),
+        InfoRow(label: 'Monto', value: CurrencyConstants.formatAmountWithParkingParams(context, amount)),
         InfoRow(label: 'Empleado', value: employeeName),
       ],
     );

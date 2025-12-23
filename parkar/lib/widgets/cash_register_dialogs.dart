@@ -171,7 +171,7 @@ class CashRegisterDialogs {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Total: ${CurrencyConstants.formatAmount(totalCash, 'BOB')}',
+                            'Total: ${CurrencyConstants.formatAmountWithParkingParams(context, totalCash)}',
                             style: TextStyle(
                               fontSize: 14,
                               color: colorScheme.onSurface,

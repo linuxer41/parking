@@ -440,8 +440,7 @@ export const ParkingSchema = t.Composite([
     
     operationMode: t.Union([t.Literal("map"), t.Literal("list")], {
       description: "Modo de operación del parqueo: map o list",
-      required: true,
-      default: "map",
+      required: true
     }),
   })],
   {

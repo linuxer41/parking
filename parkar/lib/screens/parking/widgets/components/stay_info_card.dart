@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../constants/constants.dart';
 import 'info_components.dart';
 
 /// Componente para mostrar la información de permanencia de un vehículo
@@ -61,15 +62,15 @@ class StayInfoCard extends StatelessWidget {
             value: 'Reserva - Adelanto pagado'
           ),
           InfoRow(
-            label: 'Monto adelanto', 
-            value: '\$${advanceAmount!.toStringAsFixed(2)}'
+            label: 'Monto adelanto',
+            value: CurrencyConstants.formatAmountWithParkingParams(context, advanceAmount!)
           ),
         ],
       );
     } else {
       return InfoRow(
-        label: 'Total a pagar', 
-        value: '\$${cost.toStringAsFixed(2)}'
+        label: 'Total a pagar',
+        value: CurrencyConstants.formatAmountWithParkingParams(context, cost)
       );
     }
   }

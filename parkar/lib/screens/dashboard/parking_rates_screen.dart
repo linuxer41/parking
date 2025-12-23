@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../constants/constants.dart';
 import '../../models/parking_model.dart';
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
@@ -343,14 +344,20 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
                 ),
                 const SizedBox(width: 12),
                 // Botón editar
-                IconButton(
-                  onPressed: () => _showRateDialog(rate: rate),
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    size: 20,
-                    color: colorScheme.primary,
+                Container(
+                  width: 48,
+                  height: 48,
+                  child: IconButton(
+                    onPressed: () => _showRateDialog(rate: rate),
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      size: 20,
+                      color: colorScheme.primary,
+                    ),
+                    tooltip: 'Editar tarifa',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                  tooltip: 'Editar tarifa',
                 ),
               ],
             ),
@@ -363,23 +370,25 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
                   child: _buildPriceItem(
                     context,
                     'Hora',
-                    '\$${rate.hourly.toStringAsFixed(2)}',
+                    rate.hourly,
                     Icons.schedule,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildPriceItem(
                     context,
                     'Día',
-                    '\$${rate.daily.toStringAsFixed(2)}',
+                    rate.daily,
                     Icons.calendar_today,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildPriceItem(
                     context,
                     'Semana',
-                    '\$${rate.weekly.toStringAsFixed(2)}',
+                    rate.weekly,
                     Icons.view_week,
                   ),
                 ),
@@ -392,23 +401,25 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
                   child: _buildPriceItem(
                     context,
                     'Mes',
-                    '\$${rate.monthly.toStringAsFixed(2)}',
+                    rate.monthly,
                     Icons.calendar_month,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildPriceItem(
                     context,
                     'Año',
-                    '\$${rate.yearly.toStringAsFixed(2)}',
+                    rate.yearly,
                     Icons.calendar_month,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: _buildPriceItem(
+                  child: _buildToleranceItem(
                     context,
                     'Tolerancia',
-                    '${rate.tolerance} min',
+                    rate.tolerance,
                     Icons.timer,
                   ),
                 ),
@@ -423,7 +434,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
   Widget _buildPriceItem(
     BuildContext context,
     String label,
-    String value,
+    double value,
     IconData icon,
   ) {
     final theme = Theme.of(context);
@@ -449,7 +460,47 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            value,
+            CurrencyConstants.formatAmountWithParkingParams(context, value),
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToleranceItem(
+    BuildContext context,
+    String label,
+    int value,
+    IconData icon,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 30),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: colorScheme.primary),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$value min',
             style: textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
@@ -509,6 +560,10 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
     ];
     int selectedCategory = rate?.vehicleCategory ?? 2;
 
+    final currencySymbol = _parking?.params.currency != null
+        ? CurrencyConstants.getCurrencySymbol(_parking!.params.currency)
+        : '\$';
+
     showDialog(
       context: context,
       builder: (context) => _RateDialog(
@@ -523,6 +578,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
         yearlyRateController: yearlyRateController,
         toleranceController: toleranceController,
         isActive: isActive,
+        currencySymbol: currencySymbol,
         onSave: () async {
           await _saveRate(
             isEditing: isEditing,
@@ -655,6 +711,7 @@ class _RateDialog extends StatefulWidget {
   final TextEditingController yearlyRateController;
   final TextEditingController toleranceController;
   final bool isActive;
+  final String currencySymbol;
   final VoidCallback onSave;
 
   const _RateDialog({
@@ -669,6 +726,7 @@ class _RateDialog extends StatefulWidget {
     required this.yearlyRateController,
     required this.toleranceController,
     required this.isActive,
+    required this.currencySymbol,
     required this.onSave,
   });
 
@@ -694,14 +752,29 @@ class _RateDialogState extends State<_RateDialog> {
     final textTheme = theme.textTheme;
 
     return AlertDialog(
-      title: Text(
-        widget.isEditing ? 'Editar Tarifa' : 'Nueva Tarifa',
-        style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.isEditing ? 'Editar Tarifa' : 'Nueva Tarifa',
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Configura los precios y condiciones',
+            style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 400),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Nombre de tarifa
             _buildTextField(
               controller: widget.nameController,
@@ -744,7 +817,7 @@ class _RateDialogState extends State<_RateDialog> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    prefix: '\$',
+                    prefix: widget.currencySymbol,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -756,7 +829,7 @@ class _RateDialogState extends State<_RateDialog> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    prefix: '\$',
+                    prefix: widget.currencySymbol,
                   ),
                 ),
               ],
@@ -773,7 +846,7 @@ class _RateDialogState extends State<_RateDialog> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    prefix: '\$',
+                    prefix: widget.currencySymbol,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -785,7 +858,7 @@ class _RateDialogState extends State<_RateDialog> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    prefix: '\$',
+                    prefix: widget.currencySymbol,
                   ),
                 ),
               ],
@@ -802,7 +875,7 @@ class _RateDialogState extends State<_RateDialog> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    prefix: '\$',
+                    prefix: widget.currencySymbol,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -877,6 +950,7 @@ class _RateDialogState extends State<_RateDialog> {
               ),
             ),
           ],
+        ),
         ),
       ),
       actions: [

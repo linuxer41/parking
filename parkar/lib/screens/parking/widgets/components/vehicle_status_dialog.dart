@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../constants/constants.dart';
 import '../../../../models/vehicle_model.dart';
 
 /// Diálogo para mostrar el estado de un vehículo
@@ -186,7 +187,7 @@ class VehicleStatusDialog extends StatelessWidget {
         _buildInfoRow('Inicio:', DateFormat('dd/MM/yyyy').format(DateTime.parse(access.startDate))),
         if (access.endDate != null)
           _buildInfoRow('Fin:', DateFormat('dd/MM/yyyy').format(DateTime.parse(access.endDate!))),
-        _buildInfoRow('Monto:', '\$${access.amount.toStringAsFixed(2)}'),
+        _buildInfoRow('Monto:', CurrencyConstants.formatAmountWithParkingParams(context, access.amount)),
         _buildInfoRow('Tipo:', vehicle.type ?? 'No especificado'),
         _buildInfoRow('Color:', vehicle.color ?? 'No especificado'),
         if (vehicle.ownerName != null)
@@ -210,7 +211,7 @@ class VehicleStatusDialog extends StatelessWidget {
         _buildInfoRow('Inicio:', DateFormat('dd/MM/yyyy').format(DateTime.parse(reservation.startDate))),
         if (reservation.endDate != null)
           _buildInfoRow('Fin:', DateFormat('dd/MM/yyyy').format(DateTime.parse(reservation.endDate!))),
-        _buildInfoRow('Monto:', '\$${reservation.amount.toStringAsFixed(2)}'),
+        _buildInfoRow('Monto:', CurrencyConstants.formatAmountWithParkingParams(context, reservation.amount)),
         _buildInfoRow('Tipo:', vehicle.type ?? 'No especificado'),
         _buildInfoRow('Color:', vehicle.color ?? 'No especificado'),
         if (vehicle.ownerName != null)
@@ -234,7 +235,7 @@ class VehicleStatusDialog extends StatelessWidget {
         _buildInfoRow('Inicio:', DateFormat('dd/MM/yyyy').format(DateTime.parse(subscription.startDate))),
         if (subscription.endDate != null)
           _buildInfoRow('Fin:', DateFormat('dd/MM/yyyy').format(DateTime.parse(subscription.endDate!))),
-        _buildInfoRow('Monto:', '\$${subscription.amount.toStringAsFixed(2)}'),
+        _buildInfoRow('Monto:', CurrencyConstants.formatAmountWithParkingParams(context, subscription.amount)),
         _buildInfoRow('Tipo:', vehicle.type ?? 'No especificado'),
         _buildInfoRow('Color:', vehicle.color ?? 'No especificado'),
         if (vehicle.ownerName != null)

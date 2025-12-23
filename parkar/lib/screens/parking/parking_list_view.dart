@@ -10,6 +10,7 @@ import 'package:parkar/screens/parking/widgets/components/manage_layout.dart';
 import 'package:parkar/screens/parking/widgets/manage_access.dart';
 import 'package:parkar/screens/parking/widgets/register_occupancy.dart';
 import 'package:parkar/services/access_service.dart';
+import 'package:parkar/services/cash_register_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 import 'package:parkar/widgets/cash_register_dialogs.dart';
 
@@ -56,9 +57,8 @@ class _ParkingListViewState extends State<ParkingListView> {
         orElse: () => widget.parking.areas.first,
       );
 
-      final accessService = AppStateContainer.di(
-        context,
-      ).resolve<AccessService>();
+      final accessService = AppStateContainer.di(context).resolve<AccessService>();
+      final cashRegisterService = AppStateContainer.di(context).resolve<CashRegisterService>();
       accesses = await accessService.getAccesssByParking(widget.parking.id);
       _applySearchFilter();
     } catch (e) {
@@ -97,22 +97,11 @@ class _ParkingListViewState extends State<ParkingListView> {
 
 
   void _onAccessAction(AccessModel access) {
-    // Create a ParkingSpot from the AccessModel to show the exit management screen
-    final entryInfo = ElementOccupancyInfoModel(
-      id: access.id,
-      vehiclePlate: access.vehicle.plate,
-      ownerName: access.vehicle.ownerName ?? '',
-      ownerPhone: access.vehicle.ownerPhone ?? '',
-      startDate: access.entryTime.toIso8601String(),
-      amount: access.amount,
-    );
-
     ManageLayout.show(
       context: context,
       child: ManageAccess(
         parking: widget.parking, access: access, 
         onExitSuccess: () {
-        print('--------------- Salida exitosa, Refreshing list');
         _loadData();
       }),
     );

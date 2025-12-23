@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:parkar/constants/constants.dart';
 import 'package:parkar/models/cash_register_model.dart';
 import 'package:parkar/models/parking_model.dart';
 
@@ -121,7 +122,7 @@ class ParkingInfoPanel extends StatelessWidget {
                             children: [
                               Text(
                                 cashRegister != null
-                                    ? 'Caja: ${cashRegister!.totalAmount.toStringAsFixed(2)} Bs.'
+                                    ? 'Caja: ${CurrencyConstants.formatAmountWithParkingParams(context, cashRegister!.totalAmount)}'
                                     : 'Caja no abierta',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: colorScheme.primary,

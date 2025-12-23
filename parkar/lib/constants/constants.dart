@@ -1,4 +1,7 @@
 /// Currency constants and symbols for all countries
+import 'package:flutter/material.dart';
+import '../state/app_state_container.dart';
+
 class CurrencyConstants {
   /// Map of currency codes to their symbols
   static const Map<String, String> currencySymbols = {
@@ -157,9 +160,25 @@ class CurrencyConstants {
   }
 
   /// Format amount with currency symbol
-  static String formatAmount(double amount, String currencyCode) {
+  static String formatAmount(double amount, String currencyCode, {int decimalPlaces = 2}) {
     final symbol = getCurrencySymbol(currencyCode);
-    return '$symbol${amount.toStringAsFixed(2)}';
+    return '$symbol${amount.toStringAsFixed(decimalPlaces)}';
+  }
+
+  /// Format amount using current parking parameters from context
+  static String formatAmountWithParkingParams(BuildContext context, double amount) {
+    final appState = AppStateContainer.of(context);
+    final parking = appState.currentParking;
+    if (parking == null) {
+      // Fallback to USD with 2 decimals
+      return formatAmount(amount, 'USD');
+    }
+    return formatAmount(amount, parking.params.currency, decimalPlaces: parking.params.decimalPlaces);
+  }
+
+  /// Format amount for PDF generation (no context available)
+  static String formatAmountForPdf(double amount, String currencyCode, int decimalPlaces) {
+    return formatAmount(amount, currencyCode, decimalPlaces: decimalPlaces);
   }
 }
 

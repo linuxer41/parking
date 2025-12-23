@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
+import 'package:parkar/constants/constants.dart';
 import 'package:parkar/models/booking_model.dart';
 import 'package:parkar/models/access_model.dart';
 import 'package:parkar/models/subscription_model.dart';
@@ -315,7 +316,11 @@ class PdfService {
 
     // Información de pago
     final paymentInfo = {
-      'Monto': '\$${subscription.amount.toStringAsFixed(2)}',
+      'Monto': CurrencyConstants.formatAmountForPdf(
+        subscription.amount,
+        subscription.parking.params?.currency ?? 'BOB',
+        subscription.parking.params?.decimalPlaces ?? 2,
+      ),
       'Método': 'Efectivo',
       'Estado': 'Pagado',
     };
@@ -365,7 +370,11 @@ class PdfService {
     }
 
     // Información de pago
-    final paymentInfo = {'Tarifa': '\$${access.amount.toStringAsFixed(2)}'};
+    final paymentInfo = {'Tarifa': CurrencyConstants.formatAmountForPdf(
+      access.amount,
+      access.parking.params?.currency ?? 'BOB',
+      access.parking.params?.decimalPlaces ?? 2,
+    )};
 
     // Añadir empleado (siempre mostrar, usar "--" si no está disponible)
     paymentInfo['Atendido por'] = access.employee?.name.isNotEmpty == true
@@ -423,6 +432,203 @@ class PdfService {
     } else {
       return '${minutes.toString().padLeft(2, '0')} m';
     }
+  }
+
+  // Generar reporte de accesos en PDF
+  Future<Uint8List> generateAccessReport({
+    required List<AccessModel> accesses,
+    required String periodType,
+    required String parkingName,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final pdf = pw.Document();
+
+    // Cargar fuentes
+    final font = pw.Font.helvetica();
+    final fontBold = pw.Font.helveticaBold();
+
+    // Calcular estadísticas
+    final totalAccesses = accesses.length;
+    final totalRevenue = accesses.fold<double>(0, (sum, access) => sum + access.amount);
+    final activeAccesses = accesses.where((a) => a.exitTime == null).length;
+    final completedAccesses = totalAccesses - activeAccesses;
+
+    // Formatear período
+    String periodText;
+    switch (periodType) {
+      case 'daily':
+        periodText = 'Diario - ${DateFormat('dd/MM/yyyy').format(DateTime.now())}';
+        break;
+      case 'weekly':
+        final monday = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+        final sunday = monday.add(const Duration(days: 6));
+        periodText = 'Semanal - ${DateFormat('dd/MM/yyyy').format(monday)} al ${DateFormat('dd/MM/yyyy').format(sunday)}';
+        break;
+      case 'monthly':
+        periodText = 'Mensual - ${DateFormat('MMMM yyyy').format(DateTime.now())}';
+        break;
+      case 'custom':
+        periodText = 'Personalizado - ${DateFormat('dd/MM/yyyy').format(startDate!)} al ${DateFormat('dd/MM/yyyy').format(endDate!)}';
+        break;
+      default:
+        periodText = 'Período no especificado';
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            // Encabezado
+            pw.Header(
+              level: 0,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'REPORTE DE ACCESOS',
+                    style: pw.TextStyle(font: fontBold, fontSize: 20),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    parkingName,
+                    style: pw.TextStyle(font: font, fontSize: 14),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Período: $periodText',
+                    style: pw.TextStyle(font: font, fontSize: 12),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+                    style: pw.TextStyle(font: font, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Estadísticas
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatItem('Total Accesos', totalAccesses.toString(), font, fontBold),
+                  _buildStatItem('Activos', activeAccesses.toString(), font, fontBold),
+                  _buildStatItem('Completados', completedAccesses.toString(), font, fontBold),
+                  _buildStatItem('Ingresos Totales',
+                    CurrencyConstants.formatAmountForPdf(totalRevenue, 'BOB', 2),
+                    font, fontBold),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Tabla de accesos
+            pw.Text(
+              'DETALLE DE ACCESOS',
+              style: pw.TextStyle(font: fontBold, fontSize: 14),
+            ),
+            pw.SizedBox(height: 10),
+
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1), // Fecha/Hora
+                1: const pw.FlexColumnWidth(1), // Placa
+                2: const pw.FlexColumnWidth(1), // Tipo
+                3: const pw.FlexColumnWidth(2), // Propietario
+                4: const pw.FlexColumnWidth(1), // Monto
+                5: const pw.FlexColumnWidth(1), // Estado
+              },
+              children: [
+                // Header
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    _buildTableHeader('Fecha/Hora', fontBold),
+                    _buildTableHeader('Placa', fontBold),
+                    _buildTableHeader('Tipo', fontBold),
+                    _buildTableHeader('Propietario', fontBold),
+                    _buildTableHeader('Monto', fontBold),
+                    _buildTableHeader('Estado', fontBold),
+                  ],
+                ),
+                // Data rows
+                ...accesses.map((access) => pw.TableRow(
+                  children: [
+                    _buildTableCell(DateFormat('dd/MM/yyyy HH:mm').format(access.entryTime), font),
+                    _buildTableCell(access.vehicle.plate.toUpperCase(), font),
+                    _buildTableCell(_formatVehicleType(access.vehicle.type), font),
+                    _buildTableCell(access.vehicle.ownerName ?? '--', font),
+                    _buildTableCell(CurrencyConstants.formatAmountForPdf(access.amount, 'BOB', 2), font),
+                    _buildTableCell(access.exitTime == null ? 'Activo' : 'Completado', font),
+                  ],
+                )),
+              ],
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Footer
+            pw.Footer(
+              leading: pw.Text(
+                '© ${DateTime.now().year} ParKar - Reporte generado automáticamente',
+                style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey),
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  pw.Widget _buildStatItem(String label, String value, pw.Font font, pw.Font fontBold) {
+    return pw.Column(
+      children: [
+        pw.Text(
+          value,
+          style: pw.TextStyle(font: fontBold, fontSize: 16),
+        ),
+        pw.Text(
+          label,
+          style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTableHeader(String text, pw.Font font) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  pw.Widget _buildTableCell(String text, pw.Font font) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(font: font, fontSize: 9),
+      ),
+    );
   }
 
   // Generar PDF de prueba

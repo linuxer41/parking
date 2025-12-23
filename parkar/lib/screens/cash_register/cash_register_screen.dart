@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkar/constants/constants.dart';
 import 'package:parkar/models/cash_register_model.dart';
 import 'package:parkar/models/movement_model.dart';
 import 'package:parkar/services/cash_register_service.dart';
@@ -181,7 +182,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
           return DataRow(
             cells: [
               DataCell(Text(DateFormat('dd/MM/yyyy HH:mm').format(movement.createdAt))),
-              DataCell(Text('\$${movement.amount.toStringAsFixed(2)}')),
+              DataCell(Text(CurrencyConstants.formatAmountWithParkingParams(context, movement.amount))),
               DataCell(Text(movement.description)),
             ],
           );
@@ -265,7 +266,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
           _buildDetailRow('Id de caja #:', currentCashRegister.number.toString()),
           _buildDetailRow('Usuario:', currentCashRegister.employee.name),
           _buildDetailRow('Apertura:', DateFormat('dd/MM/yyyy HH:mm').format(currentCashRegister.startDate)),
-          _buildDetailRow('Monto Actual:', '${currentCashRegister.totalAmount.toStringAsFixed(2)} Bs.'),
+          _buildDetailRow('Monto Actual:', CurrencyConstants.formatAmountWithParkingParams(context, currentCashRegister.totalAmount)),
           const SizedBox(height: 16),
 
           // Collection History Table

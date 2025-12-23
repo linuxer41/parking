@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import '../../constants/constants.dart';
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
 import '../../models/parking_model.dart';
@@ -156,12 +157,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       DashboardSection(
         title: 'Análisis',
         routes: [
-          DashboardRoute(
-            id: 'statistics',
-            title: 'Estadísticas',
-            icon: Icons.analytics_rounded,
-            builder: (context) => const StatisticsPanel(),
-          ),
+          // DashboardRoute(
+          //   id: 'statistics',
+          //   title: 'Estadísticas',
+          //   icon: Icons.analytics_rounded,
+          //   builder: (context) => const StatisticsPanel(),
+          // ),
           DashboardRoute(
             id: 'reports',
             title: 'Reportes',
@@ -554,7 +555,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final size = MediaQuery.of(context).size;
-    final isSmallScreen = size.width <= 400;
 
     // Datos financieros desde la API
     final financialData =
@@ -596,211 +596,88 @@ class _DashboardScreenState extends State<DashboardScreen>
 
           const SizedBox(height: 16),
 
-          // KPIs principales orientados al servicio
-          Row(
-            children: [
-              Expanded(
-                child: _buildKPICard(
+          // KPIs principales: Hoy, Semanal, Mensual
+          if (size.width < 600)
+            Column(
+              children: [
+                _buildPeriodCard(
                   context,
-                  'Vehículos Hoy',
-                  '${(financialData['dailyRevenue'] / financialData['averageTicket']).round()}',
-                  Icons.directions_car,
+                  'Hoy',
+                  '${_dashboardData!['summary']['dailyVehicles']}',
+                  CurrencyConstants.formatAmountWithParkingParams(context, financialData['dailyRevenue']),
+                  Icons.today,
                   Colors.blue,
-                  'registrados',
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildKPICard(
+                const SizedBox(height: 16),
+                _buildPeriodCard(
                   context,
-                  'Ingresos del Día',
-                  '\$${financialData['dailyRevenue'].toStringAsFixed(0)}',
-                  Icons.attach_money,
+                  'Semanal',
+                  '${_dashboardData!['summary']['weeklyVehicles']}',
+                  CurrencyConstants.formatAmountWithParkingParams(context, financialData['weeklyRevenue']),
+                  Icons.calendar_view_week,
                   Colors.green,
-                  'recaudado',
                 ),
-              ),
-              if (!isSmallScreen) ...[
+                const SizedBox(height: 16),
+                _buildPeriodCard(
+                  context,
+                  'Mensual',
+                  '${_dashboardData!['summary']['monthlyVehicles']}',
+                  CurrencyConstants.formatAmountWithParkingParams(context, financialData['monthlyRevenue']),
+                  Icons.calendar_month,
+                  Colors.purple,
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPeriodCard(
+                    context,
+                    'Hoy',
+                    '${_dashboardData!['summary']['dailyVehicles']}',
+                    CurrencyConstants.formatAmountWithParkingParams(context, financialData['dailyRevenue']),
+                    Icons.today,
+                    Colors.blue,
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildKPICard(
+                  child: _buildPeriodCard(
                     context,
-                    'Ocupación Actual',
-                    '${(_dashboardData!['summary']['currentOccupancy'] as double).toStringAsFixed(0)}%',
-                    Icons.local_parking,
-                    Colors.orange,
-                    'del parqueo',
+                    'Semanal',
+                    '${_dashboardData!['summary']['weeklyVehicles']}',
+                    CurrencyConstants.formatAmountWithParkingParams(context, financialData['weeklyRevenue']),
+                    Icons.calendar_view_week,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildPeriodCard(
+                    context,
+                    'Mensual',
+                    '${_dashboardData!['summary']['monthlyVehicles']}',
+                    CurrencyConstants.formatAmountWithParkingParams(context, financialData['monthlyRevenue']),
+                    Icons.calendar_month,
+                    Colors.purple,
                   ),
                 ),
               ],
-            ],
-          ),
-
-          if (isSmallScreen) ...[
-            const SizedBox(height: 16),
-            _buildKPICard(
-              context,
-              'Ocupación Actual',
-              '${(_dashboardData!['summary']['currentOccupancy'] as double).toStringAsFixed(0)}%',
-              Icons.local_parking,
-              Colors.orange,
-              'del parqueo',
             ),
-          ],
 
-          const SizedBox(height: 24),
-
-          // Métricas adicionales orientadas al servicio
-          GridView.count(
-            crossAxisCount: isSmallScreen ? 2 : 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
-            children: [
-              _buildMetricItem(
-                context,
-                'Espacios Totales',
-                '${_dashboardData!['summary']['totalSpots']}',
-                Icons.local_parking,
-                Colors.blue,
-              ),
-              _buildMetricItem(
-                context,
-                'Espacios Ocupados',
-                '${_dashboardData!['summary']['occupiedSpots']}',
-                Icons.directions_car,
-                Colors.orange,
-              ),
-              _buildMetricItem(
-                context,
-                'Tiempo Promedio',
-                '${_dashboardData!['summary']['averageTime'].toStringAsFixed(1)}h',
-                Icons.schedule,
-                Colors.green,
-              ),
-              _buildMetricItem(
-                context,
-                'Rotación Diaria',
-                '${_dashboardData!['summary']['dailyRotation'].toStringAsFixed(1)}',
-                Icons.refresh,
-                Colors.purple,
-              ),
-            ],
-          ),
-        ],
+       ],
       ),
     );
   }
 
-  // Widget para mostrar una métrica financiera moderna
-  Widget _buildModernMetricCard(
+  Widget _buildPeriodCard(
     BuildContext context,
-    String title,
-    String value,
+    String period,
+    String vehicles,
+    String revenue,
     IconData icon,
     Color color,
-    String subtitle,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const Spacer(),
-              Icon(Icons.trending_up, color: Colors.green, size: 16),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget para mostrar una fila de información
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    Color color,
-    String text,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Widget para mostrar una métrica financiera compacta
-  Widget _buildCompactMetricCard(
-    BuildContext context,
-    String value,
-    IconData icon,
-    Color color,
-    String title,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -808,272 +685,52 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-              const Spacer(),
-              Icon(Icons.trending_up, color: Colors.green, size: 14),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget para mostrar una fila de información compacta
-  Widget _buildCompactInfoRow(
-    BuildContext context,
-    IconData icon,
-    Color color,
-    String value,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(icon, color: color, size: 14),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Widget para mostrar una fila de información con etiqueta
-  Widget _buildLabeledInfoRow(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-        ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 16),
+            child: Icon(icon, color: color, size: 28),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
+                  period,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  value,
+                  '$vehicles vehículos',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  revenue,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget para KPI principal
-  Widget _buildKPICard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-    String subtitle,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const Spacer(),
-              Icon(Icons.trending_up, color: Colors.green, size: 16),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colorScheme.onSurface,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.green,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget para ítem de métrica adicional
-  Widget _buildMetricItem(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-              const Spacer(),
-              Icon(Icons.arrow_upward, color: color, size: 14),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -1288,36 +945,36 @@ class _DashboardScreenState extends State<DashboardScreen>
                           }
                         },
                       },
-                      {
-                        'title': 'Suscripción',
-                        'subtitle': 'Administrar',
-                        'icon': Icons.subscriptions_rounded,
-                        'color': Colors.purple,
-                        'onTap': () {
-                          // En pantallas grandes, usar el diseño de dos columnas
-                          final size = MediaQuery.of(context).size;
-                          if (size.width > 900) {
-                            _navigateToRoute(
-                              DashboardRoute(
-                                id: 'manageSubscriptionCard',
-                                title: 'Suscripción',
-                                icon: Icons.subscriptions_rounded,
-                                builder: (context) =>
-                                    const ManageSubscriptionScreen(),
-                              ),
-                            );
-                          } else {
-                            // En pantallas pequeñas, usar navegación normal
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const ManageSubscriptionScreen(),
-                              ),
-                            );
-                          }
-                        },
-                      },
+                      // {
+                      //   'title': 'Suscripción',
+                      //   'subtitle': 'Administrar',
+                      //   'icon': Icons.subscriptions_rounded,
+                      //   'color': Colors.purple,
+                      //   'onTap': () {
+                      //     // En pantallas grandes, usar el diseño de dos columnas
+                      //     final size = MediaQuery.of(context).size;
+                      //     if (size.width > 900) {
+                      //       _navigateToRoute(
+                      //         DashboardRoute(
+                      //           id: 'manageSubscriptionCard',
+                      //           title: 'Suscripción',
+                      //           icon: Icons.subscriptions_rounded,
+                      //           builder: (context) =>
+                      //               const ManageSubscriptionScreen(),
+                      //         ),
+                      //       );
+                      //     } else {
+                      //       // En pantallas pequeñas, usar navegación normal
+                      //       Navigator.push(
+                      //         context,
+                      //         MaterialPageRoute(
+                      //           builder: (context) =>
+                      //               const ManageSubscriptionScreen(),
+                      //         ),
+                      //       );
+                      //     }
+                      //   },
+                      // },
                     ];
 
                     return GridView.builder(

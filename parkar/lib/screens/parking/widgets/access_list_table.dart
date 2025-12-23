@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../constants/constants.dart';
 import '../../../models/access_model.dart';
 
 /// Widget para mostrar una tabla de accesos en modo list
@@ -89,7 +90,7 @@ class _AccessListTableState extends State<AccessListTable> {
                             ),
                             const SizedBox(height: 1),
                             Text(
-                              '${widget.accesses.length} en parqueo',
+                              '${widget.accesses.length} vehículos en parqueo',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
@@ -345,7 +346,7 @@ class _AccessListTableState extends State<AccessListTable> {
                       ],
                     ),
                     child: Text(
-                      '\$${access.amount.toStringAsFixed(2)}',
+                      CurrencyConstants.formatAmountWithParkingParams(context, access.amount),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onPrimary,
                         fontWeight: FontWeight.w600,
@@ -400,7 +401,7 @@ class _AccessListTableState extends State<AccessListTable> {
                 DataCell(Text(_getVehicleTypeName(access.vehicle.type))),
                 DataCell(Text(access.vehicle.ownerName ?? '--')),
                 DataCell(Text(_formatDateTime(access.entryTime))),
-                DataCell(Text('\$${access.amount.toStringAsFixed(2)}')),
+                DataCell(Text(CurrencyConstants.formatAmountWithParkingParams(context, access.amount))),
                 DataCell(
                   Center(
                     child: InkWell(
