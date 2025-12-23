@@ -1,29 +1,23 @@
-import { Elysia, t } from "elysia";
-import { swagger } from "@elysiajs/swagger";
 import { cors } from "@elysiajs/cors";
 import { opentelemetry } from "@elysiajs/opentelemetry";
-import { userController } from "./controllers/user";
-import { employeeController } from "./controllers/employee";
-import { parkingController } from "./controllers/parking";
-import { vehicleController } from "./controllers/vehicle";
-import { cashRegisterController } from "./controllers/cash-register";
-import { movementController } from "./controllers/movement";
-import { bookingController } from "./controllers/booking";
+import { swagger } from "@elysiajs/swagger";
+import { Elysia } from "elysia";
 import { accessController } from "./controllers/access";
-import { subscriptionController } from "./controllers/subscription";
-import { reportController } from "./controllers/report";
+import { authController } from "./controllers/auth";
+import { bookingController } from "./controllers/booking";
+import { cashRegisterController } from "./controllers/cash-register";
+import { employeeController } from "./controllers/employee";
+import { movementController } from "./controllers/movement";
 import { notificationController } from "./controllers/notification";
 import { notificationProcessorController } from "./controllers/notification-processor";
-import { authController } from "./controllers/auth";
+import { parkingController } from "./controllers/parking";
+import { reportController } from "./controllers/report";
+import { subscriptionController } from "./controllers/subscription";
+import { userController } from "./controllers/user";
+import { vehicleController } from "./controllers/vehicle";
 import { realtimeService } from "./services/realtime-service";
-import { 
-  ApiError, 
-  BadRequestError, 
-  UnauthorizedError, 
-  ForbiddenError, 
-  NotFoundError, 
-  ConflictError, 
-  InternalServerError 
+import {
+  ApiError
 } from "./utils/error";
 
 const app = new Elysia()
@@ -100,7 +94,7 @@ const app = new Elysia()
   //   console.log("Request:", request.method, request.url);
   // })
 
-  .listen(3002)
+  .listen(process.env.APP_PORT || 3000);
 
 
 console.log("🦊 Elysia is running at", app.server?.hostname, app.server?.port);
