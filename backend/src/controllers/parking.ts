@@ -134,7 +134,6 @@ export const parkingController = new Elysia({
     "/:parkingId",
     async ({ params, user }) => {
       const res = await db.parking.findById(params.parkingId);
-      console.log("res", res);
       return res;
     },
     {
@@ -153,7 +152,6 @@ export const parkingController = new Elysia({
     "/:parkingId/detailed",
     async ({ params, user }) => {
       const res = await db.parking.getDetailed(params.parkingId, user.id);
-      console.log("res", res);
       return res;
     },
     {
@@ -168,6 +166,35 @@ export const parkingController = new Elysia({
       },
     },
   )
+
+  // Obtener estadísticas de accesos
+  .get("/:parkingId/dashboard", async ({ parking }) => {
+    const stats = await db.access.getStats(parking.id);
+    return stats;
+  }, {
+    detail: {
+      summary: "Obtener estadísticas de accesos",
+      description: "Retorna estadísticas de accesos para el parking actual.",
+    },
+    response: {
+      200: t.Object({
+        today: t.Object({
+          vehiclesAttended: t.Number(),
+          collection: t.Number(),
+          currentVehiclesInParking: t.Number()
+        }),
+        weekly: t.Object({
+          vehiclesAttended: t.Number(),
+          collection: t.Number()
+        }),
+        monthly: t.Object({
+          vehiclesAttended: t.Number(),
+          collection: t.Number()
+        })
+      }),
+      500: t.String(),
+    },
+  })
   
   // ===== GRUPO DE RUTAS DE ÁREAS =====
   .group("/:parkingId/areas", (app) =>

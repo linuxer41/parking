@@ -15,6 +15,39 @@ export const cashRegisterController = new Elysia({
 })
   .use(authPlugin)
   .get(
+    "/",
+    async ({ query, employee, parking }) => {
+      const res = await db.cashRegister.find({
+        parkingId: parking.id,
+        closed: true,
+
+      });
+      console.log(res);
+      return res;
+    },
+    {
+      detail: {
+        summary: "Obtener todas las cash-registers",
+        description: "Retorna una lista de todas las cash-registers registradas.",
+      },
+      query: t.Object({
+        
+        status: t.Optional(t.Union([
+          t.Literal("active", { description: "Caja activa (abierta)" }),
+          t.Literal("verified", { description: "Caja verificada (dueño recogió el dinero)" }),
+        ], {
+          description: "Estado de la caja registradora",
+          required: false,
+        })),
+      }),
+      response: {
+        200: t.Array(CashRegisterResponseSchema),
+        400: t.String(),
+        500: t.String(),
+      },
+    },
+  )
+  .get(
     "/current",
     async ({ employee }) => {
       const res = await db.cashRegister.find({ employeeId: employee.id, status: "active" });
@@ -45,7 +78,6 @@ export const cashRegisterController = new Elysia({
     async ({ body, employee, parking }) => {
       const employeeId = employee.id;
       const parkingId = parking.id;
-      console.log("employeeId", employeeId);
 
       // Check for active cash registers for the same employee and parking
       const activeCashRegisters = await db.cashRegister.find({ parkingId, employeeId, status: "active" });
@@ -55,7 +87,6 @@ export const cashRegisterController = new Elysia({
 
       // Get the next number for the parking
       const existing = await db.cashRegister.find({ parkingId, employeeId });
-      console.log("existing", existing);
       const maxNumber = existing.length > 0 ? Math.max(...existing.map(cr => cr.number)) : 0;
       const number = maxNumber + 1;
 
@@ -103,37 +134,7 @@ export const cashRegisterController = new Elysia({
       },
     },
   )
-  .get(
-    "/",
-    async ({ query }) => {
-      const res = await db.cashRegister.find({});
-      return res;
-    },
-    {
-      detail: {
-        summary: "Obtener todas las cash-registers",
-        description: "Retorna una lista de todas las cash-registers registradas.",
-      },
-      query: t.Object({
-        parkingId: t.String({
-          description: "ID del parking",
-          required: false,
-        }),
-        status: t.Union([
-          t.Literal("active", { description: "Caja activa (abierta)" }),
-          t.Literal("verified", { description: "Caja verificada (dueño recogió el dinero)" }),
-        ], {
-          description: "Estado de la caja registradora",
-          required: false,
-        }),
-      }),
-      response: {
-        200: t.Array(CashRegisterResponseSchema),
-        400: t.String(),
-        500: t.String(),
-      },
-    },
-  )
+ 
   .get(
     "/:id",
     async ({ params }) => {

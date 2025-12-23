@@ -93,7 +93,6 @@ class ParkingCrud {
       `,
       values: [id],
     };
-    console.log(query);
 
 
     return withClient(async (client) => {
@@ -265,7 +264,6 @@ WHERE p.id = $1`;
  };
   return withClient(async (client) => {
     const res = await client.query<ParkingDetailedResponse>(query);
-    console.log("res", res.rows[0]);
     return res.rows[0];
   });
 }

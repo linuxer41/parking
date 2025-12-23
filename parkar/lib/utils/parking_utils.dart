@@ -3,13 +3,31 @@ import 'package:parkar/models/parking_model.dart';
 /// Calculate the parking fee based on entry time and current time
 /// @param entryTime - ISO string of entry time
 /// @param rates - List of parking rates
-/// @param vehicleCategory - Vehicle category (default 3 for car)
+/// @param vehicleType - Vehicle type string ('bicycle', 'motorcycle', 'car', 'truck')
 /// @returns Calculated fee amount
 double calculateParkingFee(
   String entryTime,
   List<RateModel> rates,
-  int vehicleCategory,
+  String vehicleType,
 ) {
+  // Map vehicle type string to numeric category
+  int vehicleCategory;
+  switch (vehicleType.toLowerCase()) {
+    case 'bicycle':
+      vehicleCategory = 0;
+      break;
+    case 'motorcycle':
+      vehicleCategory = 1;
+      break;
+    case 'car':
+      vehicleCategory = 2;
+      break;
+    case 'truck':
+      vehicleCategory = 3;
+      break;
+    default:
+      vehicleCategory = 2; // Default to car
+  }
   final entry = DateTime.parse(entryTime);
   final now = DateTime.now();
 

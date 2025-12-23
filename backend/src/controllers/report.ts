@@ -23,7 +23,7 @@ export const reportController = new Elysia({
     "/occupancy",
     async ({ body }) => {
       try {
-        const report = await db.report.getOccupancyReport(body);
+        const report = await db.report.getOccupancy(body);
         return report;
       } catch (error) {
         console.error("Error generating occupancy report:", error);
@@ -48,7 +48,7 @@ export const reportController = new Elysia({
     "/revenue",
     async ({ body }) => {
       try {
-        const report = await db.report.getRevenueReport(body);
+        const report = await db.report.getRevenue(body);
         return report;
       } catch (error) {
         console.error("Error generating revenue report:", error);
@@ -72,7 +72,7 @@ export const reportController = new Elysia({
     "/vehicles",
     async ({ body }) => {
       try {
-        const report = await db.report.getVehicleReport(body);
+        const report = await db.report.getVehicle(body);
         return report;
       } catch (error) {
         console.error("Error generating vehicle report:", error);

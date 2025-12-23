@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import '../../constants/constants.dart';
+import '../../models/dashboard_model.dart';
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
 import '../../models/parking_model.dart';
@@ -13,6 +14,7 @@ import 'statistics_panel.dart';
 import 'reports_screen.dart';
 import 'employees_screen.dart';
 import 'manage_subscription.dart';
+import '../cash_register/cash_register_history_screen.dart';
 import '../cash_register/cash_register_screen.dart';
 
 // Definición de rutas para el panel de control
@@ -54,9 +56,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   final ParkingService _parkingService = ParkingService();
 
   // Datos del dashboard
-  Map<String, dynamic>? _dashboardData;
+  DashboardModel? _dashboardData;
   bool _isLoading = true;
-  DateTime _lastRefreshTime = DateTime.now();
 
   // Estado para la página actual en el diseño responsivo (igual que perfil)
   String _currentPage = 'main';
@@ -157,12 +158,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       DashboardSection(
         title: 'Análisis',
         routes: [
-          // DashboardRoute(
-          //   id: 'statistics',
-          //   title: 'Estadísticas',
-          //   icon: Icons.analytics_rounded,
-          //   builder: (context) => const StatisticsPanel(),
-          // ),
+          DashboardRoute(
+            id: 'cashRegisterHistory',
+            title: 'Historial de Cajas',
+            icon: Icons.history_rounded,
+            builder: (context) => const CashRegisterHistoryScreen(),
+          ),
           DashboardRoute(
             id: 'reports',
             title: 'Reportes',
@@ -230,7 +231,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (mounted) {
         setState(() {
           _dashboardData = dashboardData;
-          _lastRefreshTime = DateTime.now();
           _isLoading = false;
         });
 
@@ -308,11 +308,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Información de última actualización
-                  _buildLastUpdateInfo(context, theme, colorScheme),
-
-                  const SizedBox(height: 20),
-
                   // Botones de acción rápida (mantener apariencia original)
                   _buildQuickActionButtons(context, colorScheme, theme),
 
@@ -525,28 +520,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     return null;
   }
 
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  Widget _buildLastUpdateInfo(
-    BuildContext context,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      child: Text(
-        'Última actualización: ${_formatTime(_lastRefreshTime)}',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: colorScheme.onSurfaceVariant,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
 
   // Método para construir el dashboard financiero unificado
   Widget _buildFinancialSummary(BuildContext context) {
@@ -555,10 +528,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final size = MediaQuery.of(context).size;
-
-    // Datos financieros desde la API
-    final financialData =
-        _dashboardData!['financialData'] as Map<String, dynamic>;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -603,17 +572,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                 _buildPeriodCard(
                   context,
                   'Hoy',
-                  '${_dashboardData!['summary']['dailyVehicles']}',
-                  CurrencyConstants.formatAmountWithParkingParams(context, financialData['dailyRevenue']),
+                  '${_dashboardData!.today.vehiclesAttended}',
+                  CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.today.collection),
                   Icons.today,
                   Colors.blue,
+                  currentVehicles: '${_dashboardData!.today.currentVehiclesInParking}',
                 ),
                 const SizedBox(height: 16),
                 _buildPeriodCard(
                   context,
                   'Semanal',
-                  '${_dashboardData!['summary']['weeklyVehicles']}',
-                  CurrencyConstants.formatAmountWithParkingParams(context, financialData['weeklyRevenue']),
+                  '${_dashboardData!.weekly.vehiclesAttended}',
+                  CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.weekly.collection),
                   Icons.calendar_view_week,
                   Colors.green,
                 ),
@@ -621,8 +591,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 _buildPeriodCard(
                   context,
                   'Mensual',
-                  '${_dashboardData!['summary']['monthlyVehicles']}',
-                  CurrencyConstants.formatAmountWithParkingParams(context, financialData['monthlyRevenue']),
+                  '${_dashboardData!.monthly.vehiclesAttended}',
+                  CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.monthly.collection),
                   Icons.calendar_month,
                   Colors.purple,
                 ),
@@ -635,10 +605,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: _buildPeriodCard(
                     context,
                     'Hoy',
-                    '${_dashboardData!['summary']['dailyVehicles']}',
-                    CurrencyConstants.formatAmountWithParkingParams(context, financialData['dailyRevenue']),
+                    '${_dashboardData!.today.vehiclesAttended}',
+                    CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.today.collection),
                     Icons.today,
                     Colors.blue,
+                    currentVehicles: '${_dashboardData!.today.currentVehiclesInParking}',
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -646,8 +617,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: _buildPeriodCard(
                     context,
                     'Semanal',
-                    '${_dashboardData!['summary']['weeklyVehicles']}',
-                    CurrencyConstants.formatAmountWithParkingParams(context, financialData['weeklyRevenue']),
+                    '${_dashboardData!.weekly.vehiclesAttended}',
+                    CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.weekly.collection),
                     Icons.calendar_view_week,
                     Colors.green,
                   ),
@@ -657,8 +628,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: _buildPeriodCard(
                     context,
                     'Mensual',
-                    '${_dashboardData!['summary']['monthlyVehicles']}',
-                    CurrencyConstants.formatAmountWithParkingParams(context, financialData['monthlyRevenue']),
+                    '${_dashboardData!.monthly.vehiclesAttended}',
+                    CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.monthly.collection),
                     Icons.calendar_month,
                     Colors.purple,
                   ),
@@ -677,61 +648,139 @@ class _DashboardScreenState extends State<DashboardScreen>
     String vehicles,
     String revenue,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    String? currentVehicles,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            color.withValues(alpha: 0.05),
+            color.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: color.withValues(alpha: 0.2),
           width: 1,
         ),
-        color: colorScheme.surface,
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 28),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  period,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon and period
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                period,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Metrics in a more compact layout
+          Row(
+            children: [
+              // Current vehicles metric (only for "Hoy")
+              if (currentVehicles != null)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'En Parqueo',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        currentVehicles,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$vehicles vehículos',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+
+              // Vehicles metric
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Atendidos',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      vehicles,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  revenue,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+              ),
+
+              // Revenue metric
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recaudación',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      revenue,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -814,34 +863,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                         },
                       },
                       {
-                        'title': 'Estadísticas',
-                        'subtitle': 'Análisis',
-                        'icon': Icons.analytics_rounded,
-                        'color': colorScheme.secondary,
-                        'onTap': () {
-                          // En pantallas grandes, usar el diseño de dos columnas
-                          final size = MediaQuery.of(context).size;
-                          if (size.width > 900) {
-                            _navigateToRoute(
-                              DashboardRoute(
-                                id: 'statistics',
-                                title: 'Estadísticas',
-                                icon: Icons.analytics_rounded,
-                                builder: (context) => const StatisticsPanel(),
-                              ),
-                            );
-                          } else {
-                            // En pantallas pequeñas, usar navegación normal
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const StatisticsPanel(),
-                              ),
-                            );
-                          }
-                        },
-                      },
-                      {
                         'title': 'Tarifas',
                         'subtitle': 'Precios',
                         'icon': Icons.attach_money_rounded,
@@ -884,6 +905,34 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   'No hay estacionamiento seleccionado',
                                 ),
                                 backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                      },
+                      {
+                        'title': 'Cajas',
+                        'subtitle': 'Historial',
+                        'icon': Icons.history_rounded,
+                        'color': Colors.teal,
+                        'onTap': () {
+                          // En pantallas grandes, usar el diseño de dos columnas
+                          final size = MediaQuery.of(context).size;
+                          if (size.width > 900) {
+                            _navigateToRoute(
+                              DashboardRoute(
+                                id: 'cashRegisterHistory',
+                                title: 'Historial de Cajas',
+                                icon: Icons.history_rounded,
+                                builder: (context) => const CashRegisterHistoryScreen(),
+                              ),
+                            );
+                          } else {
+                            // En pantallas pequeñas, usar navegación normal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CashRegisterHistoryScreen(),
                               ),
                             );
                           }

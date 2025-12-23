@@ -39,7 +39,7 @@ class StayInfoCard extends StatelessWidget {
       title: 'Detalles de Permanencia',
       icon: Icons.access_time,
       children: [
-        InfoRow(label: 'Entrada', value: DateFormat('dd/MM/yyyy - HH:mm').format(entryTime)),
+        InfoRow(label: 'Entrada', value: DateTimeConstants.formatDateTimeWithParkingParams(context, entryTime, format: 'dd/MM/yyyy - HH:mm')),
         InfoRow(label: 'Tiempo', value: _formatDuration(duration)),
         _buildCostRow(context),
       ],

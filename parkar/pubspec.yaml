@@ -51,6 +51,7 @@ dependencies:
   vector_math: ^2.1.4
   touchable: ^1.0.2  # Para manejo de gestos en canvas
   intl: ^0.20.2      # Formateador de fechas y números
+  timezone: ^0.9.4   # Manejo de zonas horarias
   pdf: ^3.11.3       # Generación de PDFs
   path_provider: ^2.1.5  # Acceso a directorios del sistema
   share_plus: ^12.0.1     # Compartir archivos

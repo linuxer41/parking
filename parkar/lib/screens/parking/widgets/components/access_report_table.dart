@@ -420,7 +420,7 @@ class _AccessReportTableState extends State<AccessReportTable> {
 
   String _formatDateTime(DateTime dateTime) {
     try {
-      return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+      return DateTimeConstants.formatDateTimeWithParkingParams(context, dateTime);
     } catch (e) {
       return '--';
     }

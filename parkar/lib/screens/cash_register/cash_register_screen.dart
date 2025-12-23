@@ -181,7 +181,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
         rows: incomeMovements.map((movement) {
           return DataRow(
             cells: [
-              DataCell(Text(DateFormat('dd/MM/yyyy HH:mm').format(movement.createdAt))),
+              DataCell(Text(DateTimeConstants.formatDateTimeWithParkingParams(context, movement.createdAt))),
               DataCell(Text(CurrencyConstants.formatAmountWithParkingParams(context, movement.amount))),
               DataCell(Text(movement.description)),
             ],
@@ -265,7 +265,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
           // Cash Register Details
           _buildDetailRow('Id de caja #:', currentCashRegister.number.toString()),
           _buildDetailRow('Usuario:', currentCashRegister.employee.name),
-          _buildDetailRow('Apertura:', DateFormat('dd/MM/yyyy HH:mm').format(currentCashRegister.startDate)),
+          _buildDetailRow('Apertura:', DateTimeConstants.formatDateTimeWithParkingParams(context, currentCashRegister.startDate)),
           _buildDetailRow('Monto Actual:', CurrencyConstants.formatAmountWithParkingParams(context, currentCashRegister.totalAmount)),
           const SizedBox(height: 16),
 

@@ -263,7 +263,6 @@ class AccessCrud {
 
       return result.rows[0];
     });
-    console.log({access});
 
     const result = await this.getById(access.id);
     if (!result) {
@@ -297,7 +296,6 @@ class AccessCrud {
        // Calculate parking fee
        const entryTimeStr = typeof access.entryTime === 'string' ? access.entryTime : access.entryTime.toISOString();
        const calculatedAmount = calculateParkingFee(entryTimeStr, parking.rates, vehicleCategory) || 2;
-       console.log({ calculatedAmount });
        const updates: string[] = [];
        const values: any[] = [];
        let paramIndex = 1;
@@ -407,44 +405,64 @@ class AccessCrud {
   /**
    * Obtener estadísticas de accesos por parking
    */
-  async getStats  (parkingId: string, startDate?: string, endDate?: string): Promise<{
-    total: number;
-    entered: number;
-    exited: number;
-    cancelled: number;
+  async getStats(parkingId: string): Promise<{
+    today: { vehiclesAttended: number; collection: number; currentVehiclesInParking: number };
+    weekly: { vehiclesAttended: number; collection: number };
+    monthly: { vehiclesAttended: number; collection: number };
   }> {
-    const conditions = [`"parkingId" = $1`];
-    const values = [parkingId];
-    let paramIndex = 2;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startOfMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    if (startDate) {
-      conditions.push(`"entryTime" >= $${paramIndex++}`);
-      values.push(startDate);
-    }
-
-    if (endDate) {
-      conditions.push(`"entryTime" <= $${paramIndex++}`);
-      values.push(endDate);
-    }
-
-    const whereClause = conditions.join(" AND ");
-
-    const result = await pool.query(`
-      SELECT
-        COUNT(*) as total,
-        COUNT(CASE WHEN "status" = 'valid' AND "exitTime" IS NULL THEN 1 END) as entered,
-        COUNT(CASE WHEN "status" = 'valid' AND "exitTime" IS NOT NULL THEN 1 END) as exited,
-        COUNT(CASE WHEN "status" = 'cancelled' THEN 1 END) as cancelled
+    // Current vehicles in parking
+    const currentResult = await pool.query(`
+      SELECT COUNT(*) as currentVehiclesInParking
       FROM t_access
-      WHERE ${whereClause}
-    `, values);
+      WHERE "parkingId" = $1 AND "exitTime" IS NULL
+    `, [parkingId]);
 
-    const row = result.rows[0];
+    // Today stats
+    const todayResult = await pool.query(`
+      SELECT
+        COUNT(CASE WHEN "exitTime" >= $2 THEN 1 END) as vehiclesAttended,
+        COALESCE(SUM(CASE WHEN "exitTime" >= $2 THEN "amount" END), 0) as collection
+      FROM t_access
+      WHERE "parkingId" = $1
+    `, [parkingId, startOfToday.toISOString()]);
+
+    // Weekly stats
+    const weeklyResult = await pool.query(`
+      SELECT
+        COUNT(CASE WHEN "exitTime" >= $2 THEN 1 END) as vehiclesAttended,
+        COALESCE(SUM(CASE WHEN "exitTime" >= $2 THEN "amount" END), 0) as collection
+      FROM t_access
+      WHERE "parkingId" = $1
+    `, [parkingId, startOfWeek.toISOString()]);
+
+    // Monthly stats
+    const monthlyResult = await pool.query(`
+      SELECT
+        COUNT(CASE WHEN "exitTime" >= $2 THEN 1 END) as vehiclesAttended,
+        COALESCE(SUM(CASE WHEN "exitTime" >= $2 THEN "amount" END), 0) as collection
+      FROM t_access
+      WHERE "parkingId" = $1
+    `, [parkingId, startOfMonth.toISOString()]);
+
     return {
-      total: parseInt(row.total),
-      entered: parseInt(row.entered),
-      exited: parseInt(row.exited),
-      cancelled: parseInt(row.cancelled),
+      today: {
+        vehiclesAttended: parseInt(todayResult.rows[0].vehiclesattended || 0),
+        collection: parseFloat(todayResult.rows[0].collection || 0),
+        currentVehiclesInParking: parseInt(currentResult.rows[0].currentvehiclesinparking || 0)
+      },
+      weekly: {
+        vehiclesAttended: parseInt(weeklyResult.rows[0].vehiclesattended || 0),
+        collection: parseFloat(weeklyResult.rows[0].collection || 0)
+      },
+      monthly: {
+        vehiclesAttended: parseInt(monthlyResult.rows[0].vehiclesattended || 0),
+        collection: parseFloat(monthlyResult.rows[0].collection || 0)
+      }
     };
   };
 

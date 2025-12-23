@@ -52,7 +52,7 @@ class CashRegisterDialogs {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Apertura: ${DateFormat('dd/MM/yyyy HH:mm').format(openingTime)}',
+                        'Apertura: ${DateTimeConstants.formatDateTimeWithParkingParams(context, openingTime)}',
                         style: TextStyle(
                           fontSize: 14,
                           color: colorScheme.onSurface,
@@ -190,7 +190,7 @@ class CashRegisterDialogs {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Cierre: ${DateFormat('dd/MM/yyyy HH:mm').format(closingTime)}',
+                            'Cierre: ${DateTimeConstants.formatDateTimeWithParkingParams(context, closingTime)}',
                             style: TextStyle(
                               fontSize: 14,
                               color: colorScheme.onSurface,

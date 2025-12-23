@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../constants/constants.dart';
 import '../../../parking_map/models/parking_spot.dart';
 
 /// Widget para mostrar una tabla de spots ocupados en modo list
@@ -494,7 +495,7 @@ class _VehicleListTableState extends State<VehicleListTable> {
   String _formatDateTime(String dateTimeString) {
     try {
       final dateTime = DateTime.parse(dateTimeString);
-      return DateFormat('HH:mm').format(dateTime);
+      return DateTimeConstants.formatTimeWithParkingParams(context, dateTime);
     } catch (e) {
       return '--';
     }

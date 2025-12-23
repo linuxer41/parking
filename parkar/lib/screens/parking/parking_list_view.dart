@@ -59,7 +59,14 @@ class _ParkingListViewState extends State<ParkingListView> {
 
       final accessService = AppStateContainer.di(context).resolve<AccessService>();
       final cashRegisterService = AppStateContainer.di(context).resolve<CashRegisterService>();
-      accesses = await accessService.getAccesssByParking(widget.parking.id);
+      accesses = await accessService.list(
+        AccessFilter(
+          inParking: true
+        )
+      );
+      final cashRegister = await cashRegisterService.getCurrentCashRegister();
+      appState.setCurrentCashRegister(cashRegister); // Set current cash register = cashRegister;
+
       _applySearchFilter();
     } catch (e) {
       debugPrint('Error loading data: $e');

@@ -10,6 +10,7 @@ import '../../../parking_map/models/enums.dart';
 import '../../../services/access_service.dart';
 import '../../../services/print_service.dart';
 import '../../../state/app_state_container.dart';
+import '../../../utils/parking_utils.dart';
 import 'components/action_buttons.dart' show SecondaryActionButton, PrimaryActionButton;
 import 'components/manage_layout.dart';
 import 'components/stay_info_card.dart';
@@ -92,17 +93,15 @@ class _ManageAccessState extends State<ManageAccess> {
 
     currentDuration = DateTime.now().difference(widget.access.entryTime);
 
-    // Calcular tarifa inicial solo si no es suscripción
-    if (!isSubscription) {
-      final hours = (currentDuration.inMinutes / 60).ceil();
-      cost = hours * 5.0; // $5 por hora
-    }
+    // Calcular tarifa inicial usando el calculador de fees
+    _calculateCost();
 
-    // Iniciar temporizador para actualizar duración
+    // Iniciar temporizador para actualizar duración y costo
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() {
           currentDuration = DateTime.now().difference(widget.access.entryTime);
+          _calculateCost();
         });
       }
     });
@@ -112,6 +111,30 @@ class _ManageAccessState extends State<ManageAccess> {
   void dispose() {
     timer?.cancel();
     super.dispose();
+  }
+
+  void _calculateCost() {
+    if (isSubscription) {
+      cost = 0.0;
+      return;
+    }
+
+    try {
+      final appState = AppStateContainer.of(context);
+      final rates = appState.currentParking?.rates ?? [];
+      if (rates.isEmpty) {
+        cost = 0.0;
+        return;
+      }
+
+      cost = calculateParkingFee(
+        widget.access.entryTime.toIso8601String(),
+        rates,
+        widget.access.vehicle.type,
+      );
+    } catch (e) {
+      cost = 0.0;
+    }
   }
 
   @override
@@ -207,7 +230,7 @@ class _ManageAccessState extends State<ManageAccess> {
       // Registrar salida en la API
       final updatedAccess = await accessService.registerExit(
         entryId: access.id,
-        amount: 0,
+        amount: cost,
       );
 
       // Cerrar el diálogo primero

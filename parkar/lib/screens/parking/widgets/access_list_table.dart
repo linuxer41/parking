@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../constants/constants.dart';
 import '../../../models/access_model.dart';
+import '../../../state/app_state_container.dart';
+import '../../../utils/parking_utils.dart';
 
 /// Widget para mostrar una tabla de accesos en modo list
 class AccessListTable extends StatefulWidget {
@@ -28,6 +30,8 @@ class AccessListTable extends StatefulWidget {
 class _AccessListTableState extends State<AccessListTable> {
   bool _isTableMode = true;
   Timer? _amountUpdateTimer;
+  Timer? _realTimeUpdateTimer;
+  DateTime _lastUpdate = DateTime.now();
 
   @override
   void initState() {
@@ -42,11 +46,15 @@ class _AccessListTableState extends State<AccessListTable> {
 
     // Iniciar timer para actualizar montos en tiempo real cada minuto
     _startAmountUpdateTimer();
+
+    // Iniciar timer para actualizar UI en tiempo real cada 10 segundos
+    _startRealTimeUpdateTimer();
   }
 
   @override
   void dispose() {
     _amountUpdateTimer?.cancel();
+    _realTimeUpdateTimer?.cancel();
     super.dispose();
   }
 
@@ -54,6 +62,16 @@ class _AccessListTableState extends State<AccessListTable> {
     _amountUpdateTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted && widget.onRefresh != null) {
         widget.onRefresh!();
+      }
+    });
+  }
+
+  void _startRealTimeUpdateTimer() {
+    _realTimeUpdateTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        setState(() {
+          _lastUpdate = DateTime.now();
+        });
       }
     });
   }
@@ -276,93 +294,119 @@ class _AccessListTableState extends State<AccessListTable> {
           child: InkWell(
             onTap: () => widget.onAccessAction?.call(access),
             borderRadius: BorderRadius.circular(8),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(12),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.directions_car,
-                  color: colorScheme.primary,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                access.vehicle.plate,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  if (!widget.isSimpleMode)
-                    Text(
-                      'Número: ${access.number}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  Text(
-                    'Propietario: ${access.vehicle.ownerName ?? '--'}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Text(
-                    'Entrada: ${_formatDateTime(access.entryTime)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Badge de monto a pagar
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.all(12),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.directions_car,
                       color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: colorScheme.outline.withValues(alpha: 0.5),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.primary.withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    access.vehicle.plate,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        'Permanencia: ${_formatElapsedTime(access.entryTime)} • ${_getVehicleTypeName(access.vehicle.type)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      CurrencyConstants.formatAmountWithParkingParams(context, access.amount),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  // Chevron indicador
-                  Icon(
-                    Icons.chevron_right,
-                    color: colorScheme.onSurfaceVariant,
-                    size: 20,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Badge de monto a pagar
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colorScheme.outline.withValues(alpha: 0.5),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          CurrencyConstants.formatAmountWithParkingParams(context, _calculateCurrentCost(access)),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Chevron indicador
+                      Icon(
+                        Icons.chevron_right,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                // Additional details below
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: Row(
+                    children: [
+                      if (!widget.isSimpleMode)
+                        Expanded(
+                          child: Text(
+                            'N° ${access.number}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          'Propietario: ${access.vehicle.ownerName ?? '--'}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Ingreso: ${_formatDateTime(access.entryTime)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -385,23 +429,23 @@ class _AccessListTableState extends State<AccessListTable> {
             color: colorScheme.onSurface,
           ),
           columns: [
-            if (!widget.isSimpleMode) const DataColumn(label: Text('Número')),
+            const DataColumn(label: Text('Ingreso')),
             const DataColumn(label: Text('Placa')),
-            const DataColumn(label: Text('Tipo')),
-            const DataColumn(label: Text('Propietario')),
-            const DataColumn(label: Text('Hora Entrada')),
+            const DataColumn(label: Text('Permanencia')),
             const DataColumn(label: Text('Monto')),
+            const DataColumn(label: Text('Propietario')),
+            const DataColumn(label: Text('Tipo')),
             const DataColumn(label: Text('Acción')),
           ],
           rows: widget.accesses.map((access) {
             return DataRow(
               cells: [
-                if (!widget.isSimpleMode) DataCell(Text(access.number.toString())),
-                DataCell(Text(access.vehicle.plate)),
-                DataCell(Text(_getVehicleTypeName(access.vehicle.type))),
-                DataCell(Text(access.vehicle.ownerName ?? '--')),
                 DataCell(Text(_formatDateTime(access.entryTime))),
-                DataCell(Text(CurrencyConstants.formatAmountWithParkingParams(context, access.amount))),
+                DataCell(Text(access.vehicle.plate)),
+                DataCell(Text(_formatElapsedTime(access.entryTime))),
+                DataCell(Text(CurrencyConstants.formatAmountWithParkingParams(context, _calculateCurrentCost(access)))),
+                DataCell(Text(access.vehicle.ownerName ?? '--')),
+                DataCell(Text(_getVehicleTypeName(access.vehicle.type))),
                 DataCell(
                   Center(
                     child: InkWell(
@@ -440,9 +484,39 @@ class _AccessListTableState extends State<AccessListTable> {
 
   String _formatDateTime(DateTime dateTime) {
     try {
-      return DateFormat('HH:mm dd/MM').format(dateTime);
+      return DateTimeConstants.formatDateTimeWithParkingParams(context, dateTime, format: 'HH:mm dd/MM');
     } catch (e) {
       return '--';
+    }
+  }
+
+  String _formatElapsedTime(DateTime entryTime) {
+    final now = DateTime.now();
+    final duration = now.difference(entryTime);
+
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+
+    if (hours > 0) {
+      return '${hours}h ${minutes}m';
+    } else {
+      return '${minutes}m';
+    }
+  }
+
+  double _calculateCurrentCost(AccessModel access) {
+    try {
+      final appState = AppStateContainer.of(context);
+      final rates = appState.currentParking?.rates ?? [];
+      if (rates.isEmpty) return access.amount;
+
+      return calculateParkingFee(
+        access.entryTime.toIso8601String(),
+        rates,
+        access.vehicle.type,
+      );
+    } catch (e) {
+      return access.amount;
     }
   }
 }

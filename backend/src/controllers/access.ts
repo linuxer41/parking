@@ -40,7 +40,6 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
     if (inParking !== undefined) filters.inParking = inParking === true;
-    console.log({filters});
 
     const accesss = await db.access.find(filters);
     return accesss;
@@ -118,33 +117,4 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
       404: t.String(),
       500: t.String(),
     },
-  })
-  
-  // Obtener estadísticas de accesos
-  .get("/stats/:parkingId", async ({ params, query }) => {
-    const { startDate, endDate } = query;
-    const stats = await db.access.getStats(
-      params.parkingId, 
-      startDate as string, 
-      endDate as string
-    );
-    return stats;
-  }, {
-    query: t.Object({
-      startDate: t.Optional(t.String()),
-      endDate: t.Optional(t.String()),
-    }),
-    detail: {
-      summary: "Obtener estadísticas de accesos",
-      description: "Retorna estadísticas de accesos para un parking específico.",
-    },
-    response: {
-      200: t.Object({
-        total: t.Number(),
-        entered: t.Number(),
-        exited: t.Number(),
-        cancelled: t.Number(),
-      }),
-      500: t.String(),
-    },
-  });
+  }) ;

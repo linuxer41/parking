@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:system_theme/system_theme.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 import 'config/app_config.dart';
 import 'config/localization_config.dart';
 import 'routes/app_router.dart';
@@ -33,6 +35,9 @@ bool get isTablet {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Inicializar base de datos de zonas horarias
+  tzdata.initializeTimeZones();
+
   // Configurar codificación UTF-8 para caracteres especiales
   LocalizationConfig.configureUtf8();
 
@@ -50,6 +55,7 @@ void main() async {
     apiBaseUrl: 'http://192.168.100.8:3002',
     // apiBaseUrl: 'http://192.168.1.13:3002',
     // apiBaseUrl: 'http://192.168.1.7:3002',
+    // apiBaseUrl: 'https://parkar-api.iathings.com',
     enableWebSocket: false, // Disable WebSocket as it's not available
     apiTimeout: 30,
     apiEndpoints: {

@@ -179,7 +179,6 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
   .post(
     "/sign-up",
     async ({ body, jwt, cookie: { authToken, refreshToken }, set }) => {
-      console.log(body);
       // Realizar el registro completo
       const result = await registrationService.registerComplete(body);
 

@@ -1,5 +1,7 @@
 /// Currency constants and symbols for all countries
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
 import '../state/app_state_container.dart';
 
 class CurrencyConstants {
@@ -265,5 +267,60 @@ class CountryConstants {
   /// Get currency code for a country
   static String getCurrencyForCountry(String countryCode) {
     return countries[countryCode]?['currency'] ?? 'USD';
+  }
+}
+
+/// DateTime constants and formatting functions
+class DateTimeConstants {
+  /// Format DateTime using current parking parameters from context
+  static String formatDateTimeWithParkingParams(BuildContext context, DateTime dateTime, {String? format}) {
+    final appState = AppStateContainer.of(context);
+    final parking = appState.currentParking;
+    if (parking == null) {
+      // Fallback to local timezone formatting
+      final formatter = DateFormat(format ?? 'dd/MM/yyyy HH:mm', 'es');
+      return formatter.format(dateTime.toLocal());
+    }
+
+    try {
+      // Convert to parking's timezone
+      final parkingLocation = tz.getLocation(parking.params.timeZone);
+      final tzDateTime = tz.TZDateTime.from(dateTime, parkingLocation);
+
+      // Format in parking's timezone
+      final formatter = DateFormat(format ?? 'dd/MM/yyyy HH:mm', 'es');
+      return formatter.format(tzDateTime);
+    } catch (e) {
+      // Fallback if timezone parsing fails
+      final formatter = DateFormat(format ?? 'dd/MM/yyyy HH:mm', 'es');
+      return formatter.format(dateTime.toLocal());
+    }
+  }
+
+  /// Format DateTime for PDF generation (no context available)
+  static String formatDateTimeForPdf(DateTime dateTime, String timeZone, {String? format}) {
+    try {
+      // Convert to specified timezone
+      final location = tz.getLocation(timeZone);
+      final tzDateTime = tz.TZDateTime.from(dateTime, location);
+
+      // Format in the timezone
+      final formatter = DateFormat(format ?? 'dd/MM/yyyy HH:mm', 'es');
+      return formatter.format(tzDateTime);
+    } catch (e) {
+      // Fallback
+      final formatter = DateFormat(format ?? 'dd/MM/yyyy HH:mm', 'es');
+      return formatter.format(dateTime.toLocal());
+    }
+  }
+
+  /// Format time only (HH:mm)
+  static String formatTimeWithParkingParams(BuildContext context, DateTime dateTime) {
+    return formatDateTimeWithParkingParams(context, dateTime, format: 'HH:mm');
+  }
+
+  /// Format date only (dd/MM/yyyy)
+  static String formatDateWithParkingParams(BuildContext context, DateTime dateTime) {
+    return formatDateTimeWithParkingParams(context, dateTime, format: 'dd/MM/yyyy');
   }
 }

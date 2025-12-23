@@ -45,15 +45,15 @@ const app = new Elysia()
           ws.send(message)
       }
   })
-  .onError(({ error, set }) => {
-    console.error(error);
-   
+  .onError(({ error, set, code, path }) => {
+    
+
     // Si es un error personalizado de nuestra API
     if (error instanceof ApiError) {
       // Asegurar que el statusCode sea válido
       const statusCode = error.statusCode >= 100 && error.statusCode < 600 ? error.statusCode : 500;
       set.status = statusCode;
-      return {
+      const errorResponse = {
         success: false,
         error: {
           code: statusCode,
@@ -61,7 +61,22 @@ const app = new Elysia()
           type: error.constructor.name
         }
       };
+
+      return errorResponse;
     }
+    if (code === "NOT_FOUND") {
+      console.error(`Ruta ${path} no encontrada`);
+      set.status = 404;
+      return {
+        success: false,
+        error: {
+          code: 404,
+          message: `Ruta ${path} no encontrada`,
+          type: "NotFoundError"
+        }
+      };
+    }
+    // console.error("Error interno del servidor: path:", path, "error:", error);
     let statusCode = 500;
     set.status = statusCode;
     return {
@@ -87,12 +102,7 @@ const app = new Elysia()
   .use(notificationController)
   .use(notificationProcessorController)
   .use(realtimeService)
-  // .onAfterHandle(({ response }) => {
-  //   console.log(response);
-  // })
-  // .onRequest(({ request }) => {
-  //   console.log("Request:", request.method, request.url);
-  // })
+
 
   .listen(process.env.APP_PORT || 3000);
 

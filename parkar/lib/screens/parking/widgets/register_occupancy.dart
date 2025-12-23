@@ -923,11 +923,14 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
     // Mapear el tipo de vehículo a la categoría de tarifa
     int vehicleCategory;
     switch (vehicleType) {
-      case 'car':
-        vehicleCategory = 2; // Vehículo
+      case 'bicycle':
+        vehicleCategory = 0; // Bicicleta
         break;
       case 'motorcycle':
         vehicleCategory = 1; // Moto
+        break;
+      case 'car':
+        vehicleCategory = 2; // Vehículo
         break;
       case 'truck':
         vehicleCategory = 3; // Camión
@@ -1997,15 +2000,21 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildVehicleTypeChip('car', 'Automóvil', Icons.directions_car),
+                
+                _buildVehicleTypeChip(
+                  'bicycle',
+                  'Bicicleta',
+                  Icons.pedal_bike,
+                ),
                 _buildVehicleTypeChip(
                   'motorcycle',
                   'Motocicleta',
                   Icons.two_wheeler,
                 ),
+                _buildVehicleTypeChip('car', 'Automóvil', Icons.directions_car),
                 _buildVehicleTypeChip(
                   'truck',
-                  'Camioneta',
+                  'Camion',
                   Icons.local_shipping,
                 ),
               ],

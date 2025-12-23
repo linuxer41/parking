@@ -184,9 +184,9 @@ class VehicleStatusDialog extends StatelessWidget {
       children: [
         _buildInfoTitle('Entrada Activa'),
         _buildInfoRow('Espacio:', spotName),
-        _buildInfoRow('Inicio:', DateFormat('dd/MM/yyyy').format(DateTime.parse(access.startDate))),
+        _buildInfoRow('Inicio:', DateTimeConstants.formatDateWithParkingParams(context, DateTime.parse(access.startDate))),
         if (access.endDate != null)
-          _buildInfoRow('Fin:', DateFormat('dd/MM/yyyy').format(DateTime.parse(access.endDate!))),
+          _buildInfoRow('Fin:', DateTimeConstants.formatDateWithParkingParams(context, DateTime.parse(access.endDate!))),
         _buildInfoRow('Monto:', CurrencyConstants.formatAmountWithParkingParams(context, access.amount)),
         _buildInfoRow('Tipo:', vehicle.type ?? 'No especificado'),
         _buildInfoRow('Color:', vehicle.color ?? 'No especificado'),
@@ -208,9 +208,9 @@ class VehicleStatusDialog extends StatelessWidget {
       children: [
         _buildInfoTitle('Reserva'),
         _buildInfoRow('Espacio:', spotName),
-        _buildInfoRow('Inicio:', DateFormat('dd/MM/yyyy').format(DateTime.parse(reservation.startDate))),
+        _buildInfoRow('Inicio:', DateTimeConstants.formatDateWithParkingParams(context, DateTime.parse(reservation.startDate))),
         if (reservation.endDate != null)
-          _buildInfoRow('Fin:', DateFormat('dd/MM/yyyy').format(DateTime.parse(reservation.endDate!))),
+          _buildInfoRow('Fin:', DateTimeConstants.formatDateWithParkingParams(context, DateTime.parse(reservation.endDate!))),
         _buildInfoRow('Monto:', CurrencyConstants.formatAmountWithParkingParams(context, reservation.amount)),
         _buildInfoRow('Tipo:', vehicle.type ?? 'No especificado'),
         _buildInfoRow('Color:', vehicle.color ?? 'No especificado'),
@@ -232,9 +232,9 @@ class VehicleStatusDialog extends StatelessWidget {
       children: [
         _buildInfoTitle('Suscripción'),
         _buildInfoRow('Espacio:', spotName),
-        _buildInfoRow('Inicio:', DateFormat('dd/MM/yyyy').format(DateTime.parse(subscription.startDate))),
+        _buildInfoRow('Inicio:', DateTimeConstants.formatDateWithParkingParams(context, DateTime.parse(subscription.startDate))),
         if (subscription.endDate != null)
-          _buildInfoRow('Fin:', DateFormat('dd/MM/yyyy').format(DateTime.parse(subscription.endDate!))),
+          _buildInfoRow('Fin:', DateTimeConstants.formatDateWithParkingParams(context, DateTime.parse(subscription.endDate!))),
         _buildInfoRow('Monto:', CurrencyConstants.formatAmountWithParkingParams(context, subscription.amount)),
         _buildInfoRow('Tipo:', vehicle.type ?? 'No especificado'),
         _buildInfoRow('Color:', vehicle.color ?? 'No especificado'),

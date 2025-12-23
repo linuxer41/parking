@@ -502,10 +502,10 @@ export type ElementType = typeof ELEMENT_TYPES[keyof typeof ELEMENT_TYPES];
 
 // Subtipos para spots
 export const SPOT_SUBTYPES = {
-  BYCICLE: 1,
-  MOTORCYCLE: 2,
-  CAR: 3,
-  TRUCK: 4,
+  BYCICLE: 0,
+  MOTORCYCLE: 1,
+  CAR: 2,
+  TRUCK: 3,
 } as const;
 
 // Subtipos para facilidades

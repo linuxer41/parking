@@ -2,6 +2,44 @@ import '../config/app_config.dart';
 import '../models/access_model.dart';
 import 'base_service.dart';
 
+class AccessFilter {
+  final String? vehicleId;
+  final String? employeeId;
+  final String? parkingId;
+  final String? status;
+  final String? dateFrom;
+  final String? dateTo;
+  final bool? inParking;
+
+  AccessFilter({
+    this.vehicleId,
+    this.employeeId,
+    this.parkingId,
+    this.status,
+    this.dateFrom,
+    this.dateTo,
+    this.inParking,
+  });
+
+// quei only set the values that are not null
+  String toQuery() =>this.toMap().entries
+          .where((e) => e.value != null)
+          .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
+          .join('&');
+
+  Map<String, dynamic> toMap() {
+    return {
+      'vehicleId': vehicleId,
+      'employeeId': employeeId,
+      'parkingId': parkingId,
+      'status': status,
+      'dateFrom': dateFrom,
+      'dateTo': dateTo,
+      'inParking': inParking,
+    };
+  }
+}
+
 class AccessService extends BaseService {
   AccessService() : super(path: AppConfig.apiEndpoints['access'] ?? '/access');
 
@@ -46,10 +84,7 @@ class AccessService extends BaseService {
     );
   }
 
-  Future<AccessModel> updateAccess(
-    String id,
-    Map<String, dynamic> data,
-  ) async {
+  Future<AccessModel> updateAccess(String id, Map<String, dynamic> data) async {
     return patch<AccessModel>(
       endpoint: '/$id',
       body: data,
@@ -61,10 +96,9 @@ class AccessService extends BaseService {
     return delete<void>(endpoint: '/$id', parser: (_) => null);
   }
 
-  Future<List<AccessModel>> getAccesssByParking(String parkingId) async {
+  Future<List<AccessModel>> list(AccessFilter filter,) async {
     return get<List<AccessModel>>(
-      endpoint: '?inParking=true',
-      additionalHeaders: {'parkingId': parkingId},
+      endpoint: '/?${filter.toQuery()}',
       parser: (json) => parseModelList(json, AccessModel.fromJson),
     );
   }

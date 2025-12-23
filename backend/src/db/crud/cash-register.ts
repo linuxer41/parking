@@ -82,11 +82,15 @@ class CashRegisterCrud {
   /**
    * Buscar registros de caja por criterios
    */
-  async find(where: Partial<CashRegister> = {}): Promise<CashRegisterResponse[]> {
-    const conditions = Object.entries(where)
-      .filter(([key]) => key !== 'employee') // Exclude nested objects from WHERE
+  async find(where: Partial<CashRegister> & { closed?: boolean } = {}): Promise<CashRegisterResponse[]> {
+    const {closed, ...restWhere} = where;
+    let conditions = Object.entries(restWhere)
       .map(([key, value], i) => `cr."${key}" = $${i + 1}`)
       .join(" AND ");
+    
+    if (closed){
+      conditions += ` AND cr."endDate" IS NOT NULL`;
+    }
 
     const sql = `
       SELECT
@@ -111,7 +115,7 @@ class CashRegisterCrud {
 
     const query = {
       text: sql,
-      values: Object.values(where).filter((_, i) => !['employee'].includes(Object.keys(where)[i])),
+      values: Object.values(restWhere),
     };
 
     return withClient(async (client) => {

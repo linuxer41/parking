@@ -31,8 +31,8 @@ class SubscriptionInfoCard extends StatelessWidget {
       title: 'Detalles de la Suscripción',
       icon: Icons.card_membership,
       children: [
-        InfoRow(label: 'Fecha de inicio', value: _formatDateTime(startDate)),
-        InfoRow(label: 'Fecha de vencimiento', value: _formatDateTime(endDate ?? '')),
+        InfoRow(label: 'Fecha de inicio', value: _formatDateTime(context, startDate)),
+        InfoRow(label: 'Fecha de vencimiento', value: _formatDateTime(context, endDate ?? '')),
         InfoRow(label: 'Monto', value: CurrencyConstants.formatAmountWithParkingParams(context, amount)),
         InfoRow(label: 'Empleado', value: employeeName),
       ],
@@ -40,10 +40,10 @@ class SubscriptionInfoCard extends StatelessWidget {
   }
   
   /// Formatea una fecha en formato ISO a un formato legible
-  String _formatDateTime(String dateTimeString) {
+  String _formatDateTime(BuildContext context, String dateTimeString) {
     try {
       final dateTime = DateTime.parse(dateTimeString);
-      return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+      return DateTimeConstants.formatDateTimeWithParkingParams(context, dateTime);
     } catch (e) {
       return dateTimeString;
     }

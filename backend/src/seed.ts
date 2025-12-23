@@ -23,7 +23,7 @@ const BASE_RATES: Rate[] = [
   {
     id: getUUID(),
     name: "Bicicleta",
-    vehicleCategory: 1,
+    vehicleCategory: 0,
     tolerance: 10,
     hourly: 1.5 + Math.random() * 1.5,
     daily: 8.0 + Math.random() * 4,
@@ -35,7 +35,7 @@ const BASE_RATES: Rate[] = [
   {
     id: getUUID(),
     name: "Motocicleta",
-    vehicleCategory: 2,
+    vehicleCategory: 1,
     tolerance: 10,
     hourly: 2.5 + Math.random() * 2,
     daily: 12.0 + Math.random() * 6,
@@ -47,7 +47,7 @@ const BASE_RATES: Rate[] = [
   {
     id: getUUID(),
     name: "Vehículo liviano",
-    vehicleCategory: 3,
+    vehicleCategory: 2,
     tolerance: 10,
     hourly: 4.0 + Math.random() * 3,
     daily: 20.0 + Math.random() * 10,
@@ -59,7 +59,7 @@ const BASE_RATES: Rate[] = [
   {
     id: getUUID(),
     name: "Vehículo pesado",
-    vehicleCategory: 4,
+    vehicleCategory: 3,
     tolerance: 15,
      hourly: 7.0 + Math.random() * 3,
     daily: 35.0 + Math.random() * 10,

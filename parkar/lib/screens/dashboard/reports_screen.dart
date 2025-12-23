@@ -3,7 +3,11 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/access_model.dart';
+import '../../models/vehicle_model.dart';
+import '../../models/employee_model.dart';
 import '../../services/access_service.dart';
+import '../../services/vehicle_service.dart';
+import '../../services/employee_service.dart';
 import '../../services/pdf_service.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/page_layout.dart';
@@ -25,6 +29,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _selectedPeriod = 'daily';
   DateTime _customStartDate = DateTime.now().subtract(const Duration(days: 7));
   DateTime _customEndDate = DateTime.now();
+  late VehicleService _vehicleService;
+  late EmployeeService _employeeService;
+  List<VehicleModel> _vehicles = [];
+  List<EmployeeModel> _employees = [];
+  String? _selectedVehicleId;
+  String? _selectedEmployeeId;
+  String? _selectedStatus;
+  bool _inParkingOnly = false;
 
   @override
   void didChangeDependencies() {
@@ -82,7 +94,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
 
       // Cargar accesos que están actualmente en el parqueo
-      final accesses = await _accessService.getAccesssByParking(parkingId);
+      final accesses = await _accessService.list(
+         AccessFilter(
+          parkingId: parkingId
+        )
+      );
 
       // Filtrar por rango de fechas
       final filteredAccesses = accesses.where((access) {

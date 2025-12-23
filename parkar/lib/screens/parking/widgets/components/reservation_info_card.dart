@@ -31,9 +31,9 @@ class ReservationInfoCard extends StatelessWidget {
       title: 'Detalles de la Reserva',
       icon: Icons.calendar_today,
       children: [
-        InfoRow(label: 'Fecha de inicio', value: _formatDateTime(startDate)),
+        InfoRow(label: 'Fecha de inicio', value: _formatDateTime(context, startDate)),
         if (endDate != null)
-          InfoRow(label: 'Fecha de fin', value: _formatDateTime(endDate!)),
+          InfoRow(label: 'Fecha de fin', value: _formatDateTime(context, endDate!)),
         InfoRow(label: 'Monto', value: CurrencyConstants.formatAmountWithParkingParams(context, amount)),
         InfoRow(label: 'Empleado', value: employeeName),
       ],
@@ -41,10 +41,10 @@ class ReservationInfoCard extends StatelessWidget {
   }
   
   /// Formatea una fecha en formato ISO a un formato legible
-  String _formatDateTime(String dateTimeString) {
+  String _formatDateTime(BuildContext context, String dateTimeString) {
     try {
       final dateTime = DateTime.parse(dateTimeString);
-      return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
+      return DateTimeConstants.formatDateTimeWithParkingParams(context, dateTime);
     } catch (e) {
       return dateTimeString;
     }

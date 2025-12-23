@@ -12,12 +12,10 @@ class CashRegisterService extends BaseService {
     );
   }
 
-  Future<List<CashRegisterModel>> getCashRegistersByParking(
-    String parkingId,
+  Future<List<CashRegisterModel>> getCashRegisters(
   ) async {
     return get<List<CashRegisterModel>>(
       endpoint: '',
-      additionalHeaders: {'parkingId': parkingId},
       parser: (json) => parseModelList(json, CashRegisterModel.fromJson),
     );
   }
@@ -76,6 +74,22 @@ class CashRegisterService extends BaseService {
 
   Future<void> deleteCashRegister(String id) async {
     return delete<void>(endpoint: '/$id', parser: (_) => null);
+  }
+
+  Future<CashRegisterModel> approveCashRegister(String id) async {
+    return post<CashRegisterModel>(
+      endpoint: '/$id/approve',
+      body: {},
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+    );
+  }
+
+  Future<CashRegisterModel> rejectCashRegister(String id) async {
+    return post<CashRegisterModel>(
+      endpoint: '/$id/reject',
+      body: {},
+      parser: (json) => parseModel(json, CashRegisterModel.fromJson),
+    );
   }
 
   Future<Map<String, dynamic>> getCashRegistersPaginated({
