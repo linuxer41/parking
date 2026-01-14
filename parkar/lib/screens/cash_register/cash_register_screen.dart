@@ -1,12 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:parkar/constants/constants.dart';
 import 'package:parkar/models/cash_register_model.dart';
 import 'package:parkar/models/movement_model.dart';
 import 'package:parkar/services/cash_register_service.dart';
+import 'package:parkar/services/document_service.dart';
 import 'package:parkar/services/movement_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 import 'package:parkar/widgets/cash_register_dialogs.dart';
 import 'package:parkar/widgets/page_layout.dart';
+import 'package:parkar/widgets/pdf_viewer.dart';
+import 'package:parkar/models/printer_model.dart';
 import 'package:intl/intl.dart';
 
 class CashRegisterScreen extends StatefulWidget {
@@ -21,6 +27,7 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
   bool _isLoading = true;
   final CashRegisterService _cashRegisterService = CashRegisterService();
   final MovementService _movementService = MovementService();
+  final DocumentService _documentService = DocumentService();
 
   @override
   void initState() {
@@ -82,10 +89,16 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
     if (success != true) return; // User cancelled or error
 
     // The dialog already closed the cash register and set the app state
+    final closedCashRegister = appState.currentCashRegister!;
+    final closedMovements = List<MovementModel>.from(_movements);
+
     _movements = [];
 
     setState(() {});
     _showSuccessMessage('Caja cerrada exitosamente');
+
+    // Show the closure PDF document
+    await _showClosureReceipt(closedCashRegister, closedMovements);
   }
 
   void _showErrorMessage(String message) {
@@ -101,6 +114,196 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
+  }
+
+  Future<void> _downloadCashRegisterReport() async {
+    final appState = AppStateContainer.of(context);
+    final currentCashRegister = appState.currentCashRegister;
+
+    if (currentCashRegister == null) {
+      _showErrorMessage('No hay caja abierta');
+      return;
+    }
+
+    if (_movements.isEmpty) {
+      _showErrorMessage('No hay movimientos para generar el reporte');
+      return;
+    }
+
+    try {
+      // Mostrar indicador de carga
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Generando PDF...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      final parkingName = appState.currentParking?.name ?? 'ParKar';
+
+      // Generar PDF
+      final pdfBytes = await _documentService.generateCashRegisterReport(
+        cashRegister: currentCashRegister,
+        movements: _movements,
+        parkingName: parkingName,
+      );
+
+      // Guardar archivo
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'reporte_caja_${currentCashRegister.number}_$timestamp.pdf';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(pdfBytes);
+
+      // Mostrar éxito
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF guardado en: ${file.path}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al generar PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareCashRegisterReport() async {
+    final appState = AppStateContainer.of(context);
+    final currentCashRegister = appState.currentCashRegister;
+
+    if (currentCashRegister == null) {
+      _showErrorMessage('No hay caja abierta');
+      return;
+    }
+
+    if (_movements.isEmpty) {
+      _showErrorMessage('No hay movimientos para compartir');
+      return;
+    }
+
+    try {
+      // Mostrar indicador de carga
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Generando PDF para compartir...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      final parkingName = appState.currentParking?.name ?? 'ParKar';
+
+      // Generar PDF
+      final pdfBytes = await _documentService.generateCashRegisterReport(
+        cashRegister: currentCashRegister,
+        movements: _movements,
+        parkingName: parkingName,
+      );
+
+      // Crear archivo temporal
+      final directory = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'reporte_caja_${currentCashRegister.number}_$timestamp.pdf';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(pdfBytes);
+
+      // Compartir archivo
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Reporte de Caja - $parkingName',
+      );
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al compartir: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _printCashRegisterReceipt(CashRegisterModel cashRegister) async {
+    // Note: printCashRegisterReceipt is in PrintService, but since this screen uses DocumentService,
+    // we'll call it directly. For now, we'll show the PDF using DocumentService method.
+    final appState = AppStateContainer.of(context);
+    final parkingName = appState.currentParking?.name ?? 'ParKar';
+
+    try {
+      final pdfData = await _documentService.generateCashRegisterReport(
+        cashRegister: cashRegister,
+        movements: _movements,
+        parkingName: parkingName,
+      );
+
+      if (context.mounted) {
+        PdfViewer.show(
+          context,
+          pdfData: pdfData,
+          title: 'Recibo de Caja',
+          filename: 'recibo_caja_${cashRegister.number}',
+          onPrintPressed: appState.printSettings.printMethod == PrintMethod.bluetooth
+              ? () async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Impresión Bluetooth disponible desde el visor PDF')),
+                  );
+                }
+              : null,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al generar recibo: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showClosureReceipt(CashRegisterModel cashRegister, List<MovementModel> movements) async {
+    final appState = AppStateContainer.of(context);
+    final parkingName = appState.currentParking?.name ?? 'ParKar';
+
+    try {
+      final pdfData = await _documentService.generateCashRegisterReport(
+        cashRegister: cashRegister,
+        movements: movements,
+        parkingName: parkingName,
+      );
+
+      if (context.mounted) {
+        PdfViewer.show(
+          context,
+          pdfData: pdfData,
+          title: 'Recibo de Cierre de Caja',
+          filename: 'cierre_caja_${cashRegister.number}',
+          onPrintPressed: appState.printSettings.printMethod == PrintMethod.bluetooth
+              ? () async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Impresión Bluetooth disponible desde el visor PDF')),
+                  );
+                }
+              : null,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al mostrar recibo de cierre: $e')),
+        );
+      }
+    }
   }
 
 
@@ -257,31 +460,107 @@ class _CashRegisterScreenState extends State<CashRegisterScreen> {
   }
 
   Widget _buildCashRegisterView(ThemeData theme, ColorScheme colorScheme, CashRegisterModel currentCashRegister) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Cash Register Details
-          _buildDetailRow('Id de caja #:', currentCashRegister.number.toString()),
-          _buildDetailRow('Usuario:', currentCashRegister.employee.name),
-          _buildDetailRow('Apertura:', DateTimeConstants.formatDateTimeWithParkingParams(context, currentCashRegister.startDate)),
-          _buildDetailRow('Monto Actual:', CurrencyConstants.formatAmountWithParkingParams(context, currentCashRegister.totalAmount)),
-          const SizedBox(height: 16),
+    return Column(
+      children: [
+        // Main content
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Cash Register Details with reprint button
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow('Id de caja #:', currentCashRegister.number.toString()),
+                          _buildDetailRow('Usuario:', currentCashRegister.employee.name),
+                          _buildDetailRow('Apertura:', DateTimeConstants.formatDateTimeWithParkingParams(context, currentCashRegister.startDate)),
+                          _buildDetailRow('Monto Actual:', CurrencyConstants.formatAmountWithParkingParams(context, currentCashRegister.totalAmount)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _printCashRegisterReceipt(currentCashRegister),
+                      icon: const Icon(Icons.receipt_long),
+                      tooltip: 'Reimprimir Recibo',
+                      style: IconButton.styleFrom(
+                        backgroundColor: colorScheme.primaryContainer,
+                        foregroundColor: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-          // Collection History Table
-          Text(
-            'Historial de Cobros',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+                // Collection History Table
+                Text(
+                  'Historial de Cobros',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _buildMovementsTable(),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _buildMovementsTable(),
+        ),
+
+        // Fixed bottom buttons
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            border: Border(
+              top: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _downloadCashRegisterReport,
+                  icon: const Icon(Icons.download),
+                  label: const Text('Descargar PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _shareCashRegisterReport,
+                  icon: const Icon(Icons.share),
+                  label: const Text('Compartir'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colorScheme.primary,
+                    side: BorderSide(color: colorScheme.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

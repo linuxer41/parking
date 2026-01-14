@@ -12,14 +12,33 @@ function getExpTimestamp(seconds: number) {
  * Calculate the parking fee based on entry time and current time
  * @param entryTime - ISO string of entry time
  * @param rates - Array of parking rates
- * @param vehicleCategory - Vehicle category (default 3 for car)
+ * @param vehicleType - Vehicle type string ('bicycle', 'motorcycle', 'car', 'truck')
  * @returns Calculated fee amount
  */
 function calculateParkingFee(
   entryTime: string,
   rates: Rate[],
-  vehicleCategory: number = 3
+  vehicleType: string
 ): number {
+  // Map vehicle type string to numeric category
+  let vehicleCategory: number;
+  switch (vehicleType.toLowerCase()) {
+    case 'bicycle':
+      vehicleCategory = 1;
+      break;
+    case 'motorcycle':
+      vehicleCategory = 2;
+      break;
+    case 'car':
+      vehicleCategory = 3;
+      break;
+    case 'truck':
+      vehicleCategory = 4;
+      break;
+    default:
+      vehicleCategory = 1; // Default to bicycle
+  }
+
   const entry = new Date(entryTime);
   const now = new Date();
 
@@ -27,13 +46,13 @@ function calculateParkingFee(
   const totalMinutes = Math.floor((now.getTime() - entry.getTime()) / (1000 * 60));
 
   // Find applicable rate for the vehicle category
-  const applicableRate = rates.find(rate =>
-    rate.vehicleCategory === vehicleCategory && rate.isActive
+  const applicableRate = rates.find(
+    (rate) => rate.vehicleCategory === vehicleCategory && rate.isActive
   );
 
   if (!applicableRate) {
     // Fallback to first active rate if no specific rate found
-    const fallbackRate = rates.find(rate => rate.isActive);
+    const fallbackRate = rates.find((rate) => rate.isActive);
     if (!fallbackRate) {
       return 0;
     }
@@ -50,15 +69,14 @@ function calculateParkingFee(
  * @returns Calculated fee
  */
 function calculateFeeFromRate(totalMinutes: number, rate: Rate): number {
-  const totalHours = totalMinutes / 60;
-
   // Apply tolerance (free minutes)
-  const billableMinutes = Math.max(0, totalMinutes - rate.tolerance);
-  const billableHours = billableMinutes / 60;
+  const billableMinutes = totalMinutes > rate.tolerance ? totalMinutes - rate.tolerance : 0;
 
-  // For simplicity, use hourly rate for all calculations
-  // In a real system, you might want more complex logic for daily/weekly rates
-  const fee = billableHours * rate.hourly;
+  if (billableMinutes == 0) return 0.0;
+
+  // Charge in half-hour increments, minimum 1 half-hour
+  const halfHours = Math.ceil(billableMinutes / 30);
+  const fee = halfHours * (rate.hourly / 2);
 
   // Round to 2 decimal places
   return Math.round(fee * 100) / 100;

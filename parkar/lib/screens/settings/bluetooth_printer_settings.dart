@@ -106,7 +106,6 @@ class BluetoothPrinterSettings extends StatelessWidget {
                         title: Text(device.name ?? 'Sin nombre'),
                         subtitle: Text(device.address),
                         onTap: () async {
-                          
                           // Crear una nueva instancia de PrintSettings con el dispositivo
                           final newSettings = appState.printSettings.copyWith(
                             bluetoothDevice: BluetoothPrinterDevice(
@@ -117,7 +116,6 @@ class BluetoothPrinterSettings extends StatelessWidget {
                           );
                           appState.setPrinterSettings(newSettings);
                           Navigator.of(context).pop();
-                          
                         },
                       );
                     }).toList(),
@@ -144,7 +142,6 @@ class BluetoothPrinterSettings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
     return ListenableBuilder(
       listenable: AppStateContainer.of(context),
       builder: (context, _) {
@@ -164,7 +161,7 @@ class BluetoothPrinterSettings extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 16),
-        
+
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -196,26 +193,28 @@ class BluetoothPrinterSettings extends StatelessWidget {
                               ),
                             ],
                             selected: {appState.printSettings.processingMode},
-                            onSelectionChanged: (Set<ProcessingMode> newSelection) {
-                              final mode = newSelection.first;
-                              final newSettings = appState.printSettings.copyWith(processingMode: mode);
-                              appState.setPrinterSettings(newSettings);
-                            },
+                            onSelectionChanged:
+                                (Set<ProcessingMode> newSelection) {
+                                  final mode = newSelection.first;
+                                  final newSettings = appState.printSettings
+                                      .copyWith(processingMode: mode);
+                                  appState.setPrinterSettings(newSettings);
+                                },
                           ),
                         ],
                       ),
                     ),
                   ),
-        
+
                   const SizedBox(height: 24),
-        
+
                   // Configuración del método de impresión
                   Text(
                     'Método de Impresión',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 16),
-        
+
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -236,7 +235,8 @@ class BluetoothPrinterSettings extends StatelessWidget {
                                 groupValue: appState.printSettings.printMethod,
                                 onChanged: (PrintMethod? value) {
                                   if (value != null) {
-                                    final newSettings = appState.printSettings.copyWith(printMethod: value);
+                                    final newSettings = appState.printSettings
+                                        .copyWith(printMethod: value);
                                     appState.setPrinterSettings(newSettings);
                                   }
                                 },
@@ -248,7 +248,8 @@ class BluetoothPrinterSettings extends StatelessWidget {
                                 groupValue: appState.printSettings.printMethod,
                                 onChanged: (PrintMethod? value) {
                                   if (value != null) {
-                                    final newSettings = appState.printSettings.copyWith(printMethod: value);
+                                    final newSettings = appState.printSettings
+                                        .copyWith(printMethod: value);
                                     appState.setPrinterSettings(newSettings);
                                   }
                                 },
@@ -259,19 +260,19 @@ class BluetoothPrinterSettings extends StatelessWidget {
                       ),
                     ),
                   ),
-        
+
                   // Mostrar configuración Bluetooth solo si está seleccionado
                   if (appState.printSettings.printMethod ==
                       PrintMethod.bluetooth) ...[
                     const SizedBox(height: 24),
-        
+
                     // Tipo de impresora térmica
                     Text(
                       'Tipo de Impresora Térmica',
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 16),
-        
+
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -289,10 +290,12 @@ class BluetoothPrinterSettings extends StatelessWidget {
                                   title: const Text('Genérica (ESC/POS)'),
                                   subtitle: const Text('Térmicas estándar'),
                                   value: PrinterType.generic,
-                                  groupValue: appState.printSettings.printerType,
+                                  groupValue:
+                                      appState.printSettings.printerType,
                                   onChanged: (PrinterType? value) {
                                     if (value != null) {
-                                      final newSettings = appState.printSettings.copyWith(printerType: value);
+                                      final newSettings = appState.printSettings
+                                          .copyWith(printerType: value);
                                       appState.setPrinterSettings(newSettings);
                                     }
                                   },
@@ -301,19 +304,25 @@ class BluetoothPrinterSettings extends StatelessWidget {
                                   title: const Text('Zebra (ZPL)'),
                                   subtitle: const Text('Impresoras Zebra'),
                                   value: PrinterType.zebra,
-                                  groupValue: appState.printSettings.printerType,
+                                  groupValue:
+                                      appState.printSettings.printerType,
                                   onChanged: (PrinterType? value) {
                                     if (value != null) {
-                                      final currentDevice = appState.printSettings.bluetoothDevice;
-                                      final newDevice = currentDevice != null ? BluetoothPrinterDevice(
-                                        address: currentDevice.address,
-                                        name: currentDevice.name,
-                                        printerType: value,
-                                      ) : null;
-                                      final newSettings = appState.printSettings.copyWith(
-                                        bluetoothDevice: newDevice,
-                                        printerType: value,
-                                      );
+                                      final currentDevice = appState
+                                          .printSettings
+                                          .bluetoothDevice;
+                                      final newDevice = currentDevice != null
+                                          ? BluetoothPrinterDevice(
+                                              address: currentDevice.address,
+                                              name: currentDevice.name,
+                                              printerType: value,
+                                            )
+                                          : null;
+                                      final newSettings = appState.printSettings
+                                          .copyWith(
+                                            bluetoothDevice: newDevice,
+                                            printerType: value,
+                                          );
                                       appState.setPrinterSettings(newSettings);
                                     }
                                   },
@@ -324,9 +333,9 @@ class BluetoothPrinterSettings extends StatelessWidget {
                         ),
                       ),
                     ),
-        
+
                     const SizedBox(height: 24),
-        
+
                     // Impresora seleccionada
                     Card(
                       color: appState.printSettings.bluetoothDevice != null
@@ -383,7 +392,9 @@ class BluetoothPrinterSettings extends StatelessWidget {
                                     TextButton(
                                       onPressed: () => _selectDevice(context),
                                       child: Text(
-                                        appState.printSettings.bluetoothDevice !=
+                                        appState
+                                                    .printSettings
+                                                    .bluetoothDevice !=
                                                 null
                                             ? 'Cambiar'
                                             : 'Seleccionar',
@@ -398,14 +409,22 @@ class BluetoothPrinterSettings extends StatelessWidget {
                                         ),
                                       ),
                                     ),
-                                    if (appState.printSettings.bluetoothDevice !=
+                                    if (appState
+                                            .printSettings
+                                            .bluetoothDevice !=
                                         null)
                                       TextButton(
                                         onPressed: () {
-                                          final newSettings = appState.printSettings.copyWith(
-                                            bluetoothDevice: null);
-                                          appState.setPrinterSettings(newSettings);
-                                          print('Bluetooth Device: ${newSettings.bluetoothDevice?.name ?? 'Sin nombre'}');
+                                          final newSettings = appState
+                                              .printSettings
+                                              .copyWith();
+                                          newSettings.bluetoothDevice = null;
+                                          appState.setPrinterSettings(
+                                            newSettings,
+                                          );
+                                          print(
+                                            'Bluetooth Device: ${newSettings.bluetoothDevice?.name ?? 'Sin nombre'}',
+                                          );
                                         },
                                         child: const Text(
                                           'Quitar',
@@ -441,7 +460,7 @@ class BluetoothPrinterSettings extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 24),
-        
+
                   // Información adicional
                   Card(
                     color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
@@ -476,7 +495,7 @@ class BluetoothPrinterSettings extends StatelessWidget {
             ),
           ),
         );
-      }
+      },
     );
   }
 }

@@ -5,8 +5,8 @@ import '../../models/parking_model.dart';
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/custom_address_input.dart';
-
 import '../../widgets/custom_operation_mode_selector.dart';
+import '../../widgets/modal_dialog.dart';
 import '../../widgets/page_layout.dart';
 import '../parking/parking_screen.dart';
 
@@ -1070,230 +1070,38 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
   // Mostrar diálogo de parámetros del parking
   void _showParkingParametersDialog() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final dialogKey = GlobalKey<_ParkingParametersDialogState>();
 
-    // Controladores para los campos
-    String? selectedCurrency = _parking!.params.currency;
-    final decimalPlacesController = TextEditingController(
-      text: _parking!.params.decimalPlaces.toString(),
-    );
-    String? selectedTimeZone = _parking!.params.timeZone;
-    String? selectedCountryCode = _parking!.params.countryCode;
-    bool isLoading = false;
-    String? error;
-
-    showDialog(
+    ModalDialog.show(
       context: context,
-      barrierDismissible: true,
-      useRootNavigator: true,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 24,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Título
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      'Parámetros del Parking',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const Divider(),
-
-                  if (error != null)
-                    Container(
-                      margin: const EdgeInsets.all(16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.errorContainer.withValues(
-                          alpha: 127,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            color: colorScheme.error,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              error!,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.error,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  if (isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else ...[
-                    _buildCountrySelector(dialogContext, selectedCountryCode, (
-                      value,
-                    ) {
-                      setState(() => selectedCountryCode = value);
-                    }),
-                    _buildTimeZoneSelector(dialogContext, selectedTimeZone, (
-                      value,
-                    ) {
-                      setState(() => selectedTimeZone = value);
-                    }),
-                    _buildCurrencySelector(dialogContext, selectedCurrency, (
-                      value,
-                    ) {
-                      setState(() => selectedCurrency = value);
-                    }),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _buildTextField(
-                        controller: decimalPlacesController,
-                        label: 'Decimales',
-                        icon: Icons.numbers,
-                        keyboardType: TextInputType.number,
-                        hintText: 'Ej: 2',
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 16),
-
-                  // Botones de acción
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(dialogContext).pop();
-                        },
-                        child: Text(
-                          'Cancelar',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: isLoading
-                            ? null
-                            : () async {
-                                // Validar campos requeridos
-                                if (selectedCurrency == null ||
-                                    selectedCurrency!.isEmpty ||
-                                    decimalPlacesController.text.isEmpty) {
-                                  setState(() {
-                                    error =
-                                        'Por favor completa los campos requeridos';
-                                  });
-                                  return;
-                                }
-
-                                // Validar decimales
-                                final decimalPlaces = int.tryParse(
-                                  decimalPlacesController.text,
-                                );
-                                if (decimalPlaces == null ||
-                                    decimalPlaces < 0 ||
-                                    decimalPlaces > 4) {
-                                  setState(() {
-                                    error =
-                                        'Los decimales deben ser un número entre 0 y 4';
-                                  });
-                                  return;
-                                }
-
-                                setState(() {
-                                  isLoading = true;
-                                  error = null;
-                                });
-
-                                try {
-                                  // Crear modelo de actualización de parámetros
-                                  final updatedParams = ParkingParamsModel(
-                                    theme: _parking!
-                                        .params
-                                        .theme, // Mantener el tema actual
-                                    currency: selectedCurrency!,
-                                    timeZone:
-                                        selectedTimeZone?.isNotEmpty == true
-                                        ? selectedTimeZone!
-                                        : '',
-                                    countryCode:
-                                        selectedCountryCode?.isNotEmpty == true
-                                        ? selectedCountryCode!
-                                        : '',
-                                    decimalPlaces: decimalPlaces,
-                                    slogan: _parking!
-                                        .params
-                                        .slogan, // Mantener el slogan actual
-                                  );
-
-                                  // Actualizar parámetros en el parking
-                                  await _parkingService.updateParking(
-                                    _parking!.id.toString(),
-                                    ParkingUpdateModel(params: updatedParams),
-                                  );
-
-                                  if (mounted) {
-                                    Navigator.of(dialogContext).pop();
-                                    await _refreshParkingDetails();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Parámetros actualizados correctamente',
-                                        ),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  setState(() {
-                                    error =
-                                        'Error al actualizar parámetros: ${e.toString()}';
-                                    isLoading = false;
-                                  });
-                                }
-                              },
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Guardar'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+      title: 'Parámetros del Parking',
+      children: [
+        _ParkingParametersDialog(
+          key: dialogKey,
+          parking: _parking!,
+          onSave: () => _refreshParkingDetails(),
+        ),
+      ],
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text(
+            'Cancelar',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),
-      ),
+        const SizedBox(width: 8),
+        FilledButton(
+          onPressed: () {
+            dialogKey.currentState?._saveParameters();
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
     );
   }
 
@@ -1326,30 +1134,60 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
 
   // Mostrar diálogo para editar el estacionamiento
   void _showEditDialog() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _EditParkingScreen(
+    final dialogKey = GlobalKey<_EditParkingDialogState>();
+
+    ModalDialog.show(
+      context: context,
+      title: 'Editar Estacionamiento',
+      children: [
+        _EditParkingDialog(
+          key: dialogKey,
           parking: _parking!,
           onSave: () => _refreshParkingDetails(),
         ),
-      ),
+      ],
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text(
+            'Cancelar',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(
+          onPressed: () {
+            dialogKey.currentState?._saveParking();
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
     );
   }
 }
 
-// Pantalla para editar información del estacionamiento
-class _EditParkingScreen extends StatefulWidget {
+// Diálogo para editar información del estacionamiento
+class _EditParkingDialog extends StatefulWidget {
   final ParkingDetailedModel parking;
   final VoidCallback onSave;
+  final VoidCallback? onSavePressed;
 
-  const _EditParkingScreen({required this.parking, required this.onSave});
+  const _EditParkingDialog({
+    super.key,
+    required this.parking,
+    required this.onSave,
+    this.onSavePressed,
+  });
 
   @override
-  State<_EditParkingScreen> createState() => _EditParkingScreenState();
+  State<_EditParkingDialog> createState() => _EditParkingDialogState();
 }
 
-class _EditParkingScreenState extends State<_EditParkingScreen> {
+class _EditParkingDialogState extends State<_EditParkingDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController nameController;
   late TextEditingController addressController;
@@ -1405,202 +1243,165 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    // Contenido del formulario
-    final formContent = LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 24),
-
-                          // Campo de nombre del aparcamiento
-                          _buildModernTextField(
-                            controller: nameController,
-                            label: 'Nombre del estacionamiento',
-                            icon: Icons.local_parking_outlined,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa el nombre';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Campo de dirección
-                          CustomAddressInput(
-                            addressController: addressController,
-                            latitudeController: latitudeController,
-                            longitudeController: longitudeController,
-                            labelText: 'Dirección',
-                            hintText:
-                                'Ingresa la dirección del estacionamiento',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa la dirección';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Campos de coordenadas
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _buildModernTextField(
-                                  controller: latitudeController,
-                                  label: 'Latitud',
-                                  icon: Icons.location_on_outlined,
-                                  keyboardType: TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildModernTextField(
-                                  controller: longitudeController,
-                                  label: 'Longitud',
-                                  icon: Icons.location_on_outlined,
-                                  keyboardType: TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Campos de contacto
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _buildModernTextField(
-                                  controller: emailController,
-                                  label: 'Correo electrónico',
-                                  icon: Icons.email_outlined,
-                                  keyboardType: TextInputType.emailAddress,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildModernTextField(
-                                  controller: phoneController,
-                                  label: 'Teléfono',
-                                  icon: Icons.phone_outlined,
-                                  keyboardType: TextInputType.phone,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Campo de slogan
-                          _buildModernTextField(
-                            controller: sloganController,
-                            label: 'Slogan',
-                            icon: Icons.tag_outlined,
-                            hintText: 'Ej: El mejor lugar para tu vehículo',
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Modo de operación
-                          CustomOperationModeSelector(
-                            selectedMode: operationMode,
-                            onModeChanged: (mode) {
-                              setState(() {
-                                operationMode = mode;
-                              });
-                            },
-                            label: 'Modo de Operación',
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Switch de estado activo
-                          _buildModernSwitchTile(),
-                          const SizedBox(height: 32),
-
-                          // Botón de guardar
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _saveParking,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: colorScheme.primary,
-                              foregroundColor: colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: _isLoading
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Guardando...',
-                                        style: textTheme.labelLarge?.copyWith(
-                                          color: colorScheme.onPrimary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.save, size: 20),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Guardar Cambios',
-                                        style: textTheme.labelLarge?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_error != null)
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.errorContainer.withValues(alpha: 127),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: colorScheme.error,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _error!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.error,
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
-        );
-      },
-    );
 
-    // Usar PageLayout para consistencia
-    return PageLayout(title: 'Editar Estacionamiento', body: formContent);
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else
+          Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
+
+                // Campo de nombre del aparcamiento
+                _buildModernTextField(
+                  controller: nameController,
+                  label: 'Nombre del estacionamiento',
+                  icon: Icons.local_parking_outlined,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa el nombre';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Campo de dirección
+                CustomAddressInput(
+                  addressController: addressController,
+                  latitudeController: latitudeController,
+                  longitudeController: longitudeController,
+                  labelText: 'Dirección',
+                  hintText: 'Ingresa la dirección del estacionamiento',
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor ingresa la dirección';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Campos de coordenadas
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildModernTextField(
+                        controller: latitudeController,
+                        label: 'Latitud',
+                        icon: Icons.location_on_outlined,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildModernTextField(
+                        controller: longitudeController,
+                        label: 'Longitud',
+                        icon: Icons.location_on_outlined,
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Campos de contacto
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildModernTextField(
+                        controller: emailController,
+                        label: 'Correo electrónico',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildModernTextField(
+                        controller: phoneController,
+                        label: 'Teléfono',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Campo de slogan
+                _buildModernTextField(
+                  controller: sloganController,
+                  label: 'Slogan',
+                  icon: Icons.tag_outlined,
+                  hintText: 'Ej: El mejor lugar para tu vehículo',
+                ),
+                const SizedBox(height: 16),
+
+                // Modo de operación
+                CustomOperationModeSelector(
+                  selectedMode: operationMode,
+                  onModeChanged: (mode) {
+                    setState(() {
+                      operationMode = mode;
+                    });
+                  },
+                  label: 'Modo de Operación',
+                ),
+                const SizedBox(height: 16),
+
+                // Switch de estado activo
+                _buildModernSwitchTile(),
+              ],
+            ),
+          ),
+
+      ],
+    );
   }
 
   Widget _buildModernTextField({
@@ -1726,9 +1527,6 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
   }
 
   Future<void> _saveParking() async {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     // Validar formulario
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
@@ -1740,14 +1538,11 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
     });
 
     try {
-      final parkingService = AppStateContainer.di(
-        context,
-      ).resolve<ParkingService>();
+      final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
 
       // Crear el modelo de ubicación actualizado
       ParkingLocationModel? location;
-      if (latitudeController.text.isNotEmpty &&
-          longitudeController.text.isNotEmpty) {
+      if (latitudeController.text.isNotEmpty && longitudeController.text.isNotEmpty) {
         final lat = double.tryParse(latitudeController.text);
         final lng = double.tryParse(longitudeController.text);
         if (lat != null && lng != null) {
@@ -1779,37 +1574,592 @@ class _EditParkingScreenState extends State<_EditParkingScreen> {
 
       if (mounted) {
         widget.onSave();
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Estacionamiento actualizado correctamente'),
+          const SnackBar(
+            content: Text('Estacionamiento actualizado correctamente'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: colorScheme.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
         );
-        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _error = 'Error al actualizar: ${e.toString()}';
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al actualizar: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            action: SnackBarAction(
-              label: 'Cerrar',
-              textColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
+      }
+    }
+  }
+}
+
+// Diálogo para editar parámetros del estacionamiento
+class _ParkingParametersDialog extends StatefulWidget {
+  final ParkingDetailedModel parking;
+  final VoidCallback onSave;
+
+  const _ParkingParametersDialog({
+    super.key,
+    required this.parking,
+    required this.onSave,
+  });
+
+  @override
+  State<_ParkingParametersDialog> createState() => _ParkingParametersDialogState();
+}
+
+class _ParkingParametersDialogState extends State<_ParkingParametersDialog> {
+  late String? selectedCurrency;
+  late TextEditingController decimalPlacesController;
+  late String? selectedTimeZone;
+  late String? selectedCountryCode;
+  bool isLoading = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedCurrency = widget.parking.params.currency;
+    decimalPlacesController = TextEditingController(
+      text: widget.parking.params.decimalPlaces.toString(),
+    );
+    selectedTimeZone = widget.parking.params.timeZone;
+    selectedCountryCode = widget.parking.params.countryCode;
+  }
+
+  @override
+  void dispose() {
+    decimalPlacesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (error != null)
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.errorContainer.withValues(alpha: 127),
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: colorScheme.error,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    error!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else ...[
+          _buildCountrySelector(context, selectedCountryCode, (value) {
+            setState(() => selectedCountryCode = value);
+          }),
+          _buildTimeZoneSelector(context, selectedTimeZone, (value) {
+            setState(() => selectedTimeZone = value);
+          }),
+          _buildCurrencySelector(context, selectedCurrency, (value) {
+            setState(() => selectedCurrency = value);
+          }),
+          _buildTextField(
+            controller: decimalPlacesController,
+            label: 'Decimales',
+            icon: Icons.numbers,
+            keyboardType: TextInputType.number,
+            hintText: 'Ej: 2',
+          ),
+        ],
+
+        const SizedBox(height: 16),
+
+        // Botones de acción
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Cancelar',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: isLoading ? null : _saveParameters,
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Guardar'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCountrySelector(
+    BuildContext context,
+    String? selectedCountryCode,
+    ValueChanged<String?> onChanged,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final countries = [
+      {'code': 'US', 'name': 'Estados Unidos'},
+      {'code': 'MX', 'name': 'México'},
+      {'code': 'ES', 'name': 'España'},
+      {'code': 'AR', 'name': 'Argentina'},
+      {'code': 'BR', 'name': 'Brasil'},
+      {'code': 'CO', 'name': 'Colombia'},
+      {'code': 'PE', 'name': 'Perú'},
+      {'code': 'CL', 'name': 'Chile'},
+      {'code': 'VE', 'name': 'Venezuela'},
+      {'code': 'EC', 'name': 'Ecuador'},
+      {'code': 'BO', 'name': 'Bolivia'},
+      {'code': 'PY', 'name': 'Paraguay'},
+      {'code': 'UY', 'name': 'Uruguay'},
+      {'code': 'GT', 'name': 'Guatemala'},
+      {'code': 'HN', 'name': 'Honduras'},
+      {'code': 'SV', 'name': 'El Salvador'},
+      {'code': 'NI', 'name': 'Nicaragua'},
+      {'code': 'CR', 'name': 'Costa Rica'},
+      {'code': 'PA', 'name': 'Panamá'},
+      {'code': 'CU', 'name': 'Cuba'},
+      {'code': 'DO', 'name': 'República Dominicana'},
+      {'code': 'PR', 'name': 'Puerto Rico'},
+      {'code': 'CA', 'name': 'Canadá'},
+      {'code': 'FR', 'name': 'Francia'},
+      {'code': 'DE', 'name': 'Alemania'},
+      {'code': 'IT', 'name': 'Italia'},
+      {'code': 'GB', 'name': 'Reino Unido'},
+      {'code': 'JP', 'name': 'Japón'},
+      {'code': 'CN', 'name': 'China'},
+      {'code': 'KR', 'name': 'Corea del Sur'},
+      {'code': 'AU', 'name': 'Australia'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'País',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedCountryCode != null && countries.any((c) => c['code'] == selectedCountryCode)
+                  ? selectedCountryCode
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.flag_outlined,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar país',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: countries.map((country) {
+                return DropdownMenuItem<String>(
+                  value: country['code'],
+                  child: Text(
+                    '${country['code']} - ${country['name']}',
+                    style: textTheme.bodyMedium,
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeZoneSelector(
+    BuildContext context,
+    String? selectedTimeZone,
+    ValueChanged<String?> onChanged,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final timeZones = [
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+      'America/Mexico_City',
+      'America/Sao_Paulo',
+      'America/La_Paz',
+      'America/Bogota',
+      'America/Lima',
+      'America/Caracas',
+      'America/Guayaquil',
+      'America/Asuncion',
+      'America/Montevideo',
+      'America/Guatemala',
+      'America/Tegucigalpa',
+      'America/El_Salvador',
+      'America/Managua',
+      'America/Costa_Rica',
+      'America/Panama',
+      'America/Havana',
+      'America/Santo_Domingo',
+      'America/Puerto_Rico',
+      'America/Toronto',
+      'Europe/London',
+      'Europe/Paris',
+      'Europe/Berlin',
+      'Europe/Madrid',
+      'Europe/Rome',
+      'Europe/Moscow',
+      'Asia/Tokyo',
+      'Asia/Shanghai',
+      'Asia/Seoul',
+      'Asia/Singapore',
+      'Asia/Hong_Kong',
+      'Asia/Bangkok',
+      'Australia/Sydney',
+      'Australia/Melbourne',
+      'Pacific/Auckland',
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Zona horaria',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedTimeZone != null && timeZones.contains(selectedTimeZone)
+                  ? selectedTimeZone
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.schedule,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar zona horaria',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: timeZones.map((timeZone) {
+                return DropdownMenuItem<String>(
+                  value: timeZone,
+                  child: Text(timeZone, style: textTheme.bodyMedium),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencySelector(
+    BuildContext context,
+    String? selectedCurrency,
+    ValueChanged<String?> onChanged,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final currencies = [
+      {'code': 'USD', 'name': 'Dólar estadounidense', 'symbol': '\$'},
+      {'code': 'EUR', 'name': 'Euro', 'symbol': '€'},
+      {'code': 'GBP', 'name': 'Libra esterlina', 'symbol': '£'},
+      {'code': 'JPY', 'name': 'Yen japonés', 'symbol': '¥'},
+      {'code': 'CAD', 'name': 'Dólar canadiense', 'symbol': 'C\$'},
+      {'code': 'AUD', 'name': 'Dólar australiano', 'symbol': 'A\$'},
+      {'code': 'CHF', 'name': 'Franco suizo', 'symbol': 'CHF'},
+      {'code': 'CNY', 'name': 'Yuan chino', 'symbol': '¥'},
+      {'code': 'SEK', 'name': 'Corona sueca', 'symbol': 'kr'},
+      {'code': 'NZD', 'name': 'Dólar neozelandés', 'symbol': 'NZ\$'},
+      {'code': 'MXN', 'name': 'Peso mexicano', 'symbol': '\$'},
+      {'code': 'SGD', 'name': 'Dólar singapurense', 'symbol': 'S\$'},
+      {'code': 'HKD', 'name': 'Dólar hongkonés', 'symbol': 'HK\$'},
+      {'code': 'NOK', 'name': 'Corona noruega', 'symbol': 'kr'},
+      {'code': 'KRW', 'name': 'Won surcoreano', 'symbol': '₩'},
+      {'code': 'TRY', 'name': 'Lira turca', 'symbol': '₺'},
+      {'code': 'RUB', 'name': 'Rublo ruso', 'symbol': '₽'},
+      {'code': 'INR', 'name': 'Rupia india', 'symbol': '₹'},
+      {'code': 'BRL', 'name': 'Real brasileño', 'symbol': 'R\$'},
+      {'code': 'ZAR', 'name': 'Rand sudafricano', 'symbol': 'R'},
+      {'code': 'ARS', 'name': 'Peso argentino', 'symbol': '\$'},
+      {'code': 'CLP', 'name': 'Peso chileno', 'symbol': '\$'},
+      {'code': 'COP', 'name': 'Peso colombiano', 'symbol': '\$'},
+      {'code': 'PEN', 'name': 'Sol peruano', 'symbol': 'S/'},
+      {'code': 'BOB', 'name': 'Boliviano', 'symbol': 'Bs'},
+      {'code': 'PYG', 'name': 'Guaraní paraguayo', 'symbol': '₲'},
+      {'code': 'UYU', 'name': 'Peso uruguayo', 'symbol': '\$'},
+      {'code': 'VES', 'name': 'Bolívar venezolano', 'symbol': 'Bs'},
+      {'code': 'CRC', 'name': 'Colón costarricense', 'symbol': '₡'},
+      {'code': 'GTQ', 'name': 'Quetzal guatemalteco', 'symbol': 'Q'},
+      {'code': 'HNL', 'name': 'Lempira hondureña', 'symbol': 'L'},
+      {'code': 'NIO', 'name': 'Córdoba nicaragüense', 'symbol': 'C\$'},
+      {'code': 'PAB', 'name': 'Balboa panameño', 'symbol': 'B/.'},
+      {'code': 'SVC', 'name': 'Colón salvadoreño', 'symbol': '\$'},
+      {'code': 'DOP', 'name': 'Peso dominicano', 'symbol': 'RD\$'},
+      {'code': 'HTG', 'name': 'Gourde haitiano', 'symbol': 'G'},
+      {'code': 'JMD', 'name': 'Dólar jamaiquino', 'symbol': 'J\$'},
+      {'code': 'TTD', 'name': 'Dólar trinitense', 'symbol': 'TT\$'},
+      {'code': 'XCD', 'name': 'Dólar del Caribe Oriental', 'symbol': 'EC\$'},
+      {'code': 'BSD', 'name': 'Dólar bahameño', 'symbol': 'B\$'},
+      {'code': 'BBD', 'name': 'Dólar barbadense', 'symbol': 'Bds\$'},
+      {'code': 'BZD', 'name': 'Dólar beliceño', 'symbol': 'BZ\$'},
+      {'code': 'KYD', 'name': 'Dólar de las Islas Caimán', 'symbol': 'CI\$'},
+      {'code': 'FJD', 'name': 'Dólar fiyiano', 'symbol': 'FJ\$'},
+      {'code': 'GYD', 'name': 'Dólar guyanés', 'symbol': 'G\$'},
+      {'code': 'SRD', 'name': 'Dólar surinamés', 'symbol': 'SR\$'},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Moneda',
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: colorScheme.outline.withValues(alpha: 60),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedCurrency != null && currencies.any((c) => c['code'] == selectedCurrency)
+                  ? selectedCurrency
+                  : null,
+              decoration: InputDecoration(
+                prefixIcon: Icon(
+                  Icons.currency_exchange,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              hint: Text(
+                'Seleccionar moneda',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              items: currencies.map((currency) {
+                return DropdownMenuItem<String>(
+                  value: currency['code'],
+                  child: Text(
+                    '${currency['code']} - ${currency['name']} (${currency['symbol']})',
+                    style: textTheme.bodyMedium,
+                  ),
+                );
+              }).toList(),
+              onChanged: onChanged,
+              dropdownColor: colorScheme.surface,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? hintText,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        prefixIcon: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+      ),
+      keyboardType: keyboardType,
+      style: textTheme.bodyMedium,
+    );
+  }
+
+  Future<void> _saveParameters() async {
+    // Validar campos requeridos
+    if (selectedCurrency == null ||
+        selectedCurrency!.isEmpty ||
+        decimalPlacesController.text.isEmpty) {
+      setState(() {
+        error = 'Por favor completa los campos requeridos';
+      });
+      return;
+    }
+
+    // Validar decimales
+    final decimalPlaces = int.tryParse(decimalPlacesController.text);
+    if (decimalPlaces == null || decimalPlaces < 0 || decimalPlaces > 4) {
+      setState(() {
+        error = 'Los decimales deben ser un número entre 0 y 4';
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+
+      // Crear modelo de actualización de parámetros
+      final updatedParams = ParkingParamsModel(
+        theme: widget.parking.params.theme, // Mantener el tema actual
+        currency: selectedCurrency!,
+        timeZone: selectedTimeZone?.isNotEmpty == true ? selectedTimeZone! : '',
+        countryCode: selectedCountryCode?.isNotEmpty == true ? selectedCountryCode! : '',
+        decimalPlaces: decimalPlaces,
+        slogan: widget.parking.params.slogan, // Mantener el slogan actual
+      );
+
+      // Actualizar parámetros en el parking
+      await parkingService.updateParking(
+        widget.parking.id.toString(),
+        ParkingUpdateModel(params: updatedParams),
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        widget.onSave();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Parámetros actualizados correctamente'),
           ),
         );
       }
+    } catch (e) {
+      setState(() {
+        error = 'Error al actualizar parámetros: ${e.toString()}';
+        isLoading = false;
+      });
     }
   }
 }

@@ -10,6 +10,7 @@ import {
 } from "../models/access";
 import { authPlugin } from "../plugins/access";
 import { BadRequestError, NotFoundError } from "../utils/error";
+import { calculateParkingFee } from "../utils/common";
 
 export const accessController = new Elysia({ prefix: "/access", tags: ["access"] })
   .use(authPlugin)
@@ -26,7 +27,8 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
       status,
       startDate,
       endDate,
-      inParking
+      inParking,
+      search
     } = query;
 
     const filters: any = {
@@ -40,8 +42,22 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
     if (inParking !== undefined) filters.inParking = inParking === true;
+    if (search) filters.search = search;
 
     const accesss = await db.access.find(filters);
+
+    // Calculate current fee for ongoing accesses
+    const parkingWithRates = await db.parking.findById(parking.id);
+    if (parkingWithRates && parkingWithRates.rates) {
+      for (const access of accesss) {
+        if (!access.exitTime) {
+          const entryTimeStr = typeof access.entryTime === 'string' ? access.entryTime : access.entryTime.toISOString();
+          const currentAmount = calculateParkingFee(entryTimeStr, parkingWithRates.rates, access.vehicle.type);
+          access.amount = currentAmount;
+        }
+      }
+    }
+
     return accesss;
   }, {
     query: t.Object({
@@ -53,6 +69,7 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
       startDate: t.Optional(t.String()),
       endDate: t.Optional(t.String()),
       inParking: t.Optional(t.Boolean()),
+      search: t.Optional(t.String())
     }),
     detail: {
       summary: "Obtener todos los accesos",
@@ -66,11 +83,23 @@ export const accessController = new Elysia({ prefix: "/access", tags: ["access"]
   })
   
   // Obtener un acceso por ID
-  .get("/:id", async ({ params }) => {
+  .get("/:id", async ({ params, parking }) => {
     const access = await db.access.getById(params.id);
     if (!access) {
       throw new NotFoundError("Acceso no encontrado");
     }
+
+    // Calculate current fee if ongoing
+    if (!access.exitTime) {
+      const parkingWithRates = await db.parking.findById(parking.id);
+      if (parkingWithRates && parkingWithRates.rates) {
+        const entryTimeStr = typeof access.entryTime === 'string' ? access.entryTime : access.entryTime.toISOString();
+        const currentAmount = calculateParkingFee(entryTimeStr, parkingWithRates.rates, access.vehicle.type);
+        access.amount = currentAmount;
+
+      }
+    }
+
     return access;
   }, {
     detail: {

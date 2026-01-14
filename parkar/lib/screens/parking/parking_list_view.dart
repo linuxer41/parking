@@ -25,7 +25,6 @@ class ParkingListView extends StatefulWidget {
 class _ParkingListViewState extends State<ParkingListView> {
   late TextEditingController searchController;
   List<AccessModel> accesses = [];
-  List<AccessModel> filteredAccesses = [];
   bool isLoading = true;
   AreaModel? currentArea;
   String searchQuery = '';
@@ -44,7 +43,7 @@ class _ParkingListViewState extends State<ParkingListView> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadAccesses() async {
     setState(() {
       isLoading = true;
     });
@@ -58,20 +57,15 @@ class _ParkingListViewState extends State<ParkingListView> {
       );
 
       final accessService = AppStateContainer.di(context).resolve<AccessService>();
-      final cashRegisterService = AppStateContainer.di(context).resolve<CashRegisterService>();
       accesses = await accessService.list(
         AccessFilter(
-          inParking: true
+          inParking: true,
+          search: searchQuery.isEmpty ? null : searchQuery
         )
       );
-      final cashRegister = await cashRegisterService.getCurrentCashRegister();
-      appState.setCurrentCashRegister(cashRegister); // Set current cash register = cashRegister;
-
-      _applySearchFilter();
     } catch (e) {
-      debugPrint('Error loading data: $e');
+      debugPrint('Error loading accesses: $e');
       accesses = [];
-      filteredAccesses = [];
     } finally {
       setState(() {
         isLoading = false;
@@ -79,24 +73,31 @@ class _ParkingListViewState extends State<ParkingListView> {
     }
   }
 
+  Future<void> _loadCashRegister() async {
+    try {
+      final appState = AppStateContainer.of(context);
+      final cashRegisterService = AppStateContainer.di(context).resolve<CashRegisterService>();
+      final cashRegister = await cashRegisterService.getCurrentCashRegister();
+      appState.setCurrentCashRegister(cashRegister);
+    } catch (e) {
+      debugPrint('Error loading cash register: $e');
+    }
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([
+      _loadAccesses(),
+      _loadCashRegister(),
+    ]);
+  }
+
   void _onSearchChanged() {
     setState(() {
       searchQuery = searchController.text.toLowerCase();
-      _applySearchFilter();
     });
+    _loadAccesses();
   }
 
-  void _applySearchFilter() {
-    if (searchQuery.isEmpty) {
-      filteredAccesses = List.from(accesses);
-    } else {
-      filteredAccesses = accesses.where((access) {
-        return access.vehicle.plate.toLowerCase().contains(searchQuery) ||
-            (access.vehicle.ownerName?.toLowerCase().contains(searchQuery) ??
-                false);
-      }).toList();
-    }
-  }
 
   Future<void> _onRefresh() async {
     await _loadData();
@@ -107,9 +108,9 @@ class _ParkingListViewState extends State<ParkingListView> {
     ManageLayout.show(
       context: context,
       child: ManageAccess(
-        parking: widget.parking, access: access, 
+        parking: widget.parking, access: access,
         onExitSuccess: () {
-        _loadData();
+        _loadAccesses();
       }),
     );
   }
@@ -131,7 +132,7 @@ class _ParkingListViewState extends State<ParkingListView> {
   void _onAreaChanged(String id) {
     final appState = AppStateContainer.of(context);
     appState.setCurrentArea(id);
-    _loadData();
+    _loadAccesses();
   }
 
   @override
@@ -208,7 +209,6 @@ class _ParkingListViewState extends State<ParkingListView> {
                         onEntrySuccess: () {
                           // clear search field
                           searchController.clear();
-                          _loadData();
                         },
                       ),
                     ),
@@ -218,7 +218,7 @@ class _ParkingListViewState extends State<ParkingListView> {
                 // Tabla de accesos con scroll interno
                 Expanded(
                   child: AccessListTable(
-                    accesses: filteredAccesses,
+                    accesses: accesses,
                     onRefresh: () async {
                       await _onRefresh();
                     },

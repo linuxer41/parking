@@ -65,6 +65,7 @@ class AccessCrud {
     startDate?: string;
     endDate?: string;
     inParking?: boolean;
+    search?: string;
   } = {}): Promise<Access[]> {
     const conditions: string[] = [];
     const values: any[] = [];
@@ -116,6 +117,11 @@ class AccessCrud {
     }
     if (filters.inParking) {
       conditions.push(`a."exitTime" IS NULL`);
+    }
+
+    if (filters.search) {
+      conditions.push(`v."plate" ILIKE $${paramIndex++}`);
+      values.push(`%${filters.search}%`);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -276,13 +282,13 @@ class AccessCrud {
      */
     registerExit = async (id: string, exitEmployeeId: string, data: Omit<ExitRequest, 'exitEmployeeId'>): Promise<Access> => {
      const { notes } = data;
-
-     return await withTransaction(async (client) => {
+    const access = await this.getById(id);
+    if (!access) {
+      throw new BadRequestError("Acceso no encontrado");
+    }
+    const updated = await withTransaction(async (client) => {
        // Get the access record to calculate the fee
-       const access = await this.getById(id);
-       if (!access) {
-         throw new BadRequestError("Acceso no encontrado");
-       }
+
 
        // Get parking rates
        const parking = await parkingCrud.findById(access.parking.id);
@@ -290,12 +296,9 @@ class AccessCrud {
          throw new BadRequestError("No se encontraron tarifas para el estacionamiento");
        }
 
-       // Map vehicle type to category
-       const vehicleCategory = this.mapVehicleTypeToCategory(access.vehicle.type);
-
        // Calculate parking fee
        const entryTimeStr = typeof access.entryTime === 'string' ? access.entryTime : access.entryTime.toISOString();
-       const calculatedAmount = calculateParkingFee(entryTimeStr, parking.rates, vehicleCategory) || 2;
+       const calculatedAmount = calculateParkingFee(entryTimeStr, parking.rates, access.vehicle.type) || 2;
        const updates: string[] = [];
        const values: any[] = [];
        let paramIndex = 1;
@@ -348,12 +351,15 @@ class AccessCrud {
          }
        }
 
-       const updatedAccess = await this.getById(id);
-       if (!updatedAccess) {
-         throw new BadRequestError("Error al obtener el acceso actualizado");
-       }
-       return updatedAccess;
+
      });
+      const updatedAccess = await this.getById(id);
+      if (!updatedAccess) {
+        throw new BadRequestError("Error al obtener el acceso actualizado");
+      }
+      console.log({updatedAccess});
+      
+     return updatedAccess;
    };
 
   /**

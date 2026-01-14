@@ -11,22 +11,23 @@ double calculateParkingFee(
   String vehicleType,
 ) {
   // Map vehicle type string to numeric category
+  print('vehicleType: $vehicleType');
   int vehicleCategory;
   switch (vehicleType.toLowerCase()) {
     case 'bicycle':
-      vehicleCategory = 0;
-      break;
-    case 'motorcycle':
       vehicleCategory = 1;
       break;
-    case 'car':
+    case 'motorcycle':
       vehicleCategory = 2;
       break;
-    case 'truck':
+    case 'car':
       vehicleCategory = 3;
       break;
+    case 'truck':
+      vehicleCategory = 4;
+      break;
     default:
-      vehicleCategory = 2; // Default to car
+      vehicleCategory = 1; // Default to bicycle
   }
   final entry = DateTime.parse(entryTime);
   final now = DateTime.now();
@@ -46,6 +47,8 @@ double calculateParkingFee(
     },
   );
 
+  print('applicableRate: ${applicableRate.toJson()}');
+
   return _calculateFeeFromRate(totalMinutes, applicableRate);
 }
 
@@ -54,15 +57,14 @@ double calculateParkingFee(
 /// @param rate - Rate object
 /// @returns Calculated fee
 double _calculateFeeFromRate(int totalMinutes, RateModel rate) {
-  final totalHours = totalMinutes / 60;
-
   // Apply tolerance (free minutes)
   final billableMinutes = totalMinutes > rate.tolerance ? totalMinutes - rate.tolerance : 0;
-  final billableHours = billableMinutes / 60;
 
-  // For simplicity, use hourly rate for all calculations
-  // In a real system, you might want more complex logic for daily/weekly rates
-  final fee = billableHours * rate.hourly;
+  if (billableMinutes == 0) return 0.0;
+
+  // Charge in half-hour increments, minimum 1 half-hour
+  final halfHours = (billableMinutes / 30).ceil();
+  final fee = halfHours * (rate.hourly / 2);
 
   // Round to 2 decimal places
   return (fee * 100).round() / 100;

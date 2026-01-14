@@ -10,6 +10,7 @@ class AccessFilter {
   final String? dateFrom;
   final String? dateTo;
   final bool? inParking;
+  final String? search;
 
   AccessFilter({
     this.vehicleId,
@@ -19,6 +20,7 @@ class AccessFilter {
     this.dateFrom,
     this.dateTo,
     this.inParking,
+    this.search,
   });
 
 // quei only set the values that are not null
@@ -36,6 +38,7 @@ class AccessFilter {
       'dateFrom': dateFrom,
       'dateTo': dateTo,
       'inParking': inParking,
+      'search': search,
     };
   }
 }

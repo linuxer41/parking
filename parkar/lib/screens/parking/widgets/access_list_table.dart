@@ -417,25 +417,28 @@ class _AccessListTableState extends State<AccessListTable> {
 
   Widget _buildDesktopTable(ThemeData theme, ColorScheme colorScheme) {
     return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       physics: const AlwaysScrollableScrollPhysics(),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            color: colorScheme.surfaceContainerHighest,
-            child: Row(
-              children: [
-                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Ingreso', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
-                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Placa', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
-                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Permanencia', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
-                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Costo', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
-                Expanded(flex: 3, child: Padding(padding: const EdgeInsets.all(12), child: Text('Propietario', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
-                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Tipo', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
-              ],
+      child: IntrinsicWidth(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              color: colorScheme.surfaceContainerHighest,
+              child: Row(
+                children: [
+                  SizedBox(width: 120, child: Padding(padding: const EdgeInsets.all(12), child: Text('Ingreso', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                  SizedBox(width: 100, child: Padding(padding: const EdgeInsets.all(12), child: Text('Placa', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                  SizedBox(width: 120, child: Padding(padding: const EdgeInsets.all(12), child: Text('Permanencia', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                  SizedBox(width: 100, child: Padding(padding: const EdgeInsets.all(12), child: Text('Costo', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                  SizedBox(width: 150, child: Padding(padding: const EdgeInsets.all(12), child: Text('Propietario', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                  SizedBox(width: 100, child: Padding(padding: const EdgeInsets.all(12), child: Text('Tipo', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                ],
+              ),
             ),
-          ),
-          ...widget.accesses.map((access) => _buildTableRow(access, theme, colorScheme)),
-        ],
+            ...widget.accesses.map((access) => _buildTableRow(access, theme, colorScheme)),
+          ],
+        ),
       ),
     );
   }
@@ -449,12 +452,12 @@ class _AccessListTableState extends State<AccessListTable> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Expanded(flex: 2, child: Padding(padding: const EdgeInsets.only(left: 12), child: Text(_formatDateTime(access.entryTime), style: theme.textTheme.bodyMedium))),
-            Expanded(flex: 2, child: Text(access.vehicle.plate, style: theme.textTheme.bodyMedium)),
-            Expanded(flex: 2, child: Text(_formatElapsedTime(access.entryTime), style: theme.textTheme.bodyMedium)),
-            Expanded(flex: 2, child: Text(CurrencyConstants.formatAmountWithParkingParams(context, _calculateCurrentCost(access)), style: theme.textTheme.bodyMedium)),
-            Expanded(flex: 3, child: Text(access.vehicle.ownerName ?? '--', style: theme.textTheme.bodyMedium)),
-            Expanded(flex: 2, child: Text(_getVehicleTypeName(access.vehicle.type), style: theme.textTheme.bodyMedium)),
+            SizedBox(width: 120, child: Padding(padding: const EdgeInsets.only(left: 12), child: Text(_formatDateTime(access.entryTime), maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium))),
+            SizedBox(width: 100, child: Text(access.vehicle.plate, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium)),
+            SizedBox(width: 120, child: Text(_formatElapsedTime(access.entryTime), maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium)),
+            SizedBox(width: 100, child: Text(CurrencyConstants.formatAmountWithParkingParams(context, _calculateCurrentCost(access)), maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium)),
+            SizedBox(width: 150, child: Text(access.vehicle.ownerName ?? '--', maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium)),
+            SizedBox(width: 100, child: Text(_getVehicleTypeName(access.vehicle.type), maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium)),
             Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant, size: 16),
           ],
         ),

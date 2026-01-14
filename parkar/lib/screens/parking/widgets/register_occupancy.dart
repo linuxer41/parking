@@ -1162,10 +1162,12 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
   ) {
     final isSelected = index == _selectedTabIndex;
     final colorScheme = Theme.of(context).colorScheme;
+    // For now, only entry tab (index 0) is active
+    final isEnabled = index == 0;
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTabIndex = index),
+        onTap: isEnabled ? () => setState(() => _selectedTabIndex = index) : null,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
@@ -1180,7 +1182,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
                 size: 14,
                 color: isSelected
                     ? colorScheme.onPrimary
-                    : colorScheme.onSurfaceVariant,
+                    : isEnabled
+                        ? colorScheme.onSurfaceVariant
+                        : colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
               ),
               const SizedBox(width: 4),
               Text(
@@ -1190,7 +1194,9 @@ class _RegisterOccupancyState extends State<RegisterOccupancy> {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected
                       ? colorScheme.onPrimary
-                      : colorScheme.onSurfaceVariant,
+                      : isEnabled
+                          ? colorScheme.onSurfaceVariant
+                          : colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 ),
               ),
             ],

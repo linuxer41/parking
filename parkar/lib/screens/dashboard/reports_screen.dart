@@ -8,7 +8,7 @@ import '../../models/employee_model.dart';
 import '../../services/access_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../services/employee_service.dart';
-import '../../services/pdf_service.dart';
+import '../../services/document_service.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/page_layout.dart';
 import '../parking/widgets/components/access_report_table.dart';
@@ -22,7 +22,7 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   late AccessService _accessService;
-  late PdfService _pdfService;
+  late DocumentService _documentService;
   bool _isLoading = true;
   List<AccessModel> _accesses = [];
   String? _error;
@@ -42,7 +42,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _accessService = AppStateContainer.di(context).resolve<AccessService>();
-    _pdfService = PdfService();
+    _documentService = DocumentService();
     _loadAccesses();
   }
 
@@ -502,7 +502,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final parkingName = appState.currentParking?.name ?? 'ParKar';
 
       // Generar PDF
-      final pdfBytes = await _pdfService.generateAccessReport(
+      final pdfBytes = await _documentService.generateAccessReport(
         accesses: _accesses,
         periodType: _selectedPeriod,
         parkingName: parkingName,
@@ -570,7 +570,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final parkingName = appState.currentParking?.name ?? 'ParKar';
 
       // Generar PDF
-      final pdfBytes = await _pdfService.generateAccessReport(
+      final pdfBytes = await _documentService.generateAccessReport(
         accesses: _accesses,
         periodType: _selectedPeriod,
         parkingName: parkingName,

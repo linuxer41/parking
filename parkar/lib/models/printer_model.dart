@@ -63,7 +63,7 @@ class PrintSettings {
       processingMode: processingMode ?? this.processingMode,
       printMethod: printMethod ?? this.printMethod,
       printerType: printerType ?? this.printerType,
-      bluetoothDevice: bluetoothDevice,
+      bluetoothDevice: bluetoothDevice ?? this.bluetoothDevice,
     );
   }
 }

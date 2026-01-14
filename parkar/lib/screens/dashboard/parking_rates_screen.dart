@@ -43,6 +43,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
 
   // Cargar tarifas desde la API
   Future<void> _loadRates() async {
+    final appState = AppStateContainer.of(context);
     setState(() {
       _isLoading = true;
       _error = null;
@@ -53,6 +54,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
       final parking = await _parkingService.getParkingDetailed(
         widget.parkingId.toString(),
       );
+      appState.setCurrentParking(ParkingModel.fromParkingDetailedModel(parking), appState.employee);
 
       if (mounted) {
         setState(() {
@@ -650,7 +652,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
       // Actualizar el parking con las nuevas tarifas
       final updateModel = ParkingUpdateModel(rates: updatedRates);
 
-      await _parkingService.updateParking(
+      final parking = await _parkingService.updateParking(
         widget.parkingId.toString(),
         updateModel,
       );
@@ -744,7 +746,7 @@ class _RateDialogState extends State<_RateDialog> {
         children: [
           Text(
             widget.isEditing ? 'Editar Tarifa' : 'Nueva Tarifa',
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           Text(

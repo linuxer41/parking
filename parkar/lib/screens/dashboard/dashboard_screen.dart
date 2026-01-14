@@ -340,7 +340,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             // Panel izquierdo (menú) - con ancho fijo de 320px
             SizedBox(
-              width: 450,
+              width: 350,
               child: Container(
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
@@ -379,12 +379,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             Expanded(
               child: Column(
                 children: [
-                  // Header del panel derecho
-                  if (_currentPage != 'main')
-                    _buildRightPanelHeader()
-                  else
-                    _buildDefaultHeader(),
-
                   // Contenido del panel derecho
                   Expanded(child: _currentPageWidget ?? _buildDefaultContent()),
                 ],
@@ -396,118 +390,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  /// Construye el header del panel derecho cuando estamos en una página específica
-  Widget _buildRightPanelHeader() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outline.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
-            onPressed: _backToMain,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            _getCurrentPageTitle() ?? '',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Construye el header por defecto del panel derecho
-  Widget _buildDefaultHeader() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outline.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.dashboard_outlined,
-            color: colorScheme.onSurfaceVariant,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Área de Contenido',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Construye el contenido por defecto del panel derecho
-  Widget _buildDefaultContent() {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.touch_app,
-            size: 64,
-            color: colorScheme.primary.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Selecciona una opción',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Obtiene el título de la página actual
-  String? _getCurrentPageTitle() {
-    if (_currentPage == 'main') return null;
-
-    // Buscar la ruta actual en todas las secciones
-    for (final section in _dashboardSections) {
-      for (final route in section.routes) {
-        if (route.id == _currentPage) {
-          return route.title;
-        }
-      }
-    }
-    return null;
-  }
 
 
   // Método para construir el dashboard financiero unificado
@@ -517,6 +399,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final size = MediaQuery.of(context).size;
+    print('size.........: $size');
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -555,8 +438,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 16),
 
           // KPIs principales: Hoy, Semanal, Mensual
-          if (size.width < 600)
-            Column(
+         Column(
               children: [
                 _buildPeriodCard(
                   context,
@@ -587,45 +469,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ],
             )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPeriodCard(
-                    context,
-                    'Hoy',
-                    '${_dashboardData!.today.vehiclesAttended}',
-                    CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.today.collection),
-                    Icons.today,
-                    Colors.blue,
-                    currentVehicles: '${_dashboardData!.today.currentVehiclesInParking}',
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPeriodCard(
-                    context,
-                    'Semanal',
-                    '${_dashboardData!.weekly.vehiclesAttended}',
-                    CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.weekly.collection),
-                    Icons.calendar_view_week,
-                    Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPeriodCard(
-                    context,
-                    'Mensual',
-                    '${_dashboardData!.monthly.vehiclesAttended}',
-                    CurrencyConstants.formatAmountWithParkingParams(context, _dashboardData!.monthly.collection),
-                    Icons.calendar_month,
-                    Colors.purple,
-                  ),
-                ),
-              ],
-            ),
-
+          
        ],
       ),
     );
@@ -1118,6 +962,33 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Construye el contenido por defecto del panel derecho
+  Widget _buildDefaultContent() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.touch_app,
+            size: 64,
+            color: colorScheme.primary.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Selecciona una opción',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ],
       ),
     );
   }
