@@ -47,11 +47,11 @@ void main() async {
 
   AppConfig.init(
     // apiBaseUrl: 'http://localhost:3002',
-    apiBaseUrl: 'http://192.168.100.8:3002',
+    // apiBaseUrl: 'http://192.168.100.8:3002',
     // apiBaseUrl: 'http://192.168.1.16:3002',
     // apiBaseUrl: 'http://192.168.1.13:3002',
     // apiBaseUrl: 'http://192.168.1.7:3002',
-    // apiBaseUrl: 'https://parkar-api.iathings.com',
+    apiBaseUrl: 'https://parkar-api.iathings.com',
     enableWebSocket: false, // Disable WebSocket as it's not available
     apiTimeout: 30,
     apiEndpoints: {
