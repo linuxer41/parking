@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import '../../constants/constants.dart';
 import '../../models/parking_model.dart';
 import '../../services/parking_service.dart';
@@ -512,18 +512,11 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
   }
 
   String _getVehicleCategoryName(int category) {
-    switch (category) {
-      case 0:
-        return 'Bicicleta';
-      case 1:
-        return 'Moto';
-      case 2:
-        return 'Vehículo';
-      case 3:
-        return 'Camión';
-      default:
-        return 'Desconocido';
-    }
+    final cat = vehicleCategories.firstWhere(
+      (c) => c.value == category,
+      orElse: () => VehicleCategory(value: category, label: 'Desconocido', icon: Icons.help, color: Colors.grey),
+    );
+    return cat.label;
   }
 
   // Mostrar diálogo para editar o agregar tarifa
@@ -548,16 +541,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
     final toleranceController = TextEditingController(
       text: rate?.tolerance.toString() ?? '15',
     );
-
     bool isActive = rate?.isActive ?? true;
-
-    // Lista de categorías de vehículos
-    final List<Map<String, dynamic>> vehicleCategories = [
-      {'value': 0, 'label': 'Bicicleta'},
-      {'value': 1, 'label': 'Moto'},
-      {'value': 2, 'label': 'Vehículo'},
-      {'value': 3, 'label': 'Camión'},
-    ];
     int selectedCategory = rate?.vehicleCategory ?? 2;
 
     final currencySymbol = _parking?.params.currency != null
@@ -702,7 +686,7 @@ class _ParkingRatesScreenState extends State<ParkingRatesScreen> {
 class _RateDialog extends StatefulWidget {
   final bool isEditing;
   final TextEditingController nameController;
-  final List<Map<String, dynamic>> vehicleCategories;
+  final List<VehicleCategory> vehicleCategories;
   final int selectedCategory;
   final TextEditingController hourlyRateController;
   final TextEditingController dailyRateController;
@@ -765,7 +749,9 @@ class _RateDialogState extends State<_RateDialog> {
           const SizedBox(height: 4),
           Text(
             'Configura los precios y condiciones',
-            style: textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -775,182 +761,182 @@ class _RateDialogState extends State<_RateDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            // Nombre de tarifa
-            _buildTextField(
-              controller: widget.nameController,
-              label: 'Nombre de tarifa',
-              icon: Icons.label_outline,
-            ),
-            const SizedBox(height: 16),
-
-            // Categoría de vehículo
-            _buildDropdownField(
-              label: 'Categoría de vehículo',
-              icon: Icons.directions_car_outlined,
-              value: selectedCategory,
-              items: widget.vehicleCategories
-                  .map(
-                    (category) => DropdownMenuItem<int>(
-                      value: category['value'] as int,
-                      child: Text(category['label'] as String),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    selectedCategory = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Precios en 2 columnas
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: widget.hourlyRateController,
-                    label: 'Precio por hora',
-                    icon: Icons.schedule,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    prefix: widget.currencySymbol,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildTextField(
-                    controller: widget.dailyRateController,
-                    label: 'Tarifa diaria',
-                    icon: Icons.calendar_today,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    prefix: widget.currencySymbol,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: widget.weeklyRateController,
-                    label: 'Tarifa semanal',
-                    icon: Icons.view_week,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    prefix: widget.currencySymbol,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildTextField(
-                    controller: widget.monthlyRateController,
-                    label: 'Tarifa mensual',
-                    icon: Icons.calendar_month,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    prefix: widget.currencySymbol,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTextField(
-                    controller: widget.yearlyRateController,
-                    label: 'Tarifa anual',
-                    icon: Icons.calendar_month,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    prefix: widget.currencySymbol,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildTextField(
-                    controller: widget.toleranceController,
-                    label: 'Tolerancia',
-                    icon: Icons.timer,
-                    keyboardType: TextInputType.number,
-                    suffix: 'min',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Switch de estado activo
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(
-                  alpha: 30,
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: colorScheme.outline.withValues(alpha: 60),
-                  width: 1,
-                ),
+              // Nombre de tarifa
+              _buildTextField(
+                controller: widget.nameController,
+                label: 'Nombre de tarifa',
+                icon: Icons.label_outline,
               ),
-              child: Row(
+              const SizedBox(height: 16),
+
+              // Categoría de vehículo
+              _buildDropdownField(
+                label: 'Categoría de vehículo',
+                icon: Icons.directions_car_outlined,
+                value: selectedCategory,
+                items: widget.vehicleCategories
+                    .map(
+                      (entry) => DropdownMenuItem<int>(
+                        value: entry.value,
+                        child: Text(entry.label),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      selectedCategory = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Precios en 2 columnas
+              Row(
                 children: [
-                  Icon(
-                    Icons.power_settings_new_outlined,
-                    color: colorScheme.primary,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tarifa activa',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Determina si la tarifa está disponible para uso',
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                    child: _buildTextField(
+                      controller: widget.hourlyRateController,
+                      label: 'Precio por hora',
+                      icon: Icons.schedule,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefix: widget.currencySymbol,
                     ),
                   ),
-                  Switch(
-                    value: isActive,
-                    onChanged: (value) {
-                      setState(() {
-                        isActive = value;
-                      });
-                    },
-                    activeColor: colorScheme.primary,
-                    activeTrackColor: colorScheme.primaryContainer,
-                    inactiveThumbColor: colorScheme.outline,
-                    inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: widget.dailyRateController,
+                      label: 'Tarifa diaria',
+                      icon: Icons.calendar_today,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefix: widget.currencySymbol,
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      controller: widget.weeklyRateController,
+                      label: 'Tarifa semanal',
+                      icon: Icons.view_week,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefix: widget.currencySymbol,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: widget.monthlyRateController,
+                      label: 'Tarifa mensual',
+                      icon: Icons.calendar_month,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefix: widget.currencySymbol,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      controller: widget.yearlyRateController,
+                      label: 'Tarifa anual',
+                      icon: Icons.calendar_month,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      prefix: widget.currencySymbol,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: widget.toleranceController,
+                      label: 'Tolerancia',
+                      icon: Icons.timer,
+                      keyboardType: TextInputType.number,
+                      suffix: 'min',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Switch de estado activo
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 30,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: 60),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.power_settings_new_outlined,
+                      color: colorScheme.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tarifa activa',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Determina si la tarifa está disponible para uso',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isActive,
+                      onChanged: (value) {
+                        setState(() {
+                          isActive = value;
+                        });
+                      },
+                      activeColor: colorScheme.primary,
+                      activeTrackColor: colorScheme.primaryContainer,
+                      inactiveThumbColor: colorScheme.outline,
+                      inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

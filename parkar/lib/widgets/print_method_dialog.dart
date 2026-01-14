@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/printer_model.dart';
 import '../services/print_service.dart';
 
 class PrintMethodDialog extends StatelessWidget {

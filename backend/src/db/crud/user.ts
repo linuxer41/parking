@@ -106,6 +106,25 @@ async update(id: string, input: UserUpdateRequest): Promise<User> {
   });
 }
 
+async updatePassword(id: string, passwordHash: string): Promise<User> {
+  
+  const query = {
+    text: `UPDATE ${this.TABLE_NAME} SET "passwordHash" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING *`,
+    values: [passwordHash, id],
+  };
+  
+  return withClient(async (client) => {
+    const res = await client.query<User>(query);
+    
+    if (!res.rows || res.rows.length === 0) {
+      throw new Error(`No se encontró el usuario con ID ${id} para actualizar`);
+    }
+    
+    return res.rows[0];
+  });
+}
+
+
 /**
  * Eliminar un usuario
  */

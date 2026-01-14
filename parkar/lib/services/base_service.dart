@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_config.dart';
 import 'api_exception.dart';
-import 'auth_manager.dart';
+import 'service_locator.dart';
 
 /// Base class for all services
 class BaseService {
@@ -84,11 +84,7 @@ class BaseService {
 
   /// Get authentication token
   String? _getAuthToken() {
-    return AuthManager().token;
-  }
-
-  String? _getParkingId() {
-    return AuthManager().parkingId;
+    return ServiceLocator().getAppState().authToken;
   }
 
   /// Generic method to handle HTTP requests with retry logic

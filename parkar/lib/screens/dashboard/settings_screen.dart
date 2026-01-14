@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../widgets/page_layout.dart';
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
@@ -328,7 +329,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Modo Oscuro',
               'Cambiar entre tema claro y oscuro',
               _darkModeEnabled,
-              (value) => setState(() => _darkModeEnabled = value),
+              (value) => setState(() {
+                _darkModeEnabled = value;
+                
+              }),
             ),
             _buildListSetting(
               context,

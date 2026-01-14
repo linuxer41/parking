@@ -63,7 +63,7 @@ export const UserUpdateSchema = t.Partial(t.Pick(UserSchema, ["updatedAt", "name
 });
 
 // ===== ESQUEMA DE REQUEST DE ACTUALIZACIÓN =====
-export const UserUpdateRequestSchema = t.Partial(t.Pick(UserSchema, ["name", "email", "phone"]), {
+export const UserUpdateRequestSchema = t.Partial(t.Pick(UserSchema, ["name", "phone",]), {
   description: "Esquema de request para actualizar un User",
 });
 

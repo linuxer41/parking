@@ -1,7 +1,7 @@
 import { PoolClient } from "pg";
 import { getConnection, withClient, withTransaction } from "../connection";
-import { Employee, EmployeeCreate, EmployeeUpdate, EmployeeCreateSchema, EmployeeUpdateSchema, EmployeeCreateRequest, EmployeeUpdateRequest, EmployeePasswordChangeRequest } from "../../models/employee";
-import { UserCreateSchema } from "../../models/user";
+import { EmployeeResponse, EmployeeCreate, EmployeeUpdate, EmployeeCreateSchema, EmployeeUpdateSchema, EmployeeCreateRequest, EmployeeUpdateRequest, EmployeePasswordChangeRequest, Employee } from "../../models/employee";
+import { User, UserCreateSchema } from "../../models/user";
 import { getSchemaValidator } from "elysia";
 import { ConflictError } from "../../utils/error";
 import { userCrud } from "./user";
@@ -14,17 +14,23 @@ class EmployeeCrud {
   /**
    * Crear un nuevo empleado
    */
-  async create(input: EmployeeCreateRequest): Promise<Employee> {
+  async create(input: EmployeeCreateRequest, parkingId: string): Promise<EmployeeResponse> {
     // Verificar si el usuario ya existe
-    const existingUsers = await userCrud.find({ email: input.email });
-    if (existingUsers.length > 0) {
-      throw new ConflictError(`Ya existe un usuario con el email ${input.email}`);
+    if (input.email) {
+      const existingUsers = await userCrud.find({ email: input.email });
+      if (existingUsers.length > 0) {
+        throw new ConflictError(`Ya existe un usuario con el email ${input.email}`);
+      }
     }
 
+
     return await withTransaction(async (client) => {
-      const { password, ...restInput } = input;
+      const { password, role, ...restInput } = input;
 
       // Crear el usuario
+      try {
+        
+  
       const userValidator = getSchemaValidator(UserCreateSchema);
       const userData = userValidator.parse({
         ...restInput,
@@ -32,46 +38,63 @@ class EmployeeCrud {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       });
-
-      const userQueryRes = await client.query(`
+      const userQueryRes = await client.query<User>(`
         INSERT INTO t_user ("id", "createdAt", "name", "email", "passwordHash", "phone")
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING *
       `, [userData.id, userData.createdAt, userData.name, userData.email, userData.passwordHash, userData.phone]);
 
       const user = userQueryRes.rows[0];
 
+
       // Crear el empleado
       const employeeValidator = getSchemaValidator(EmployeeCreateSchema);
       const employeeData = employeeValidator.parse({
         userId: user.id,
-        parkingId: input.parkingId,
+        parkingId: parkingId,
         role: input.role,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       });
 
+      // create employee
       const employeeQueryRes = await client.query<Employee>(`
-        INSERT INTO t_employee ("id", "createdAt", "parkingId", "role", "userId")
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO t_employee ("id", "createdAt", "userId", "parkingId", "role")
+        VALUES ($1, $2, $3, $4, $5) 
         RETURNING *
-      `, [employeeData.id, employeeData.createdAt, employeeData.parkingId, employeeData.role, employeeData.userId]);
+      `, [employeeData.id, employeeData.createdAt, employeeData.userId, employeeData.parkingId, employeeData.role]);
 
-      return employeeQueryRes.rows[0];
+      // Fetch the complete employee data with user info
+      const completeQuery = await client.query<EmployeeResponse>(`
+        SELECT e.*, u.name, u.email, u.phone
+        FROM t_employee e
+        JOIN t_user u ON e."userId" = u.id
+        WHERE e.id = $1
+      `, [employeeData.id]);
+
+      const employee = completeQuery.rows[0];
+      if (!employee) {
+        throw new Error("Employee not found");
+      }
+
+      return employee;
+      } catch (error) {
+          throw new Error("Error creating employee");
+      }
     });
   }
 
   /**
    * Buscar un empleado por ID
    */
-  async findById(id: string): Promise<Employee | undefined> {
+  async findById(id: string): Promise<EmployeeResponse | undefined> {
     const query = {
-      text: `SELECT * FROM ${this.TABLE_NAME} WHERE id = $1 LIMIT 1`,
+      text: `SELECT e.*, u.name, u.email, u.phone FROM ${this.TABLE_NAME} e JOIN t_user u ON e."userId" = u.id WHERE e.id = $1 LIMIT 1`,
       values: [id],
     };
 
     return withClient(async (client) => {
-      const res = await client.query<Employee>(query);
+      const res = await client.query<EmployeeResponse>(query);
       return res.rows[0];
     });
   }
@@ -79,18 +102,30 @@ class EmployeeCrud {
   /**
    * Buscar empleados por criterios
    */
-  async find(where: Partial<Employee> = {}): Promise<Employee[]> {
-    const conditions = Object.entries(where)
-      .map(([key, value], i) => `"${key}" = $${i + 1}`)
-      .join(" AND ");
+  async find(where: Partial<Employee> = {}): Promise<EmployeeResponse[]> {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    Object.entries(where).forEach(([key, value]) => {
+      if (['name', 'email', 'phone'].includes(key)) {
+        conditions.push(`u."${key}" = $${paramIndex}`);
+      } else {
+        conditions.push(`e."${key}" = $${paramIndex}`);
+      }
+      values.push(value);
+      paramIndex++;
+    });
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const query = {
-      text: `SELECT * FROM ${this.TABLE_NAME} ${conditions ? `WHERE ${conditions}` : ""}`,
-      values: Object.values(where),
+      text: `SELECT e.*, u.name, u.email, u.phone FROM ${this.TABLE_NAME} e JOIN t_user u ON e."userId" = u.id ${whereClause}`,
+      values,
     };
 
     return withClient(async (client) => {
-      const res = await client.query<Employee>(query);
+      const res = await client.query<EmployeeResponse>(query);
       return res.rows;
     });
   }
@@ -98,7 +133,7 @@ class EmployeeCrud {
   /**
    * Actualizar un empleado
    */
-  async update(id: string, input: EmployeeUpdateRequest): Promise<Employee> {
+  async update(id: string, input: EmployeeUpdateRequest): Promise<EmployeeResponse> {
     const validator = getSchemaValidator(EmployeeUpdateSchema);
     const data = validator.parse(input);
 
@@ -116,33 +151,56 @@ class EmployeeCrud {
     };
 
     return withClient(async (client) => {
-      const res = await client.query<Employee>(query);
+      const res = await client.query(query);
 
       if (!res.rows || res.rows.length === 0) {
         throw new Error(`No se encontró el empleado con ID ${id} para actualizar`);
       }
 
-      return res.rows[0];
+      // Fetch the complete employee data with user info
+      const completeQuery = await client.query<EmployeeResponse>(`
+        SELECT e.*, u.name, u.email, u.phone
+        FROM t_employee e
+        JOIN t_user u ON e."userId" = u.id
+        WHERE e.id = $1
+      `, [id]);
+
+      return completeQuery.rows[0];
     });
   }
 
   /**
    * Eliminar un empleado
    */
-  async delete(id: string): Promise<Employee> {
-    const query = {
-      text: `DELETE FROM ${this.TABLE_NAME} WHERE id = $1 RETURNING *`,
+  async delete(id: string): Promise<EmployeeResponse> {
+    // First fetch the complete data before deletion
+    const fetchQuery = {
+      text: `SELECT e.*, u.name, u.email, u.phone FROM ${this.TABLE_NAME} e JOIN t_user u ON e."userId" = u.id WHERE e.id = $1`,
       values: [id],
     };
 
     return withClient(async (client) => {
-      const res = await client.query<Employee>(query);
+      const fetchRes = await client.query<EmployeeResponse>(fetchQuery);
 
-      if (!res.rows || res.rows.length === 0) {
+      if (!fetchRes.rows || fetchRes.rows.length === 0) {
         throw new Error(`No se encontró el empleado con ID ${id} para eliminar`);
       }
 
-      return res.rows[0];
+      const employeeData = fetchRes.rows[0];
+
+      // Prevent deletion of employees with 'owner' role
+      if (employeeData.role === 'owner') {
+        throw new Error(`No se puede eliminar un empleado con rol de propietario`);
+      }
+
+      const deleteQuery = {
+        text: `DELETE FROM ${this.TABLE_NAME} WHERE id = $1`,
+        values: [id],
+      };
+
+      await client.query(deleteQuery);
+
+      return employeeData;
     });
   }
 
@@ -151,7 +209,10 @@ class EmployeeCrud {
    */
   async changePassword(employeeId: string, currentPassword: string, newPassword: string): Promise<void> {
     // Obtener el empleado
-    const employee = await this.findById(employeeId);
+    const employee = await withClient(async (client) => {
+      const res = await client.query<Employee>(`SELECT * FROM ${this.TABLE_NAME} WHERE id = $1`, [employeeId]);
+      return res.rows[0];
+    })
     if (!employee) {
       throw new Error(`No se encontró el empleado con ID ${employeeId}`);
     }

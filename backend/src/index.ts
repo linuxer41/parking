@@ -76,6 +76,7 @@ const app = new Elysia()
         }
       };
     }
+    console.error("Error interno del servidor: path:", path, "error:", error);
     // console.error("Error interno del servidor: path:", path, "error:", error);
     let statusCode = 500;
     set.status = statusCode;

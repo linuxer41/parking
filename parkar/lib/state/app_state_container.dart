@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:parkar/di/di_container.dart';
+import '../di/di_container.dart';
 import 'app_state.dart';
 
 class AppStateContainer extends StatefulWidget {

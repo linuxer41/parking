@@ -229,7 +229,7 @@ export class RegistrationService {
       {
         id: crypto.randomUUID(),
         name: "Tarifa Bicicleta",
-        vehicleCategory: 0,
+        vehicleCategory: 1,
         tolerance: 30,
         hourly: 3.50,
         daily: 35.00,
@@ -241,7 +241,7 @@ export class RegistrationService {
       {
         id: crypto.randomUUID(),
         name: "Tarifa Motocicleta",
-        vehicleCategory: 1,
+        vehicleCategory: 2,
         tolerance: 15,
         hourly: 2.50,
         daily: 25.00,
@@ -253,7 +253,7 @@ export class RegistrationService {
       {
         id: crypto.randomUUID(),
         name: "Tarifa Vehículo",
-        vehicleCategory: 2,
+        vehicleCategory: 3,
         tolerance: 30,
         hourly: 3.50,
         daily: 35.00,
@@ -265,7 +265,7 @@ export class RegistrationService {
       {
         id: crypto.randomUUID(),
         name: "Tarifa Camion",
-        vehicleCategory: 3,
+        vehicleCategory: 4,
         tolerance: 15,
         hourly: 2.50,
         daily: 25.00,

@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../constants/constants.dart';
+import 'package:parkar/constants/constants.dart';
 import '../../../models/access_model.dart';
 import '../../../state/app_state_container.dart';
 import '../../../utils/parking_utils.dart';
@@ -417,69 +418,53 @@ class _AccessListTableState extends State<AccessListTable> {
   Widget _buildDesktopTable(ThemeData theme, ColorScheme colorScheme) {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: DataTable(
-          headingTextStyle: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
-          ),
-          dataTextStyle: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurface,
-          ),
-          columns: [
-            const DataColumn(label: Text('Ingreso')),
-            const DataColumn(label: Text('Placa')),
-            const DataColumn(label: Text('Permanencia')),
-            const DataColumn(label: Text('Monto')),
-            const DataColumn(label: Text('Propietario')),
-            const DataColumn(label: Text('Tipo')),
-            const DataColumn(label: Text('Acción')),
-          ],
-          rows: widget.accesses.map((access) {
-            return DataRow(
-              cells: [
-                DataCell(Text(_formatDateTime(access.entryTime))),
-                DataCell(Text(access.vehicle.plate)),
-                DataCell(Text(_formatElapsedTime(access.entryTime))),
-                DataCell(Text(CurrencyConstants.formatAmountWithParkingParams(context, _calculateCurrentCost(access)))),
-                DataCell(Text(access.vehicle.ownerName ?? '--')),
-                DataCell(Text(_getVehicleTypeName(access.vehicle.type))),
-                DataCell(
-                  Center(
-                    child: InkWell(
-                      onTap: () => widget.onAccessAction?.call(access),
-                      child: Icon(
-                        Icons.visibility,
-                        color: colorScheme.primary,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            color: colorScheme.surfaceContainerHighest,
+            child: Row(
+              children: [
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Ingreso', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Placa', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Permanencia', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Costo', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                Expanded(flex: 3, child: Padding(padding: const EdgeInsets.all(12), child: Text('Propietario', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
+                Expanded(flex: 2, child: Padding(padding: const EdgeInsets.all(12), child: Text('Tipo', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)))),
               ],
-            );
-          }).toList(),
+            ),
+          ),
+          ...widget.accesses.map((access) => _buildTableRow(access, theme, colorScheme)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableRow(AccessModel access, ThemeData theme, ColorScheme colorScheme) {
+    return InkWell(
+      onTap: () => widget.onAccessAction?.call(access),
+      hoverColor: colorScheme.primary.withValues(alpha: 0.1),
+      mouseCursor: SystemMouseCursors.click,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Expanded(flex: 2, child: Padding(padding: const EdgeInsets.only(left: 12), child: Text(_formatDateTime(access.entryTime), style: theme.textTheme.bodyMedium))),
+            Expanded(flex: 2, child: Text(access.vehicle.plate, style: theme.textTheme.bodyMedium)),
+            Expanded(flex: 2, child: Text(_formatElapsedTime(access.entryTime), style: theme.textTheme.bodyMedium)),
+            Expanded(flex: 2, child: Text(CurrencyConstants.formatAmountWithParkingParams(context, _calculateCurrentCost(access)), style: theme.textTheme.bodyMedium)),
+            Expanded(flex: 3, child: Text(access.vehicle.ownerName ?? '--', style: theme.textTheme.bodyMedium)),
+            Expanded(flex: 2, child: Text(_getVehicleTypeName(access.vehicle.type), style: theme.textTheme.bodyMedium)),
+            Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant, size: 16),
+          ],
         ),
       ),
     );
   }
 
 
-  String _getVehicleTypeName(String type) {
-    switch (type.toLowerCase()) {
-      case 'car':
-        return 'Automóvil';
-      case 'motorcycle':
-        return 'Motocicleta';
-      case 'truck':
-        return 'Camión';
-      case 'bicycle':
-        return 'Bicicleta';
-      default:
-        return 'Vehículo';
-    }
+  String _getVehicleTypeName(String? type) {
+    return getVehicleCategoryLabel(type);
   }
 
   String _formatDateTime(DateTime dateTime) {

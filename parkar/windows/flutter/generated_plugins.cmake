@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   flutter_acrylic
   geolocator_windows
+  permission_handler_windows
   printing
   screen_retriever_windows
   share_plus

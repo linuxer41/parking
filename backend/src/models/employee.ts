@@ -29,11 +29,12 @@ export const EmployeeSchema = t.Composite([
     email: t.Nullable(t.String({
       description: "Email del empleado",
       required: false,
+      format: "email",
     })),
-    phone: t.Nullable(t.String({
+    phone: t.Optional(t.Nullable(t.String({
       description: "Teléfono del empleado",
       required: false,
-    })),
+    }))),
   }),
   ],
   {
@@ -53,21 +54,9 @@ export const EmployeeUpdateSchema = t.Partial(t.Pick(EmployeeSchema, ["updatedAt
 
 // ===== ESQUEMAS DE REQUEST =====
 export const EmployeeCreateRequestSchema = t.Composite([
-  t.Pick(EmployeeSchema, ["parkingId", "role"]),
+  t.Pick(EmployeeSchema, [ "role", 'name', 'email', 'phone']),
   t.Object({
-    name: t.String({
-      description: "Nombre del empleado",
-      required: true,
-    }),
-    email: t.String({
-      description: "Email del empleado",
-      required: true,
-      format: "email",
-    }),
-    phone: t.String({
-      description: "Teléfono del empleado",
-      required: true,
-    }),
+
     password: t.String({
       description: "Contraseña del empleado",
       required: true,

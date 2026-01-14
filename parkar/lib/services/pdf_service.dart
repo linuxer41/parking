@@ -1,682 +1,660 @@
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
-import 'package:parkar/constants/constants.dart';
-import 'package:parkar/models/booking_model.dart';
-import 'package:parkar/models/access_model.dart';
-import 'package:parkar/models/subscription_model.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:intl/intl.dart';
+// import 'dart:typed_data';
+// import 'package:flutter/services.dart';
+// import 'package:parkar/constants/constants.dart';
+// import 'package:parkar/models/booking_model.dart';
+// import 'package:parkar/models/access_model.dart';
+// import 'package:parkar/models/subscription_model.dart';
+// import 'package:pdf/pdf.dart';
+// import 'package:pdf/widgets.dart' as pw;
+// import 'package:intl/intl.dart';
 
-class PdfService {
-  // Función para crear un ticket con diseño unificado
-  Future<Uint8List> _createUnifiedTicket({
-    required String title,
-    required String parkingName,
-    required String parkingAddress,
-    required int ticketNumber,
-    required DateTime dateTime,
-    required Map<String, String> vehicleInfo,
-    Map<String, String>? ownerInfo,
-    Map<String, String>? paymentInfo,
-    required String footerMessage,
-  }) async {
-    final pdf = pw.Document();
+// class PdfService {
+//   // Función para crear un ticket con diseño unificado
+//   Future<Uint8List> _createUnifiedTicket({
+//     required String title,
+//     required String parkingName,
+//     required String ticketNumber,
+//     required String dateLabel,
+//     required DateTime dateTime,
+//     required List<MapEntry<String, String>> vehicleInfo,
+//     List<MapEntry<String, String>>? paymentInfo,
+//     required String footerMessage,
+//     bool showPaymentHeader = true,
+//   }) async {
+//     final pdf = pw.Document();
 
-    // Cargar fuentes
-    final font = pw.Font.helvetica();
-    final fontBold = pw.Font.helveticaBold();
-    final fontItalic = pw.Font.helveticaOblique();
+//     // Cargar fuentes
+//     final font = pw.Font.helvetica();
+//     final fontBold = pw.Font.helveticaBold();
 
-    // Crear página con formato de ticket
-    pdf.addPage(
-      pw.Page(
-        pageFormat: const PdfPageFormat(
-          80 * PdfPageFormat.mm,
-          200 * PdfPageFormat.mm,
-          marginAll: 5,
-        ),
-        build: (pw.Context context) {
-          return pw.Container(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Encabezado: Título, nombre del parqueo, dirección, número de ticket y fecha
-                pw.Center(
-                  child: pw.Text(
-                    title.toUpperCase(),
-                    style: pw.TextStyle(font: fontBold, fontSize: 12),
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Center(
-                  child: pw.Text(
-                    parkingName.toUpperCase(),
-                    style: pw.TextStyle(font: fontBold, fontSize: 10),
-                  ),
-                ),
-                pw.SizedBox(height: 2),
-                pw.Center(
-                  child: pw.Text(
-                    parkingAddress,
-                    style: pw.TextStyle(font: font, fontSize: 8),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'Ticket: $ticketNumber',
-                      style: pw.TextStyle(font: font, fontSize: 8),
-                    ),
-                    pw.Text(
-                      DateFormat('dd/MM/yyyy HH:mm').format(dateTime),
-                      style: pw.TextStyle(font: font, fontSize: 8),
-                    ),
-                  ],
-                ),
+//     // Crear página con formato de ticket
+//     pdf.addPage(
+//       pw.Page(
+//         pageFormat: const PdfPageFormat(
+//           80 * PdfPageFormat.mm,
+//           200 * PdfPageFormat.mm,
+//           marginAll: 5,
+//         ),
+//         build: (pw.Context context) {
+//           return pw.Container(
+//             child: pw.Column(
+//               crossAxisAlignment: pw.CrossAxisAlignment.center,
+//               children: [
+//                 // Título
+//                 pw.Text(
+//                   title.toUpperCase(),
+//                   style: pw.TextStyle(font: fontBold, fontSize: 14),
+//                   textAlign: pw.TextAlign.center,
+//                 ),
+//                 pw.SizedBox(height: 8),
+//                 // Nombre del parqueo
+//                 pw.Text(
+//                   parkingName.toUpperCase(),
+//                   style: pw.TextStyle(font: fontBold, fontSize: 12),
+//                   textAlign: pw.TextAlign.center,
+//                 ),
+//                 pw.SizedBox(height: 8),
+//                 // Número de ticket
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                   children: [
+//                     pw.Text(
+//                       'Nro:',
+//                       style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                     ),
+//                     pw.Text(
+//                       ticketNumber,
+//                       style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                     ),
+//                   ],
+//                 ),
+//                 pw.SizedBox(height: 8),
+//                 // Fecha
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                   children: [
+//                     pw.Text(
+//                       '$dateLabel',
+//                       style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                     ),
+//                     pw.Text(
+//                       DateFormat('dd/MM/yyyy HH:mm').format(dateTime),
+//                       style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                     ),
+//                   ],
+//                 ),
+//                 pw.SizedBox(height: 8),
+//                 // Separador
+//                 pw.Divider(thickness: 1, color: PdfColors.black),
+//                 pw.SizedBox(height: 8),
 
-                // Primer separador
-                pw.SizedBox(height: 5),
-                pw.Divider(thickness: 1, color: PdfColors.black),
-                pw.SizedBox(height: 5),
+//                 // Información del vehículo
+//                 ...vehicleInfo.map(
+//                   (entry) => pw.Column(
+//                     children: [
+//                       pw.Row(
+//                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                         children: [
+//                           pw.Text(
+//                             '${entry.key}:',
+//                             style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                           ),
+//                           pw.Text(
+//                             entry.value,
+//                             style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                           ),
+//                         ],
+//                       ),
+//                       pw.SizedBox(height: 4),
+//                     ],
+//                   ),
+//                 ),
 
-                // Información del vehículo
-                pw.Text(
-                  'INFORMACIÓN DEL VEHÍCULO',
-                  style: pw.TextStyle(font: fontBold, fontSize: 9),
-                ),
-                pw.SizedBox(height: 3),
-                ...vehicleInfo.entries.map(
-                  (entry) =>
-                      _buildInfoRow(entry.key, entry.value, fontBold, font),
-                ),
+//                 // Información de pago si existe
+//                 if (paymentInfo != null && paymentInfo.isNotEmpty) ...[
+//                   if (showPaymentHeader) ...[
+//                     pw.SizedBox(height: 8),
+//                     pw.Divider(thickness: 1, color: PdfColors.black),
+//                     pw.SizedBox(height: 8),
+//                     pw.Text(
+//                       'PAGO',
+//                       style: pw.TextStyle(font: fontBold, fontSize: 12),
+//                       textAlign: pw.TextAlign.center,
+//                     ),
+//                     pw.SizedBox(height: 8),
+//                   ],
+//                   ...paymentInfo.map(
+//                     (entry) => pw.Column(
+//                       children: [
+//                         pw.Row(
+//                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                           children: [
+//                             pw.Text(
+//                               '${entry.key}:',
+//                               style: pw.TextStyle(font: fontBold, fontSize: 12),
+//                             ),
+//                             pw.Text(
+//                               entry.value,
+//                               style: pw.TextStyle(font: fontBold, fontSize: 12),
+//                             ),
+//                           ],
+//                         ),
+//                         pw.SizedBox(height: 4),
+//                       ],
+//                     ),
+//                   ),
+//                 ],
 
-                // Información del propietario si existe
-                if (ownerInfo != null && ownerInfo.isNotEmpty) ...[
-                  pw.SizedBox(height: 5),
-                  pw.Text(
-                    'INFORMACIÓN DEL PROPIETARIO',
-                    style: pw.TextStyle(font: fontBold, fontSize: 9),
-                  ),
-                  pw.SizedBox(height: 3),
-                  ...ownerInfo.entries.map(
-                    (entry) =>
-                        _buildInfoRow(entry.key, entry.value, fontBold, font),
-                  ),
-                ],
+//                 // Separador
+//                 pw.SizedBox(height: 8),
+//                 pw.Divider(thickness: 1, color: PdfColors.black),
+//                 pw.SizedBox(height: 8),
 
-                // Información de pago si existe
-                if (paymentInfo != null && paymentInfo.isNotEmpty) ...[
-                  pw.SizedBox(height: 5),
-                  pw.Text(
-                    'INFORMACIÓN DE PAGO',
-                    style: pw.TextStyle(font: fontBold, fontSize: 9),
-                  ),
-                  pw.SizedBox(height: 3),
-                  ...paymentInfo.entries.map(
-                    (entry) =>
-                        _buildInfoRow(entry.key, entry.value, fontBold, font),
-                  ),
-                ],
+//                 // Mensaje
+//                 pw.Text(
+//                   footerMessage,
+//                   style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                   textAlign: pw.TextAlign.center,
+//                 ),
+//               ],
+//             ),
+//           );
+//         },
+//       ),
+//     );
 
-                // Segundo separador
-                pw.SizedBox(height: 5),
-                pw.Divider(thickness: 1, color: PdfColors.black),
-                pw.SizedBox(height: 5),
+//     return pdf.save();
+//   }
 
-                // Mensaje y copyright
-                pw.Center(
-                  child: pw.Text(
-                    footerMessage,
-                    style: pw.TextStyle(font: fontBold, fontSize: 8),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Center(
-                  child: pw.Text(
-                    '© ${DateTime.now().year} ParKar - Todos los derechos reservados',
-                    style: pw.TextStyle(font: fontItalic, fontSize: 6),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+//   // Función para crear filas de información
+//   pw.Widget _buildInfoRow(
+//     String label,
+//     String value,
+//     pw.Font fontBold,
+//     pw.Font font,
+//   ) {
+//     return pw.Padding(
+//       padding: const pw.EdgeInsets.symmetric(vertical: 2),
+//       child: pw.Row(
+//         crossAxisAlignment: pw.CrossAxisAlignment.start,
+//         children: [
+//           pw.SizedBox(
+//             width: 60,
+//             child: pw.Text(
+//               '$label:',
+//               style: pw.TextStyle(font: fontBold, fontSize: 8),
+//             ),
+//           ),
+//           pw.Expanded(
+//             child: pw.Text(value, style: pw.TextStyle(font: font, fontSize: 8)),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-    return pdf.save();
-  }
+//   // Método para estandarizar los tipos de acceso
+//   String _standardizeAccessType(String? accessType) {
+//     if (accessType == null) return 'Normal';
 
-  // Función para crear filas de información
-  pw.Widget _buildInfoRow(
-    String label,
-    String value,
-    pw.Font fontBold,
-    pw.Font font,
-  ) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.SizedBox(
-            width: 60,
-            child: pw.Text(
-              '$label:',
-              style: pw.TextStyle(font: fontBold, fontSize: 8),
-            ),
-          ),
-          pw.Expanded(
-            child: pw.Text(value, style: pw.TextStyle(font: font, fontSize: 8)),
-          ),
-        ],
-      ),
-    );
-  }
+//     final lowercaseType = accessType.toLowerCase();
+//     if (lowercaseType.contains('reserv')) {
+//       return 'Reserva';
+//     } else if (lowercaseType.contains('suscri') ||
+//         lowercaseType.contains('subscri')) {
+//       return 'Suscripción';
+//     } else {
+//       return 'Normal';
+//     }
+//   }
 
-  // Método para estandarizar los tipos de acceso
-  String _standardizeAccessType(String? accessType) {
-    if (accessType == null) return 'Normal';
+//   // Generar ticket de entrada
+//   Future<Uint8List> generateEntryTicket({required AccessModel access}) async {
+//     // Información básica del vehículo
+//     final vehicleInfo = <MapEntry<String, String>>[
+//       MapEntry('Placa', access.vehicle.plate.isNotEmpty
+//           ? access.vehicle.plate.toUpperCase()
+//           : '--'),
+//       MapEntry('Tipo', access.vehicle.type.isNotEmpty
+//           ? _formatVehicleType(access.vehicle.type)
+//           : '--'),
+//       MapEntry('Color', access.vehicle.color?.isNotEmpty == true
+//           ? access.vehicle.color!
+//           : '--'),
+//     ];
 
-    final lowercaseType = accessType.toLowerCase();
-    if (lowercaseType.contains('reserv')) {
-      return 'Reserva';
-    } else if (lowercaseType.contains('suscri') ||
-        lowercaseType.contains('subscri')) {
-      return 'Suscripción';
-    } else {
-      return 'Normal';
-    }
-  }
+//     // Solo agregar información del espacio si no está vacío
+//     if (access.spot?.id != null) {
+//       vehicleInfo.add(MapEntry('Espacio', access.spot?.name ?? '--'));
+//     }
 
-  // Generar ticket de entrada
-  Future<Uint8List> generateEntryTicket({required AccessModel access}) async {
-    // Generar número de ticket único basado en timestamp
-    final ticketNumber = access.number;
+//     return _createUnifiedTicket(
+//       title: 'TICKET DE ENTRADA',
+//       parkingName: access.parking.name,
+//       ticketNumber: access.number?.toString().padLeft(6, '0') ?? '000000',
+//       dateLabel: 'Fecha de ingreso:',
+//       dateTime: access.entryTime,
+//       vehicleInfo: vehicleInfo,
+//       footerMessage: 'Conserve este ticket requerido para la salida',
+//     );
+//   }
 
-    // Información básica del vehículo (solo facturación)
-    final vehicleInfo = <String, String>{
-      'Placa': access.vehicle.plate.isNotEmpty
-          ? access.vehicle.plate.toUpperCase()
-          : '--',
-      'Tipo': access.vehicle.type.isNotEmpty
-          ? _formatVehicleType(access.vehicle.type)
-          : '--',
-      'Color': access.vehicle.color?.isNotEmpty == true
-          ? access.vehicle.color!
-          : '--',
-    };
+//   // Generar ticket de reserva
+//   Future<Uint8List> generateReservationTicket({
+//     required BookingModel booking,
+//   }) async {
+//     // Información del vehículo y reserva
+//     final vehicleInfo = <MapEntry<String, String>>[
+//       MapEntry('Placa', booking.vehicle.plate.isNotEmpty
+//           ? booking.vehicle.plate.toUpperCase()
+//           : '--'),
+//       MapEntry('Tipo', booking.vehicle.type.isNotEmpty
+//           ? _formatVehicleType(booking.vehicle.type)
+//           : '--'),
+//       MapEntry('Inicio', DateFormat('dd/MM/yyyy HH:mm').format(booking.startDate)),
+//       MapEntry('Fin', DateFormat('dd/MM/yyyy HH:mm').format(booking.endDate ?? DateTime.now())),
+//       MapEntry('Duración', '${booking.duration?.inHours ?? 0} horas'),
+//     ];
 
-    // Solo agregar información del espacio si no está vacío
-    if (access.spot?.id != null) {
-      vehicleInfo['Espacio'] = access.spot?.name ?? '--';
-    }
+//     // Solo agregar información del espacio si no está vacío
+//     if (booking.spotId?.isNotEmpty == true) {
+//       vehicleInfo.add(MapEntry('Espacio', booking.spotId!));
+//     }
 
-    return _createUnifiedTicket(
-      title: 'TICKET DE ENTRADA',
-      parkingName: access.parking.name,
-      parkingAddress: access.parking.address ?? '',
-      ticketNumber: ticketNumber,
-      dateTime: access.entryTime,
-      vehicleInfo: vehicleInfo,
-      footerMessage:
-          'CONSERVE ESTE TICKET\nRequerido para la salida del vehículo',
-    );
-  }
+//     return _createUnifiedTicket(
+//       title: 'RESERVA DE ESTACIONAMIENTO',
+//       parkingName: booking.parking.name,
+//       ticketNumber: booking.number?.toString().padLeft(6, '0') ?? '000000',
+//       dateLabel: 'Fecha de reserva:',
+//       dateTime: DateTime.now(),
+//       vehicleInfo: vehicleInfo,
+//       footerMessage: 'Presente este ticket al llegar la reserva expira 15 min despues',
+//     );
+//   }
 
-  // Generar ticket de reserva
-  Future<Uint8List> generateReservationTicket({
-    required BookingModel booking,
-  }) async {
-    // Generar número de ticket único basado en timestamp
-    final ticketNumber = booking.number;
-    // Información del vehículo y reserva
-    final vehicleInfo = <String, String>{
-      'Placa': booking.vehicle.plate.isNotEmpty
-          ? booking.vehicle.plate.toUpperCase()
-          : '--',
-      'Tipo': booking.vehicle.type.isNotEmpty
-          ? _formatVehicleType(booking.vehicle.type)
-          : '--',
-      'Acceso': 'Reserva',
-      'Inicio': DateFormat('dd/MM/yyyy HH:mm').format(booking.startDate),
-      'Fin': DateFormat(
-        'dd/MM/yyyy HH:mm',
-      ).format(booking.endDate ?? DateTime.now()),
-      'Duración': '${booking.duration?.inHours ?? 0} horas',
-    };
+//   // Generar recibo de suscripción
+//   Future<Uint8List> generateSubscriptionReceipt({
+//     required SubscriptionModel subscription,
+//   }) async {
+//     // Información de la suscripción
+//     final vehicleInfo = <MapEntry<String, String>>[
+//       MapEntry('Placa', subscription.vehicle.plate.isNotEmpty
+//           ? subscription.vehicle.plate.toUpperCase()
+//           : '--'),
+//       MapEntry('Inicio', DateFormat('dd/MM/yyyy').format(subscription.startDate)),
+//       MapEntry('Fin', DateFormat('dd/MM/yyyy').format(subscription.endDate ?? DateTime.now())),
+//     ];
 
-    // Solo agregar información del espacio si no está vacío
-    if (booking.spotId?.isNotEmpty == true) {
-      vehicleInfo['Espacio'] = booking.spotId!;
-    }
+//     // Información de pago
+//     final paymentInfo = <MapEntry<String, String>>[
+//       MapEntry('Monto', CurrencyConstants.formatAmountForPdf(
+//         subscription.amount,
+//         subscription.parking.params?.currency ?? 'BOB',
+//         subscription.parking.params?.decimalPlaces ?? 2,
+//       )),
+//       MapEntry('Metodo', 'Efectivo'),
+//       MapEntry('Estado', 'Pagado'),
+//     ];
 
-    // Información del propietario (siempre mostrar, usar "--" para valores nulos)
-    final ownerInfo = <String, String>{
-      'Nombre': booking.vehicle.ownerName?.isNotEmpty == true
-          ? booking.vehicle.ownerName!
-          : '--',
-      'Documento': booking.vehicle.ownerDocument?.isNotEmpty == true
-          ? booking.vehicle.ownerDocument!
-          : '--',
-      'Teléfono': booking.vehicle.ownerPhone?.isNotEmpty == true
-          ? booking.vehicle.ownerPhone!
-          : '--',
-    };
+//     return _createUnifiedTicket(
+//       title: 'RECIBO DE SUSCRIPCION',
+//       parkingName: subscription.parking.name,
+//       ticketNumber: subscription.number?.toString().padLeft(6, '0') ?? '000000',
+//       dateLabel: 'Fecha de emision:',
+//       dateTime: DateTime.now(),
+//       vehicleInfo: vehicleInfo,
+//       paymentInfo: paymentInfo,
+//       footerMessage: 'Recibo oficial conserve este documento',
+//     );
+//   }
 
-    return _createUnifiedTicket(
-      title: 'RESERVA DE ESTACIONAMIENTO',
-      parkingName: booking.parking.name,
-      parkingAddress: booking.parking.address ?? '',
-      ticketNumber: ticketNumber,
-      dateTime: DateTime.now(),
-      vehicleInfo: vehicleInfo,
-      ownerInfo: ownerInfo,
-      footerMessage:
-          'PRESENTE ESTE TICKET AL LLEGAR\nLa reserva expira 15 minutos después de la hora indicada',
-    );
-  }
+//   // Generar ticket de salida
+//   Future<Uint8List> generateExitTicket({required AccessModel access}) async {
+//     final exitTime = access.exitTime ?? DateTime.now();
+//     final duration = exitTime.difference(access.entryTime);
 
-  // Generar recibo de suscripción
-  Future<Uint8List> generateSubscriptionReceipt({
-    required SubscriptionModel subscription,
-  }) async {
-    // Generar número de ticket único basado en timestamp
-    final ticketNumber = subscription.number;
+//     // Información del vehículo y estancia
+//     final vehicleInfo = <MapEntry<String, String>>[
+//       MapEntry('Placa', access.vehicle.plate.isNotEmpty
+//           ? access.vehicle.plate.toUpperCase()
+//           : '--'),
+//       MapEntry('Entrada', DateFormat('dd/MM/yyyy HH:mm').format(access.entryTime)),
+//       MapEntry('Salida', DateFormat('dd/MM/yyyy HH:mm').format(exitTime)),
+//       MapEntry('Duracion', _formatDuration(duration)),
+//     ];
 
-    // Información de la suscripción
-    final vehicleInfo = {
-      'Placa': subscription.vehicle.plate.isNotEmpty
-          ? subscription.vehicle.plate.toUpperCase()
-          : '--',
-      'Acceso': 'Suscripción',
-      // 'Plan': subscription.subscription?.plan.isNotEmpty == true ? _formatSubscriptionType(subscription.subscription!.plan) : '--',
-      'Inicio': DateFormat('dd/MM/yyyy').format(subscription.startDate),
-      'Fin': DateFormat('dd/MM/yyyy').format(subscription.endDate ?? DateTime.now()),
-    };
+//     // Solo agregar información del espacio si no está vacío
+//     if (access.spot?.id.isNotEmpty == true) {
+//       vehicleInfo.add(MapEntry('Espacio', access.spot?.name ?? ''));
+//     }
 
-    // Información del propietario (siempre mostrar, usar "--" para valores nulos)
-    final ownerInfo = <String, String>{
-      'Nombre': subscription.vehicle.ownerName?.isNotEmpty == true
-          ? subscription.vehicle.ownerName!
-          : '--',
-      'Documento': subscription.vehicle.ownerDocument?.isNotEmpty == true
-          ? subscription.vehicle.ownerDocument!
-          : '--',
-      'Teléfono': subscription.vehicle.ownerPhone?.isNotEmpty == true
-          ? subscription.vehicle.ownerPhone!
-          : '--',
-    };
+//     // Información de pago
+//     final paymentInfo = <MapEntry<String, String>>[
+//       MapEntry('Tarifa', CurrencyConstants.formatAmountForPdf(
+//         access.amount,
+//         access.parking.params?.currency ?? 'BOB',
+//         access.parking.params?.decimalPlaces ?? 2,
+//       )),
+//     ];
 
-    // Información de pago
-    final paymentInfo = {
-      'Monto': CurrencyConstants.formatAmountForPdf(
-        subscription.amount,
-        subscription.parking.params?.currency ?? 'BOB',
-        subscription.parking.params?.decimalPlaces ?? 2,
-      ),
-      'Método': 'Efectivo',
-      'Estado': 'Pagado',
-    };
+//     final attendedBy = access.employee?.name.isNotEmpty == true
+//         ? access.employee!.name
+//         : '--';
 
-    return _createUnifiedTicket(
-      title: 'RECIBO DE SUSCRIPCIÓN',
-      parkingName: subscription.parking.name,
-      parkingAddress: subscription.parking.address ?? '',
-      ticketNumber: ticketNumber,
-      dateTime: DateTime.now(),
-      vehicleInfo: vehicleInfo,
-      ownerInfo: ownerInfo,
-      paymentInfo: paymentInfo,
-      footerMessage:
-          'RECIBO OFICIAL\nConserve este documento para cualquier aclaración',
-    );
-  }
+//     return _createUnifiedTicket(
+//       title: 'TICKET DE SALIDA',
+//       parkingName: access.parking.name,
+//       ticketNumber: access.number?.toString().padLeft(6, '0') ?? '000000',
+//       dateLabel: 'Fecha de salida:',
+//       dateTime: exitTime,
+//       vehicleInfo: vehicleInfo,
+//       paymentInfo: paymentInfo,
+//       footerMessage: 'Atendido por: $attendedBy gracias por su visita este documento es comprobante de pago',
+//       showPaymentHeader: false,
+//     );
+//   }
 
-  // Generar ticket de salida
-  Future<Uint8List> generateExitTicket({required AccessModel access}) async {
-    // Generar número de ticket único basado en timestamp
-    final exitTime = access.exitTime ?? DateTime.now();
-    final duration = exitTime.difference(access.entryTime);
-    final ticketNumber = access.number;
+//   // Método para formatear el tipo de vehículo
+//   String _formatVehicleType(String vehicleType) {
+//     switch (vehicleType) {
+//       case 'car':
+//         return 'Automóvil';
+//       case 'motorcycle':
+//         return 'Motocicleta';
+//       case 'truck':
+//         return 'Camioneta';
+//       default:
+//         return vehicleType;
+//     }
+//   }
 
-    // Estandarizar el tipo de acceso
-    final standardAccessType = _standardizeAccessType(
-      'access',
-    ); // Always 'access' for exits
+//   // Método para formatear el tipo de suscripción
+//   String _formatSubscriptionType(String subscriptionType) {
+//     switch (subscriptionType) {
+//       case 'weekly':
+//         return 'Semanal';
+//       case 'monthly':
+//         return 'Mensual';
+//       case 'annual':
+//         return 'Anual';
+//       default:
+//         return subscriptionType;
+//     }
+//   }
 
-    // Información del vehículo y estancia
-    final vehicleInfo = <String, String>{
-      'Placa': access.vehicle.plate.isNotEmpty
-          ? access.vehicle.plate.toUpperCase()
-          : '--',
-      'Acceso': standardAccessType,
-      'Entrada': DateFormat('dd/MM/yyyy HH:mm').format(access.entryTime),
-      'Salida': DateFormat(
-        'dd/MM/yyyy HH:mm',
-      ).format(access.exitTime ?? DateTime.now()),
-      'Duración': _formatDuration(duration ?? Duration.zero),
-    };
+//   // Método para formatear la duración
+//   String _formatDuration(Duration duration) {
+//     final hours = duration.inHours;
+//     final minutes = duration.inMinutes % 60;
 
-    // Solo agregar información del espacio si no está vacío
-    if (access.spot?.id.isNotEmpty == true) {
-      vehicleInfo['Espacio'] = access.spot?.name ?? '';
-    }
+//     if (hours > 0) {
+//       return '$hours h ${minutes.toString().padLeft(2, '0')} m';
+//     } else {
+//       return '${minutes.toString().padLeft(2, '0')} m';
+//     }
+//   }
 
-    // Información de pago
-    final paymentInfo = {'Tarifa': CurrencyConstants.formatAmountForPdf(
-      access.amount,
-      access.parking.params?.currency ?? 'BOB',
-      access.parking.params?.decimalPlaces ?? 2,
-    )};
+//   // Generar reporte de accesos en PDF
+//   Future<Uint8List> generateAccessReport({
+//     required List<AccessModel> accesses,
+//     required String periodType,
+//     required String parkingName,
+//     DateTime? startDate,
+//     DateTime? endDate,
+//   }) async {
+//     final pdf = pw.Document();
 
-    // Añadir empleado (siempre mostrar, usar "--" si no está disponible)
-    paymentInfo['Atendido por'] = access.employee?.name.isNotEmpty == true
-        ? access.employee!.name
-        : '--';
+//     // Cargar fuentes
+//     final font = pw.Font.helvetica();
+//     final fontBold = pw.Font.helveticaBold();
 
-    return _createUnifiedTicket(
-      title: 'TICKET DE SALIDA',
-      parkingName: access.parking.name,
-      parkingAddress: access.parking.address ?? '',
-      ticketNumber: ticketNumber,
-      dateTime: access.exitTime ?? DateTime.now(),
-      vehicleInfo: vehicleInfo,
-      paymentInfo: paymentInfo,
-      footerMessage:
-          'GRACIAS POR SU VISITA\nEste documento es un comprobante de pago',
-    );
-  }
+//     // Calcular estadísticas
+//     final totalAccesses = accesses.length;
+//     final totalRevenue = accesses.fold<double>(0, (sum, access) => sum + access.amount);
+//     final activeAccesses = accesses.where((a) => a.exitTime == null).length;
+//     final completedAccesses = totalAccesses - activeAccesses;
 
-  // Método para formatear el tipo de vehículo
-  String _formatVehicleType(String vehicleType) {
-    switch (vehicleType) {
-      case 'car':
-        return 'Automóvil';
-      case 'motorcycle':
-        return 'Motocicleta';
-      case 'truck':
-        return 'Camioneta';
-      default:
-        return vehicleType;
-    }
-  }
+//     // Formatear período
+//     String periodText;
+//     switch (periodType) {
+//       case 'daily':
+//         periodText = 'Diario - ${DateFormat('dd/MM/yyyy').format(DateTime.now())}';
+//         break;
+//       case 'weekly':
+//         final monday = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+//         final sunday = monday.add(const Duration(days: 6));
+//         periodText = 'Semanal - ${DateFormat('dd/MM/yyyy').format(monday)} al ${DateFormat('dd/MM/yyyy').format(sunday)}';
+//         break;
+//       case 'monthly':
+//         periodText = 'Mensual - ${DateFormat('MMMM yyyy').format(DateTime.now())}';
+//         break;
+//       case 'custom':
+//         periodText = 'Personalizado - ${DateFormat('dd/MM/yyyy').format(startDate!)} al ${DateFormat('dd/MM/yyyy').format(endDate!)}';
+//         break;
+//       default:
+//         periodText = 'Período no especificado';
+//     }
 
-  // Método para formatear el tipo de suscripción
-  String _formatSubscriptionType(String subscriptionType) {
-    switch (subscriptionType) {
-      case 'weekly':
-        return 'Semanal';
-      case 'monthly':
-        return 'Mensual';
-      case 'annual':
-        return 'Anual';
-      default:
-        return subscriptionType;
-    }
-  }
+//     pdf.addPage(
+//       pw.MultiPage(
+//         pageFormat: PdfPageFormat.a4,
+//         margin: const pw.EdgeInsets.all(32),
+//         build: (pw.Context context) {
+//           return [
+//             // Encabezado
+//             pw.Header(
+//               level: 0,
+//               child: pw.Column(
+//                 crossAxisAlignment: pw.CrossAxisAlignment.start,
+//                 children: [
+//                   pw.Text(
+//                     'REPORTE DE ACCESOS',
+//                     style: pw.TextStyle(font: fontBold, fontSize: 20),
+//                   ),
+//                   pw.SizedBox(height: 8),
+//                   pw.Text(
+//                     parkingName,
+//                     style: pw.TextStyle(font: font, fontSize: 14),
+//                   ),
+//                   pw.SizedBox(height: 4),
+//                   pw.Text(
+//                     'Período: $periodText',
+//                     style: pw.TextStyle(font: font, fontSize: 12),
+//                   ),
+//                   pw.SizedBox(height: 4),
+//                   pw.Text(
+//                     'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+//                     style: pw.TextStyle(font: font, fontSize: 10),
+//                   ),
+//                 ],
+//               ),
+//             ),
 
-  // Método para formatear la duración
-  String _formatDuration(Duration duration) {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
+//             pw.SizedBox(height: 20),
 
-    if (hours > 0) {
-      return '$hours h ${minutes.toString().padLeft(2, '0')} m';
-    } else {
-      return '${minutes.toString().padLeft(2, '0')} m';
-    }
-  }
+//             // Estadísticas
+//             pw.Container(
+//               padding: const pw.EdgeInsets.all(16),
+//               decoration: pw.BoxDecoration(
+//                 border: pw.Border.all(color: PdfColors.grey),
+//                 borderRadius: pw.BorderRadius.circular(8),
+//               ),
+//               child: pw.Row(
+//                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+//                 children: [
+//                   _buildStatItem('Total Accesos', totalAccesses.toString(), font, fontBold),
+//                   _buildStatItem('Activos', activeAccesses.toString(), font, fontBold),
+//                   _buildStatItem('Completados', completedAccesses.toString(), font, fontBold),
+//                   _buildStatItem('Ingresos Totales',
+//                     CurrencyConstants.formatAmountForPdf(totalRevenue, 'BOB', 2),
+//                     font, fontBold),
+//                 ],
+//               ),
+//             ),
 
-  // Generar reporte de accesos en PDF
-  Future<Uint8List> generateAccessReport({
-    required List<AccessModel> accesses,
-    required String periodType,
-    required String parkingName,
-    DateTime? startDate,
-    DateTime? endDate,
-  }) async {
-    final pdf = pw.Document();
+//             pw.SizedBox(height: 20),
 
-    // Cargar fuentes
-    final font = pw.Font.helvetica();
-    final fontBold = pw.Font.helveticaBold();
+//             // Tabla de accesos
+//             pw.Text(
+//               'DETALLE DE ACCESOS',
+//               style: pw.TextStyle(font: fontBold, fontSize: 14),
+//             ),
+//             pw.SizedBox(height: 10),
 
-    // Calcular estadísticas
-    final totalAccesses = accesses.length;
-    final totalRevenue = accesses.fold<double>(0, (sum, access) => sum + access.amount);
-    final activeAccesses = accesses.where((a) => a.exitTime == null).length;
-    final completedAccesses = totalAccesses - activeAccesses;
+//             pw.Table(
+//               border: pw.TableBorder.all(color: PdfColors.grey),
+//               columnWidths: {
+//                 0: const pw.FlexColumnWidth(1), // Fecha/Hora
+//                 1: const pw.FlexColumnWidth(1), // Placa
+//                 2: const pw.FlexColumnWidth(1), // Tipo
+//                 3: const pw.FlexColumnWidth(2), // Propietario
+//                 4: const pw.FlexColumnWidth(1), // Monto
+//                 5: const pw.FlexColumnWidth(1), // Estado
+//               },
+//               children: [
+//                 // Header
+//                 pw.TableRow(
+//                   decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+//                   children: [
+//                     _buildTableHeader('Fecha/Hora', fontBold),
+//                     _buildTableHeader('Placa', fontBold),
+//                     _buildTableHeader('Tipo', fontBold),
+//                     _buildTableHeader('Propietario', fontBold),
+//                     _buildTableHeader('Monto', fontBold),
+//                     _buildTableHeader('Estado', fontBold),
+//                   ],
+//                 ),
+//                 // Data rows
+//                 ...accesses.map((access) => pw.TableRow(
+//                   children: [
+//                     _buildTableCell(DateFormat('dd/MM/yyyy HH:mm').format(access.entryTime), font),
+//                     _buildTableCell(access.vehicle.plate.toUpperCase(), font),
+//                     _buildTableCell(_formatVehicleType(access.vehicle.type), font),
+//                     _buildTableCell(access.vehicle.ownerName ?? '--', font),
+//                     _buildTableCell(CurrencyConstants.formatAmountForPdf(access.amount, 'BOB', 2), font),
+//                     _buildTableCell(access.exitTime == null ? 'Activo' : 'Completado', font),
+//                   ],
+//                 )),
+//               ],
+//             ),
 
-    // Formatear período
-    String periodText;
-    switch (periodType) {
-      case 'daily':
-        periodText = 'Diario - ${DateFormat('dd/MM/yyyy').format(DateTime.now())}';
-        break;
-      case 'weekly':
-        final monday = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
-        final sunday = monday.add(const Duration(days: 6));
-        periodText = 'Semanal - ${DateFormat('dd/MM/yyyy').format(monday)} al ${DateFormat('dd/MM/yyyy').format(sunday)}';
-        break;
-      case 'monthly':
-        periodText = 'Mensual - ${DateFormat('MMMM yyyy').format(DateTime.now())}';
-        break;
-      case 'custom':
-        periodText = 'Personalizado - ${DateFormat('dd/MM/yyyy').format(startDate!)} al ${DateFormat('dd/MM/yyyy').format(endDate!)}';
-        break;
-      default:
-        periodText = 'Período no especificado';
-    }
+//             pw.SizedBox(height: 20),
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
-        build: (pw.Context context) {
-          return [
-            // Encabezado
-            pw.Header(
-              level: 0,
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    'REPORTE DE ACCESOS',
-                    style: pw.TextStyle(font: fontBold, fontSize: 20),
-                  ),
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    parkingName,
-                    style: pw.TextStyle(font: font, fontSize: 14),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    'Período: $periodText',
-                    style: pw.TextStyle(font: font, fontSize: 12),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                    style: pw.TextStyle(font: font, fontSize: 10),
-                  ),
-                ],
-              ),
-            ),
+//             // Footer
+//             pw.Footer(
+//               leading: pw.Text(
+//                 '© ${DateTime.now().year} ParKar - Reporte generado automáticamente',
+//                 style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey),
+//               ),
+//             ),
+//           ];
+//         },
+//       ),
+//     );
 
-            pw.SizedBox(height: 20),
+//     return pdf.save();
+//   }
 
-            // Estadísticas
-            pw.Container(
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem('Total Accesos', totalAccesses.toString(), font, fontBold),
-                  _buildStatItem('Activos', activeAccesses.toString(), font, fontBold),
-                  _buildStatItem('Completados', completedAccesses.toString(), font, fontBold),
-                  _buildStatItem('Ingresos Totales',
-                    CurrencyConstants.formatAmountForPdf(totalRevenue, 'BOB', 2),
-                    font, fontBold),
-                ],
-              ),
-            ),
+//   pw.Widget _buildStatItem(String label, String value, pw.Font font, pw.Font fontBold) {
+//     return pw.Column(
+//       children: [
+//         pw.Text(
+//           value,
+//           style: pw.TextStyle(font: fontBold, fontSize: 16),
+//         ),
+//         pw.Text(
+//           label,
+//           style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700),
+//         ),
+//       ],
+//     );
+//   }
 
-            pw.SizedBox(height: 20),
+//   pw.Widget _buildTableHeader(String text, pw.Font font) {
+//     return pw.Container(
+//       padding: const pw.EdgeInsets.all(8),
+//       child: pw.Text(
+//         text,
+//         style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold),
+//         textAlign: pw.TextAlign.center,
+//       ),
+//     );
+//   }
 
-            // Tabla de accesos
-            pw.Text(
-              'DETALLE DE ACCESOS',
-              style: pw.TextStyle(font: fontBold, fontSize: 14),
-            ),
-            pw.SizedBox(height: 10),
+//   pw.Widget _buildTableCell(String text, pw.Font font) {
+//     return pw.Container(
+//       padding: const pw.EdgeInsets.all(6),
+//       child: pw.Text(
+//         text,
+//         style: pw.TextStyle(font: font, fontSize: 9),
+//       ),
+//     );
+//   }
 
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey),
-              columnWidths: {
-                0: const pw.FlexColumnWidth(1), // Fecha/Hora
-                1: const pw.FlexColumnWidth(1), // Placa
-                2: const pw.FlexColumnWidth(1), // Tipo
-                3: const pw.FlexColumnWidth(2), // Propietario
-                4: const pw.FlexColumnWidth(1), // Monto
-                5: const pw.FlexColumnWidth(1), // Estado
-              },
-              children: [
-                // Header
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                  children: [
-                    _buildTableHeader('Fecha/Hora', fontBold),
-                    _buildTableHeader('Placa', fontBold),
-                    _buildTableHeader('Tipo', fontBold),
-                    _buildTableHeader('Propietario', fontBold),
-                    _buildTableHeader('Monto', fontBold),
-                    _buildTableHeader('Estado', fontBold),
-                  ],
-                ),
-                // Data rows
-                ...accesses.map((access) => pw.TableRow(
-                  children: [
-                    _buildTableCell(DateFormat('dd/MM/yyyy HH:mm').format(access.entryTime), font),
-                    _buildTableCell(access.vehicle.plate.toUpperCase(), font),
-                    _buildTableCell(_formatVehicleType(access.vehicle.type), font),
-                    _buildTableCell(access.vehicle.ownerName ?? '--', font),
-                    _buildTableCell(CurrencyConstants.formatAmountForPdf(access.amount, 'BOB', 2), font),
-                    _buildTableCell(access.exitTime == null ? 'Activo' : 'Completado', font),
-                  ],
-                )),
-              ],
-            ),
+//   // Generar PDF de prueba
+//   Future<Uint8List> generateTestPrint() async {
+//     final pdf = pw.Document();
 
-            pw.SizedBox(height: 20),
+//     // Cargar fuentes
+//     final font = pw.Font.helvetica();
+//     final fontBold = pw.Font.helveticaBold();
 
-            // Footer
-            pw.Footer(
-              leading: pw.Text(
-                '© ${DateTime.now().year} ParKar - Reporte generado automáticamente',
-                style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey),
-              ),
-            ),
-          ];
-        },
-      ),
-    );
+//     pdf.addPage(
+//       pw.Page(
+//         pageFormat: const PdfPageFormat(
+//           80 * PdfPageFormat.mm,
+//           100 * PdfPageFormat.mm,
+//           marginAll: 5,
+//         ),
+//         build: (pw.Context context) {
+//           return pw.Container(
+//             child: pw.Column(
+//               crossAxisAlignment: pw.CrossAxisAlignment.center,
+//               children: [
+//                 pw.Text(
+//                   'PRUEBA DE IMPRESIÓN',
+//                   style: pw.TextStyle(font: fontBold, fontSize: 14),
+//                 ),
+//                 pw.SizedBox(height: 10),
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                   children: [
+//                     pw.Text(
+//                       'Fecha:',
+//                       style: pw.TextStyle(font: fontBold, fontSize: 10),
+//                     ),
+//                     pw.Text(
+//                       DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+//                       style: pw.TextStyle(font: font, fontSize: 10),
+//                     ),
+//                   ],
+//                 ),
+//                 pw.SizedBox(height: 10),
+//                 pw.Row(
+//                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//                   children: [
+//                     pw.Text(
+//                       'Estado:',
+//                       style: pw.TextStyle(font: fontBold, fontSize: 12),
+//                     ),
+//                     pw.Text(
+//                       'Impresión Nativa OK',
+//                       style: pw.TextStyle(font: fontBold, fontSize: 12),
+//                     ),
+//                   ],
+//                 ),
+//                 pw.SizedBox(height: 20),
+//                 pw.Text(
+//                   '© ${DateTime.now().year} ParKar',
+//                   style: pw.TextStyle(font: font, fontSize: 8),
+//                 ),
+//               ],
+//             ),
+//           );
+//         },
+//       ),
+//     );
 
-    return pdf.save();
-  }
-
-  pw.Widget _buildStatItem(String label, String value, pw.Font font, pw.Font fontBold) {
-    return pw.Column(
-      children: [
-        pw.Text(
-          value,
-          style: pw.TextStyle(font: fontBold, fontSize: 16),
-        ),
-        pw.Text(
-          label,
-          style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _buildTableHeader(String text, pw.Font font) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(font: font, fontSize: 10, fontWeight: pw.FontWeight.bold),
-        textAlign: pw.TextAlign.center,
-      ),
-    );
-  }
-
-  pw.Widget _buildTableCell(String text, pw.Font font) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(6),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(font: font, fontSize: 9),
-      ),
-    );
-  }
-
-  // Generar PDF de prueba
-  Future<Uint8List> generateTestPrint() async {
-    final pdf = pw.Document();
-
-    // Cargar fuentes
-    final font = pw.Font.helvetica();
-    final fontBold = pw.Font.helveticaBold();
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: const PdfPageFormat(
-          80 * PdfPageFormat.mm,
-          100 * PdfPageFormat.mm,
-          marginAll: 5,
-        ),
-        build: (pw.Context context) {
-          return pw.Container(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  'PRUEBA DE IMPRESIÓN',
-                  style: pw.TextStyle(font: fontBold, fontSize: 14),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Fecha: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                  style: pw.TextStyle(font: font, fontSize: 10),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Impresión Nativa OK',
-                  style: pw.TextStyle(font: fontBold, fontSize: 12),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  '© ${DateTime.now().year} ParKar',
-                  style: pw.TextStyle(font: font, fontSize: 8),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    return pdf.save();
-  }
-}
+//     return pdf.save();
+//   }
+// }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../models/employee_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/parking_service.dart';
 import '../../state/app_state_container.dart';
@@ -159,8 +160,9 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
 
       // Configurar el estado de la aplicación igual que en login
       final appState = AppStateContainer.of(context);
-      appState.setAccessToken(response.auth.token);
-      appState.setCurrentUser(response.user);
+      await appState.setAccessToken(response.auth.token);
+      await appState.setRefreshToken(response.auth.refreshToken);
+      await appState.setCurrentUser(response.user);
 
       // Los parkings vienen en la respuesta
       final parkings = response.parkings;
@@ -179,8 +181,13 @@ class _RegisterStepperScreenState extends State<RegisterStepperScreen> {
       if (mounted) {
         // Si solo hay un estacionamiento, seleccionarlo por defecto
         if (parkings.length == 1) {
-          final parking = await parkingService.getParkingById(parkings.first.id);
-          appState.setCurrentParking(parking);
+          final parking = await parkingService.getParkingDetailed(parkings.first.id);
+          final employee = parking.currentEmployee;
+
+          await appState.setCurrentParking(
+            ParkingModel.fromParkingDetailedModel(parking),
+            employee,
+          );
           context.go('/home');
           return;
         }

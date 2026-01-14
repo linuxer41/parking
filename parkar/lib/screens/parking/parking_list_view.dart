@@ -206,6 +206,8 @@ class _ParkingListViewState extends State<ParkingListView> {
                             ? searchController.text
                             : null,
                         onEntrySuccess: () {
+                          // clear search field
+                          searchController.clear();
                           _loadData();
                         },
                       ),

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../constants/constants.dart';
 import '../../models/employee_model.dart';
 import '../../models/parking_model.dart';
 import '../../services/parking_service.dart';
@@ -315,6 +317,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final appState = AppStateContainer.of(context);
+    final currentRole = appState.currentRole;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -365,7 +369,10 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          employee.role,
+                          userRoles.firstWhere(
+                            (r) => r.value == employee.role,
+                            orElse: () => UserRole(value: '', label: 'Desconocido', icon: Icons.help),
+                          ).label,
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.w500,
@@ -476,15 +483,6 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final confirmPasswordController = TextEditingController();
     String? selectedRole;
 
-    final roles = [
-      {'value': 'owner', 'label': 'Propietario'},
-      {'value': 'Administrador', 'label': 'Administrador'},
-      {'value': 'Supervisor', 'label': 'Supervisor'},
-      {'value': 'Operador', 'label': 'Operador'},
-      {'value': 'Cajero', 'label': 'Cajero'},
-      {'value': 'Guardia', 'label': 'Guardia de Seguridad'},
-    ];
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -521,7 +519,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                 const SizedBox(height: 16),
                 _buildRoleSelector(
                   selectedRole: selectedRole,
-                  roles: roles,
+                  roles: userRoles,
                   onChanged: (value) => selectedRole = value,
                 ),
                 const SizedBox(height: 16),
@@ -647,7 +645,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   Widget _buildRoleSelector({
     required String? selectedRole,
-    required List<Map<String, String>> roles,
+    required List<UserRole> roles,
     required ValueChanged<String?> onChanged,
   }) {
     final theme = Theme.of(context);
@@ -695,8 +693,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
             ),
             items: roles.map((role) {
               return DropdownMenuItem<String>(
-                value: role['value'],
-                child: Text(role['label']!, style: textTheme.bodyMedium),
+                value: role.value,
+                child: Text(role.label, style: textTheme.bodyMedium),
               );
             }).toList(),
             onChanged: onChanged,
@@ -722,14 +720,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final newPasswordController = TextEditingController();
     final confirmNewPasswordController = TextEditingController();
 
-    final roles = [
-      {'value': 'owner', 'label': 'Propietario'},
-      {'value': 'Administrador', 'label': 'Administrador'},
-      {'value': 'Supervisor', 'label': 'Supervisor'},
-      {'value': 'Operador', 'label': 'Operador'},
-      {'value': 'Cajero', 'label': 'Cajero'},
-      {'value': 'Guardia', 'label': 'Guardia de Seguridad'},
-    ];
+    final roles = userRoles;
 
     showDialog(
       context: context,

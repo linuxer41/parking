@@ -218,7 +218,7 @@ class CustomFormInputField extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return SizedBox(
-      height: height,
+      height: validator != null ? null : height,
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,

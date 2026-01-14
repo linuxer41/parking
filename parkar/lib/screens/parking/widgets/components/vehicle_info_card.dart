@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parkar/constants/constants.dart';
 import '../../../../models/vehicle_model.dart';
 import 'info_components.dart';
 
@@ -24,7 +25,7 @@ class VehicleInfoCard extends StatelessWidget {
           values: [
             vehicle.plate.toUpperCase(),
             vehicle.color ?? 'No especificado',
-            vehicle.type ?? 'No especificado'
+            getVehicleCategoryLabel(vehicle.type)
           ],
         ),
         

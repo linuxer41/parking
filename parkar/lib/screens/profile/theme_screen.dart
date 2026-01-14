@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../state/app_state.dart';
 import '../../state/app_state_container.dart';
 import '../../widgets/page_layout.dart';
@@ -48,15 +49,6 @@ class _ThemeScreenState extends State<ThemeScreen> {
       // Aplicar el cambio directamente
       AppStateContainer.theme(context).color = color;
     });
-
-    // Mostrar mensaje de confirmación
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Color actualizado'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 1),
-      ),
-    );
   }
 
   // Método para cambiar el modo del tema
@@ -66,15 +58,6 @@ class _ThemeScreenState extends State<ThemeScreen> {
       // Aplicar el cambio directamente
       AppStateContainer.theme(context).mode = mode;
     });
-
-    // Mostrar mensaje de confirmación
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Modo de tema actualizado'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 1),
-      ),
-    );
   }
 
   @override

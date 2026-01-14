@@ -248,6 +248,17 @@ SELECT
     INNER JOIN t_user eu ON eu.id = em."userId"
     WHERE em."parkingId" = p.id
   ) AS employees,
+  (
+    SELECT to_jsonb(em.*) || jsonb_build_object(
+      'name', eu.name,
+      'email', eu.email,
+      'phone', eu.phone
+    )
+    FROM t_employee em
+    INNER JOIN t_user eu ON eu.id = em."userId"
+    WHERE em."parkingId" = p.id AND em."userId" = $2
+    LIMIT 1
+  ) AS "currentEmployee",
   CASE WHEN p."ownerId" = $2 THEN true ELSE false END as "isOwner",
   true as "isActive",
   ps."areaCount"::integer as "areaCount",

@@ -370,6 +370,10 @@ export const ParkingAditionalSelectSchema = t.Object({
     description: "Empleados del parking",
     required: true,
   }),
+  currentEmployee: t.Nullable(EmployeeResponseSchema, {
+    description: "Empleado actual del usuario en este parking",
+    required: true,
+  }),
   isOwner: t.Boolean({
     description: "Indica si el usuario es propietario",
     required: true,

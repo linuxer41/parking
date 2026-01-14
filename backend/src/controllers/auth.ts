@@ -6,7 +6,7 @@ import {
   REFRESH_TOKEN_EXP,
 } from "../config/constants";
 import { db } from "../db";
-import { AuthResponseSchema, loginBodySchema, RegistrationSchema } from "../models/auth";
+import { AuthResponseSchema, loginBodySchema, RegistrationSchema, PasswordResetRequestSchema, PasswordResetConfirmSchema } from "../models/auth";
 import { authPlugin } from "../plugins";
 import { registrationService } from "../services/registration-service";
 import { getExpTimestamp } from "../utils/common";
@@ -232,6 +232,86 @@ export const authController = new Elysia({ prefix: "/auth", tags: ["auth"] })
     {
       body: RegistrationSchema,
       response: AuthResponseSchema,
+    },
+  )
+  .post(
+    "/request-password-reset",
+    async ({ body }) => {
+      // Find user by email
+      const users = await db.user.find({ email: body.email });
+      const user = users[0];
+
+      if (!user) {
+        // Don't reveal if email exists or not for security
+        return { message: "Si el correo existe, se ha enviado un código de verificación" };
+      }
+
+      // Delete any existing unused tokens for this user
+      await db.passwordResetToken.deleteByUserId(user.id);
+
+      // Generate 6-digit code
+      const token = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Set expiration to 15 minutes from now
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+      // Create token record
+      await db.passwordResetToken.create({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        token,
+        expiresAt,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Send email (for now, just log it)
+      console.log(`[PASSWORD RESET] Código para ${body.email}: ${token}`);
+
+      // In production, send actual email here
+      // await sendPasswordResetEmail(body.email, token);
+
+      return { message: "Si el correo existe, se ha enviado un código de verificación" };
+    },
+    {
+      body: PasswordResetRequestSchema,
+    },
+  )
+  .post(
+    "/reset-password",
+    async ({ body }) => {
+      // Find valid token
+      const resetToken = await db.passwordResetToken.findByToken(body.token);
+
+      if (!resetToken) {
+        throw new UnauthorizedError("Código inválido o expirado");
+      }
+
+      // Find user
+      const users = await db.user.find({ id: resetToken.userId });
+      const user = users[0];
+
+      if (!user) {
+        throw new UnauthorizedError("Usuario no encontrado");
+      }
+
+      // Verify email matches
+      if (user.email !== body.email) {
+        throw new UnauthorizedError("El correo no coincide con el código");
+      }
+
+      // Hash new password
+      const newPasswordHash = await Bun.password.hash(body.newPassword);
+
+      // Update user password
+      await db.user.updatePassword(user.id, newPasswordHash);
+
+      // Mark token as used
+      await db.passwordResetToken.markAsUsed(resetToken.id);
+
+      return { message: "Contraseña actualizada exitosamente" };
+    },
+    {
+      body: PasswordResetConfirmSchema,
     },
   )
   .use(authPlugin)

@@ -1306,6 +1306,7 @@ class _ParkingDetailScreenState extends State<ParkingDetailScreen> {
     if (_parking != null) {
       appState.setCurrentParking(
         ParkingModel.fromParkingDetailedModel(_parking!),
+        _parking?.currentEmployee ,
       );
 
       // Si hay áreas disponibles, seleccionar la primera

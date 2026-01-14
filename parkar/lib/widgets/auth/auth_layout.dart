@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AuthLayout extends StatelessWidget {
   final String title; // Título de la pantalla
@@ -19,7 +20,6 @@ class AuthLayout extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final size = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(

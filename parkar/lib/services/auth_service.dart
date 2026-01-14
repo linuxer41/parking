@@ -2,7 +2,6 @@ import '../config/app_config.dart';
 import '../models/auth_model.dart';
 import 'base_service.dart';
 import 'api_exception.dart';
-import 'auth_manager.dart';
 
 class AuthService extends BaseService {
   AuthService() : super(path: AppConfig.apiEndpoints['auth'] ?? '/auth');
@@ -13,16 +12,6 @@ class AuthService extends BaseService {
         endpoint: '/sign-in',
         body: {'email': email, 'password': password},
         parser: (json) => parseModel(json, AuthResponseModel.fromJson),
-      );
-
-      // Store authentication data after successful login
-      await AuthManager().setAuthData(
-        token: response.auth.token,
-        refreshToken: response.auth.refreshToken,
-        userData: response.user.toJson(),
-        parkingId: response.parkings.isNotEmpty
-            ? response.parkings.first.id
-            : null,
       );
 
       return response;
@@ -71,17 +60,6 @@ class AuthService extends BaseService {
         body: registerData,
         parser: (json) => parseModel(json, AuthResponseModel.fromJson),
       );
-
-      // Store authentication data after successful registration
-      await AuthManager().setAuthData(
-        token: response.auth.token,
-        refreshToken: response.auth.refreshToken,
-        userData: response.user.toJson(),
-        parkingId: response.parkings.isNotEmpty
-            ? response.parkings.first.id
-            : null,
-      );
-
       return response;
     } on ApiException catch (e) {
       if (e.isValidationError) {
@@ -109,7 +87,7 @@ class AuthService extends BaseService {
       print('Warning: Logout API call failed, clearing local data: $e');
     } finally {
       // Always clear local authentication data
-      await AuthManager().clearAuth();
+      
     }
   }
 
@@ -128,26 +106,26 @@ class AuthService extends BaseService {
     }
   }
 
-  Future<void> forgotPassword(String email) async {
+  Future<void> requestPasswordReset(String email) async {
     try {
       await post<void>(
-        endpoint: '/forgot-password',
+        endpoint: '/request-password-reset',
         body: {'email': email},
         parser: (_) => null,
       );
     } catch (e) {
       throw ApiException(
         statusCode: 500,
-        message: 'Error al enviar email de recuperación: ${e.toString()}',
+        message: 'Error al enviar código de recuperación: ${e.toString()}',
       );
     }
   }
 
-  Future<void> resetPassword(String token, String newPassword) async {
+  Future<void> resetPassword(String email, String token, String newPassword) async {
     try {
       await post<void>(
         endpoint: '/reset-password',
-        body: {'token': token, 'newPassword': newPassword},
+        body: {'email': email, 'token': token, 'newPassword': newPassword},
         parser: (_) => null,
       );
     } catch (e) {

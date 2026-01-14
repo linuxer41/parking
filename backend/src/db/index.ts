@@ -9,6 +9,7 @@ import { cashRegisterCrud } from "./crud/cash-register";
 import { movementCrud } from "./crud/movement";
 import { notificationCrud } from "./crud/notification";
 import { reportCrud } from "./crud/report";
+import { passwordResetTokenCrud } from "./crud/password-reset-token";
 
 export const db = {
   // ===== BOOKING (RESERVAS) =====
@@ -44,4 +45,7 @@ export const db = {
 
   // ===== REPORT =====
   report: reportCrud,
+
+  // ===== PASSWORD RESET TOKEN =====
+  passwordResetToken: passwordResetTokenCrud,
 };

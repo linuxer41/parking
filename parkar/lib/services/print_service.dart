@@ -3,55 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/booking_model.dart';
 import '../models/access_model.dart';
 import '../models/subscription_model.dart';
-import 'pdf_service.dart';
-import 'bluetooth_print_service.dart';
+import 'document_service.dart';
 import '../state/app_state_container.dart';
 import 'package:parkar/widgets/pdf_viewer.dart';
-
-// Enum para métodos de impresión
-enum PrintMethod {
-  native, // Impresión nativa del sistema (PDF)
-  bluetooth, // Impresión directa vía Bluetooth
-}
-
-// Enum para tipo de impresora térmica
-enum PrinterType {
-  generic, // ESC/POS
-  zebra, // ZPL
-}
-
-// Enum para modo de procesamiento
-enum ProcessingMode {
-  viewPdf, // Mostrar PDF y permitir elegir impresión
-  silentPrint, // Imprimir directamente según configuración
-}
-
-// Clase para configuración de impresión
-class PrintSettings {
-  ProcessingMode processingMode;
-  PrintMethod printMethod;
-  PrinterType printerType;
-
-  PrintSettings({
-    this.processingMode = ProcessingMode.viewPdf,
-    this.printMethod = PrintMethod.native,
-    this.printerType = PrinterType.generic,
-  });
-
-  // Para compatibilidad, getters
-  ProcessingMode get mode => processingMode;
-  set mode(ProcessingMode value) => processingMode = value;
-
-  PrintMethod get method => printMethod;
-  set method(PrintMethod value) => printMethod = value;
-
-  PrinterType get type => printerType;
-  set type(PrinterType value) => printerType = value;
-}
+import '../models/printer_model.dart';
 
 class PrintService {
-  final PdfService _pdfService = PdfService();
-  final BluetoothPrintService _bluetoothService = BluetoothPrintService();
+  final DocumentService _documentService = DocumentService();
 
   // Método unificado para manejar la impresión de tickets de entrada
   Future<void> _handlePrint({
@@ -65,10 +23,13 @@ class PrintService {
     final appState = AppStateContainer.of(context);
     final settings = appState.printSettings;
 
-    if (forceView || settings.processingMode == ProcessingMode.viewPdf) {
+    if (forceView || settings.processingMode == ProcessingMode.view) {
       // Mostrar PDF
       try {
-        final pdfData = await pdfGenerator().timeout(const Duration(seconds: 10), onTimeout: () => Uint8List(0));
+        final pdfData = await pdfGenerator().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => Uint8List(0),
+        );
         if (pdfData.isEmpty) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -89,13 +50,18 @@ class PrintService {
             filename: filename,
             onPrintPressed: settings.printMethod == PrintMethod.bluetooth
                 ? () async {
-                    final success = await bluetoothPrinter().timeout(const Duration(seconds: 5), onTimeout: () => false);
+                    final success = await bluetoothPrinter().timeout(
+                      const Duration(seconds: 5),
+                      onTimeout: () => false,
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(success
-                              ? 'Ticket enviado a impresora Bluetooth'
-                              : 'Error al imprimir vía Bluetooth'),
+                          content: Text(
+                            success
+                                ? 'Ticket enviado a impresora Bluetooth'
+                                : 'Error al imprimir vía Bluetooth',
+                          ),
                           backgroundColor: success ? Colors.green : Colors.red,
                         ),
                       );
@@ -117,13 +83,18 @@ class PrintService {
     } else {
       // Imprimir directamente según configuración
       if (settings.printMethod == PrintMethod.bluetooth) {
-        final success = await bluetoothPrinter().timeout(const Duration(seconds: 5), onTimeout: () => false);
+        final success = await bluetoothPrinter().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => false,
+        );
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(success
-                  ? 'Ticket enviado a impresora Bluetooth'
-                  : 'Error al imprimir vía Bluetooth'),
+              content: Text(
+                success
+                    ? 'Ticket enviado a impresora Bluetooth'
+                    : 'Error al imprimir vía Bluetooth',
+              ),
               backgroundColor: success ? Colors.green : Colors.red,
             ),
           );
@@ -131,12 +102,17 @@ class PrintService {
       } else {
         // Para nativo silencioso, mostrar PDF
         try {
-          final pdfData = await pdfGenerator().timeout(const Duration(seconds: 10), onTimeout: () => Uint8List(0));
+          final pdfData = await pdfGenerator().timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => Uint8List(0),
+          );
           if (pdfData.isEmpty) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Error: El ticket generado está vacío o timeout'),
+                  content: Text(
+                    'Error: El ticket generado está vacío o timeout',
+                  ),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -151,14 +127,21 @@ class PrintService {
               filename: filename,
               onPrintPressed: settings.printMethod == PrintMethod.bluetooth
                   ? () async {
-                      final success = await bluetoothPrinter().timeout(const Duration(seconds: 5), onTimeout: () => false);
+                      final success = await bluetoothPrinter().timeout(
+                        const Duration(seconds: 5),
+                        onTimeout: () => false,
+                      );
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(success
-                                ? 'Ticket enviado a impresora Bluetooth'
-                                : 'Error al imprimir vía Bluetooth'),
-                            backgroundColor: success ? Colors.green : Colors.red,
+                            content: Text(
+                              success
+                                  ? 'Ticket enviado a impresora Bluetooth'
+                                  : 'Error al imprimir vía Bluetooth',
+                            ),
+                            backgroundColor: success
+                                ? Colors.green
+                                : Colors.red,
                           ),
                         );
                       }
@@ -190,7 +173,17 @@ class PrintService {
     final appState = AppStateContainer.of(context);
     await _handlePrint(
       pdfGenerator: () => _pdfService.generateEntryTicket(access: access),
-      bluetoothPrinter: () => _bluetoothService.printEntryTicket(access, appState.printSettings.printerType),
+      bluetoothPrinter: () async {
+        print("Imprimiendo ticket de entrada vía Bluetooth");
+        if (appState.printSettings.bluetoothDevice == null) {
+          throw Exception("No se ha seleccionado una impresora Bluetooth");
+        }
+        return await _bluetoothService.printEntryTicket(
+          access,
+          appState.printSettings.bluetoothDevice!.address,
+          appState.printSettings.printerType,
+        );
+      },
       title: 'Ticket de Entrada',
       filename: 'entrada_${access.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
@@ -205,9 +198,20 @@ class PrintService {
     bool isSimpleMode = false,
     bool forceView = false,
   }) async {
+    final appState = AppStateContainer.of(context);
     await _handlePrint(
       pdfGenerator: () => _pdfService.generateExitTicket(access: access),
-      bluetoothPrinter: () => _bluetoothService.printExitTicket(access),
+      bluetoothPrinter: () async {
+        print("Imprimiendo ticket de salida vía Bluetooth");
+        if (appState.printSettings.bluetoothDevice == null) {
+          throw Exception("No se ha seleccionado una impresora Bluetooth");
+        }
+        return await _bluetoothService.printExitTicket(
+          access,
+          appState.printSettings.bluetoothDevice!.address,
+          appState.printSettings.printerType,
+        );
+      },
       title: 'Ticket de Salida',
       filename: 'salida_${access.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
@@ -215,16 +219,17 @@ class PrintService {
     );
   }
 
- // Métodos para gestión de impresora Bluetooth
- Future<bool> connectToBluetoothPrinter(String address) async {
-   return await _bluetoothService.connectToDevice(address);
- }
+  // Métodos para gestión de impresora Bluetooth
+  Future<bool> connectToBluetoothPrinter(String address) async {
+    return await _bluetoothService.connectToDevice(address);
+  }
 
- Future<void> disconnectBluetoothPrinter(String address) async {
-   await _bluetoothService.disconnect(address);
- }
+  Future<void> disconnectBluetoothPrinter(String address) async {
+    await _bluetoothService.disconnect(address);
+  }
 
- Future<bool> get isBluetoothConnected async => await _bluetoothService.isConnected;
+  Future<bool> get isBluetoothConnected async =>
+      await _documentService.isConnected;
 
   // Imprimir ticket de reserva
   Future<void> printReservationTicket({
@@ -233,9 +238,15 @@ class PrintService {
     bool isSimpleMode = false,
     bool forceView = false,
   }) async {
+    final appState = AppStateContainer.of(context);
     await _handlePrint(
-      pdfGenerator: () => _pdfService.generateReservationTicket(booking: booking),
-      bluetoothPrinter: () => _bluetoothService.printReservationTicket(booking),
+      pdfGenerator: () =>
+          _pdfService.generateReservationTicket(booking: booking),
+      bluetoothPrinter: () => _bluetoothService.printReservationTicket(
+        booking,
+        appState.printSettings.bluetoothDevice!.address,
+        appState.printSettings.printerType,
+      ),
       title: 'Reserva de Estacionamiento',
       filename: 'reserva_${booking.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
@@ -249,11 +260,18 @@ class PrintService {
     required BuildContext context,
     bool forceView = false,
   }) async {
+    final appState = AppStateContainer.of(context);
     await _handlePrint(
-      pdfGenerator: () => _pdfService.generateSubscriptionReceipt(subscription: subscription),
-      bluetoothPrinter: () => _bluetoothService.printSubscriptionReceipt(subscription),
+      pdfGenerator: () =>
+          _pdfService.generateSubscriptionReceipt(subscription: subscription),
+      bluetoothPrinter: () => _bluetoothService.printSubscriptionReceipt(
+        subscription,
+        appState.printSettings.bluetoothDevice!.address,
+        appState.printSettings.printerType,
+      ),
       title: 'Recibo de Suscripción',
-      filename: 'suscripcion_${subscription.vehicle.plate.replaceAll(' ', '_')}',
+      filename:
+          'suscripcion_${subscription.vehicle.plate.replaceAll(' ', '_')}',
       context: context,
       forceView: forceView,
     );
@@ -267,23 +285,29 @@ class PrintService {
     final appState = AppStateContainer.of(context);
     final settings = appState.printSettings;
 
-    if (settings.processingMode == ProcessingMode.viewPdf) {
-      if (settings.printMethod == PrintMethod.bluetooth && bluetoothAddress != null) {
+    if (settings.processingMode == ProcessingMode.view) {
+      if (settings.printMethod == PrintMethod.bluetooth &&
+          bluetoothAddress != null) {
         // Para Bluetooth en modo visualización, imprimir directamente térmica
-        final success = await _bluetoothService.printTest(bluetoothAddress, settings.printerType);
+        final success = await _bluetoothService.printTest(
+          bluetoothAddress,
+          settings.printerType,
+        );
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(success
-                  ? 'Prueba enviada a impresora Bluetooth'
-                  : 'Error al imprimir prueba vía Bluetooth'),
+              content: Text(
+                success
+                    ? 'Prueba enviada a impresora Bluetooth'
+                    : 'Error al imprimir prueba vía Bluetooth',
+              ),
               backgroundColor: success ? Colors.green : Colors.red,
             ),
           );
         }
       } else {
         // Mostrar PDF de prueba para nativo
-        final pdfData = await _pdfService.generateTestPrint();
+        final pdfData = await _documentService.generateTestPrintPDF();
 
         if (context.mounted) {
           PdfViewer.show(
@@ -291,15 +315,22 @@ class PrintService {
             pdfData: pdfData,
             title: 'Prueba de Impresión',
             filename: 'prueba_impresion',
-            onPrintPressed: settings.printMethod == PrintMethod.bluetooth && bluetoothAddress != null
+            onPrintPressed:
+                settings.printMethod == PrintMethod.bluetooth &&
+                    bluetoothAddress != null
                 ? () async {
-                    final success = await _bluetoothService.printTest(bluetoothAddress!, settings.printerType);
+                    final success = await _bluetoothService.printTest(
+                      bluetoothAddress!,
+                      settings.printerType,
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(success
-                              ? 'Prueba enviada a impresora Bluetooth'
-                              : 'Error al imprimir prueba vía Bluetooth'),
+                          content: Text(
+                            success
+                                ? 'Prueba enviada a impresora Bluetooth'
+                                : 'Error al imprimir prueba vía Bluetooth',
+                          ),
                           backgroundColor: success ? Colors.green : Colors.red,
                         ),
                       );
@@ -313,13 +344,18 @@ class PrintService {
       // Imprimir directamente
       if (settings.printMethod == PrintMethod.bluetooth) {
         if (bluetoothAddress != null) {
-          final success = await _bluetoothService.printTest(bluetoothAddress, settings.printerType);
+          final success = await _bluetoothService.printTest(
+            bluetoothAddress,
+            settings.printerType,
+          );
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(success
-                    ? 'Prueba enviada a impresora Bluetooth'
-                    : 'Error al imprimir prueba vía Bluetooth'),
+                content: Text(
+                  success
+                      ? 'Prueba enviada a impresora Bluetooth'
+                      : 'Error al imprimir prueba vía Bluetooth',
+                ),
                 backgroundColor: success ? Colors.green : Colors.red,
               ),
             );
@@ -336,7 +372,7 @@ class PrintService {
         }
       } else {
         // Para nativo silencioso, mostrar PDF
-        final pdfData = await _pdfService.generateTestPrint();
+        final pdfData = await _documentService.generateTestPrintPDF();
 
         if (context.mounted) {
           PdfViewer.show(
@@ -344,15 +380,22 @@ class PrintService {
             pdfData: pdfData,
             title: 'Prueba de Impresión',
             filename: 'prueba_impresion',
-            onPrintPressed: settings.printMethod == PrintMethod.bluetooth && bluetoothAddress != null
+            onPrintPressed:
+                settings.printMethod == PrintMethod.bluetooth &&
+                    bluetoothAddress != null
                 ? () async {
-                    final success = await _bluetoothService.printTest(bluetoothAddress!, settings.printerType);
+                    final success = await _bluetoothService.printTest(
+                      bluetoothAddress!,
+                      settings.printerType,
+                    );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(success
-                              ? 'Prueba enviada a impresora Bluetooth'
-                              : 'Error al imprimir prueba vía Bluetooth'),
+                          content: Text(
+                            success
+                                ? 'Prueba enviada a impresora Bluetooth'
+                                : 'Error al imprimir prueba vía Bluetooth',
+                          ),
                           backgroundColor: success ? Colors.green : Colors.red,
                         ),
                       );

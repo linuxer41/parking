@@ -7,21 +7,22 @@ import '../screens/home/home_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/register_stepper_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
+import '../screens/auth/reset_password_screen.dart';
 import '../state/app_state_container.dart';
 
 /// Middleware para verificar la autenticación
 String? _checkAuth(BuildContext context, {bool requireParking = false}) {
   final appState = AppStateContainer.of(context);
   print(
-    'Middleware: Verificando autenticación authtoke: ${appState.authToken} accesstoken: ${appState.refreshToken}',
+    'Middleware: Verificando autenticación token: ${appState.authToken}, expired: ${appState.isTokenExpired}',
   );
 
-  // Verifica si el authToken está presente
-  if (appState.authToken == null) {
-    return '/login'; // Redirige a login si no hay authToken
+  // Verifica si el token está presente y no expirado
+  if (appState.authToken == null || appState.isTokenExpired) {
+    return '/login'; // Redirige a login si no hay token válido
   }
 
-  // Verifica si el authToken es requerido y está presente
+  // Verifica si el estacionamiento es requerido y está presente
   if (requireParking && appState.currentParking == null) {
     return '/select'; // Redirige a /select si no hay estacionamiento seleccionado
   }
@@ -45,6 +46,13 @@ final _publicRoutes = [
     path: '/forgot-password',
     builder: (context, state) => const ForgotPasswordScreen(),
   ),
+  GoRoute(
+    path: '/reset-password/:email',
+    builder: (context, state) {
+      final email = state.pathParameters['email']!;
+      return ResetPasswordScreen(email: email);
+    },
+  ),
 ];
 
 /// Rutas protegidas (requieren autenticación)
@@ -63,26 +71,26 @@ final _protectedRoutes = [
 
 /// Enrutador principal
 final router = GoRouter(
-  initialLocation: '/welcome',
+  initialLocation: '/',
   routes: [
     // Ruta de redirección inicial
     GoRoute(
       path: '/',
       redirect: (context, state) {
         final appState = AppStateContainer.of(context);
-        print('Router: authToken = ${appState.authToken}, currentParking = ${appState.currentParking}');
-        
-        // Si no hay token, siempre ir a welcome
-        if (appState.authToken == null || appState.authToken!.isEmpty) {
+        print('Router: token = ${appState.authToken}, expired = ${appState.isTokenExpired}, currentParking = ${appState.currentParking}');
+
+        // Si no hay token válido, ir a welcome
+        if (appState.authToken == null  || appState.isTokenExpired) {
           return '/welcome';
         }
-        
-        // Si hay token pero no estacionamiento seleccionado, ir a select
+
+        // Si hay token válido pero no estacionamiento seleccionado, ir a select
         if (appState.currentParking == null) {
           return '/select';
         }
-        
-        // Si hay token y estacionamiento, ir a home
+
+        // Si hay token válido y estacionamiento, ir a home
         return '/home';
       },
     ),

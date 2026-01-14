@@ -1,8 +1,78 @@
 /// Currency constants and symbols for all countries
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../state/app_state_container.dart';
+
+class UserRole {
+  final String value;
+  final String label;
+  final IconData icon;
+
+  UserRole({required this.value, required this.label, required this.icon});
+}
+
+class VehicleCategory {
+  final int value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  VehicleCategory({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+}
+
+final List<UserRole> userRoles = [
+  UserRole(value: 'owner', label: 'Propietario', icon: Icons.person),
+  UserRole(
+    value: 'admin',
+    label: 'Administrador',
+    icon: Icons.admin_panel_settings,
+  ),
+  UserRole(value: 'operator', label: 'Operador', icon: Icons.engineering),
+  UserRole(value: 'cashier', label: 'Cajero', icon: Icons.point_of_sale),
+];
+
+final List<VehicleCategory> vehicleCategories = [
+  VehicleCategory(
+    value: 1,
+    label: 'Bicicleta',
+    icon: Icons.bike_scooter,
+    color: Colors.green,
+  ),
+  VehicleCategory(
+    value: 2,
+    label: 'Moto',
+    icon: Icons.motorcycle,
+    color: Colors.red,
+  ),
+  VehicleCategory(
+    value: 3,
+    label: 'Vehículo',
+    icon: Icons.directions_car,
+    color: Colors.blue,
+  ),
+  VehicleCategory(
+    value: 4,
+    label: 'Camion',
+    icon: Icons.directions_bus,
+    color: Colors.orange,
+  ),
+];
+String getVehicleCategoryLabel(String? type) {
+  final value = int.tryParse(type ?? '');
+  if (value == null) return type ?? 'No especificado';
+  final category = vehicleCategories.firstWhere(
+    (c) => c.value == value,
+    orElse: () => VehicleCategory(value: value, label: 'Desconocido', icon: Icons.help, color: Colors.grey),
+  );
+  return category.label;
+}
 
 class CurrencyConstants {
   /// Map of currency codes to their symbols
@@ -162,24 +232,39 @@ class CurrencyConstants {
   }
 
   /// Format amount with currency symbol
-  static String formatAmount(double amount, String currencyCode, {int decimalPlaces = 2}) {
+  static String formatAmount(
+    double amount,
+    String currencyCode, {
+    int decimalPlaces = 2,
+  }) {
     final symbol = getCurrencySymbol(currencyCode);
     return '$symbol${amount.toStringAsFixed(decimalPlaces)}';
   }
 
   /// Format amount using current parking parameters from context
-  static String formatAmountWithParkingParams(BuildContext context, double amount) {
+  static String formatAmountWithParkingParams(
+    BuildContext context,
+    double amount,
+  ) {
     final appState = AppStateContainer.of(context);
     final parking = appState.currentParking;
     if (parking == null) {
       // Fallback to USD with 2 decimals
       return formatAmount(amount, 'USD');
     }
-    return formatAmount(amount, parking.params.currency, decimalPlaces: parking.params.decimalPlaces);
+    return formatAmount(
+      amount,
+      parking.params.currency,
+      decimalPlaces: parking.params.decimalPlaces,
+    );
   }
 
   /// Format amount for PDF generation (no context available)
-  static String formatAmountForPdf(double amount, String currencyCode, int decimalPlaces) {
+  static String formatAmountForPdf(
+    double amount,
+    String currencyCode,
+    int decimalPlaces,
+  ) {
     return formatAmount(amount, currencyCode, decimalPlaces: decimalPlaces);
   }
 }
@@ -273,7 +358,11 @@ class CountryConstants {
 /// DateTime constants and formatting functions
 class DateTimeConstants {
   /// Format DateTime using current parking parameters from context
-  static String formatDateTimeWithParkingParams(BuildContext context, DateTime dateTime, {String? format}) {
+  static String formatDateTimeWithParkingParams(
+    BuildContext context,
+    DateTime dateTime, {
+    String? format,
+  }) {
     final appState = AppStateContainer.of(context);
     final parking = appState.currentParking;
     if (parking == null) {
@@ -298,7 +387,11 @@ class DateTimeConstants {
   }
 
   /// Format DateTime for PDF generation (no context available)
-  static String formatDateTimeForPdf(DateTime dateTime, String timeZone, {String? format}) {
+  static String formatDateTimeForPdf(
+    DateTime dateTime,
+    String timeZone, {
+    String? format,
+  }) {
     try {
       // Convert to specified timezone
       final location = tz.getLocation(timeZone);
@@ -315,12 +408,22 @@ class DateTimeConstants {
   }
 
   /// Format time only (HH:mm)
-  static String formatTimeWithParkingParams(BuildContext context, DateTime dateTime) {
+  static String formatTimeWithParkingParams(
+    BuildContext context,
+    DateTime dateTime,
+  ) {
     return formatDateTimeWithParkingParams(context, dateTime, format: 'HH:mm');
   }
 
   /// Format date only (dd/MM/yyyy)
-  static String formatDateWithParkingParams(BuildContext context, DateTime dateTime) {
-    return formatDateTimeWithParkingParams(context, dateTime, format: 'dd/MM/yyyy');
+  static String formatDateWithParkingParams(
+    BuildContext context,
+    DateTime dateTime,
+  ) {
+    return formatDateTimeWithParkingParams(
+      context,
+      dateTime,
+      format: 'dd/MM/yyyy',
+    );
   }
 }

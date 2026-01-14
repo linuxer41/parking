@@ -49,12 +49,6 @@ class PageLayout extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
 
-    // Ajustar el brillo de los iconos de la barra de estado
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
-      statusBarBrightness: theme.brightness == Brightness.dark ? Brightness.dark : Brightness.light,
-    ));
-
     // Contenido con centrado opcional en desktop
     final content = centerContent && isDesktop
         ? Center(

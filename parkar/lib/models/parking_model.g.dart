@@ -333,6 +333,9 @@ ParkingDetailedModel _$ParkingDetailedModelFromJson(
   employees: (json['employees'] as List<dynamic>?)
       ?.map((e) => EmployeeModel.fromJson(e as Map<String, dynamic>))
       .toList(),
+  currentEmployee: EmployeeModel.fromJson(
+    json['currentEmployee'] as Map<String, dynamic>,
+  ),
   location: json['location'] == null
       ? null
       : ParkingLocationModel.fromJson(json['location'] as Map<String, dynamic>),
@@ -362,6 +365,7 @@ Map<String, dynamic> _$ParkingDetailedModelToJson(
   'params': instance.params,
   'areas': instance.areas,
   'employees': instance.employees,
+  'currentEmployee': instance.currentEmployee,
   'location': instance.location,
   'areaCount': instance.areaCount,
   'operationMode': _$ParkingOperationModeEnumMap[instance.operationMode],

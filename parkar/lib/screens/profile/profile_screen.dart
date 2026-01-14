@@ -67,14 +67,6 @@ class _ProfilePanelState extends State<ProfilePanel> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
-
-    // Set system UI overlay style for Android
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
   }
 
   @override
@@ -82,8 +74,6 @@ class _ProfilePanelState extends State<ProfilePanel> {
     super.didChangeDependencies();
     if (!_initialized) {
       _initialized = true;
-
-      // Inicializar las secciones y rutas
       _initializeRoutes();
     }
   }

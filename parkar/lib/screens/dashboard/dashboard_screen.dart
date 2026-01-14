@@ -104,6 +104,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _initializeRoutes() {
+    final appState = AppStateContainer.of(context);
+    final role = appState.currentRole;
     _dashboardSections = [
       // Sección de gestión de parking
       DashboardSection(
@@ -127,12 +129,13 @@ class _DashboardScreenState extends State<DashboardScreen>
               );
             },
           ),
-          DashboardRoute(
-            id: 'employees',
-            title: 'Empleados',
-            icon: Icons.people_rounded,
-            builder: (context) => const EmployeesScreen(),
-          ),
+          if (role == 'owner')
+            DashboardRoute(
+              id: 'employees',
+              title: 'Empleados',
+              icon: Icons.people_rounded,
+              builder: (context) => const EmployeesScreen(),
+            ),
           DashboardRoute(
             id: 'parkingRates',
             title: 'Tarifas y Precios',
@@ -282,20 +285,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final textTheme = theme.textTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
-
-    // Configurar el estilo de la barra de estado
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: theme.brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark,
-        systemNavigationBarColor: colorScheme.surface,
-        systemNavigationBarIconBrightness: theme.brightness == Brightness.dark
-            ? Brightness.light
-            : Brightness.dark,
-      ),
-    );
 
     // Contenido principal del panel de opciones
     final leftPanelContent = _isLoading

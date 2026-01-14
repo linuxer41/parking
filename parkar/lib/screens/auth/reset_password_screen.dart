@@ -6,23 +6,31 @@ import '../../state/app_state_container.dart';
 import '../../widgets/custom_input_field.dart';
 import '../../widgets/custom_snackbar.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+class ResetPasswordScreen extends StatefulWidget {
+  final String email;
+
+  const ResetPasswordScreen({
+    super.key,
+    required this.email,
+  });
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _codeController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
-  String? _successMessage;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _codeController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -31,33 +39,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
-        _successMessage = null;
       });
 
       final authService = AppStateContainer.di(context).resolve<AuthService>();
 
       try {
-        final response = await authService.requestPasswordReset(
-          _emailController.text,
+        await authService.resetPassword(
+          widget.email,
+          _codeController.text,
+          _passwordController.text,
         );
 
         if (!mounted) return;
 
-        setState(() {
-          _successMessage =
-              'Se ha enviado un código de verificación a tu correo.';
-        });
+        // Show success message and navigate to login
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contraseña actualizada exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
 
-        // Navigate to reset password screen after a short delay
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            context.go('/reset-password/${_emailController.text}');
-          }
-        });
+        // Navigate back to login
+        context.go('/login');
       } catch (e) {
         if (mounted) {
           setState(() {
-            _errorMessage = 'Error al enviar el correo: $e';
+            _errorMessage = 'Error al restablecer contraseña: $e';
           });
         }
       } finally {
@@ -77,11 +85,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final textTheme = theme.textTheme;
 
     return AuthLayout(
-      title: 'Recuperar Contraseña',
-      subtitle: 'Te enviaremos instrucciones a tu correo',
+      title: 'Restablecer Contraseña',
+      subtitle: 'Ingresa el código y tu nueva contraseña',
       children: [
         Text(
-          'Ingresa tu correo electrónico y te enviaremos instrucciones para recuperar tu contraseña.',
+          'Hemos enviado un código de 6 dígitos a ${widget.email}. Ingresa el código y establece tu nueva contraseña.',
           style: textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -97,32 +105,62 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             });
           },
         ),
-        ConditionalMessageWidget(
-          message: _successMessage,
-          type: MessageType.success,
-          onClose: () {
-            setState(() {
-              _successMessage = null;
-            });
-          },
-        ),
         Form(
           key: _formKey,
           child: Column(
             children: [
               CustomFormInputField(
-                controller: _emailController,
-                labelText: 'Email',
-                hintText: 'ejemplo@correo.com',
-                prefixIcon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
+                controller: _codeController,
+                labelText: 'Código de verificación',
+                hintText: '123456',
+                prefixIcon: Icons.lock_clock,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa el código';
+                  }
+                  if (value.length != 6) {
+                    return 'El código debe tener 6 dígitos';
+                  }
+                  if (!RegExp(r'^\d{6}$').hasMatch(value)) {
+                    return 'El código debe contener solo números';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              CustomFormInputField(
+                controller: _passwordController,
+                labelText: 'Nueva contraseña',
+                hintText: 'Mínimo 8 caracteres',
+                prefixIcon: Icons.lock_outline,
+                obscureText: true,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa una contraseña';
+                  }
+                  if (value.length < 8) {
+                    return 'La contraseña debe tener al menos 8 caracteres';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              CustomFormInputField(
+                controller: _confirmPasswordController,
+                labelText: 'Confirmar contraseña',
+                hintText: 'Repite la nueva contraseña',
+                prefixIcon: Icons.lock_outline,
+                obscureText: true,
                 textInputAction: TextInputAction.done,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa tu email';
+                    return 'Por favor confirma la contraseña';
                   }
-                  if (!value.contains('@') || !value.contains('.')) {
-                    return 'Por favor ingresa un email válido';
+                  if (value != _passwordController.text) {
+                    return 'Las contraseñas no coinciden';
                   }
                   return null;
                 },
@@ -155,7 +193,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                       )
                     : Text(
-                        'Enviar instrucciones',
+                        'Restablecer contraseña',
                         style: textTheme.labelLarge?.copyWith(
                           color: colorScheme.onPrimary,
                         ),
@@ -167,11 +205,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 16),
         TextButton.icon(
           onPressed: () {
-            context.go('/login');
+            context.go('/forgot-password');
           },
           icon: Icon(Icons.arrow_back, size: 16, color: colorScheme.primary),
           label: Text(
-            'Volver a Iniciar Sesión',
+            'Volver',
             style: textTheme.labelMedium?.copyWith(color: colorScheme.primary),
           ),
           style: TextButton.styleFrom(

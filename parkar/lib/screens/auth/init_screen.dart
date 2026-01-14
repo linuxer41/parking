@@ -4,6 +4,8 @@ import 'package:parkar/services/parking_service.dart';
 import 'package:parkar/services/user_service.dart';
 import 'package:parkar/state/app_state_container.dart';
 
+import '../../models/employee_model.dart';
+import '../../models/parking_model.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/custom_snackbar.dart';
 
@@ -162,7 +164,14 @@ class InitScreen extends StatelessWidget {
                               );
 
                               try {
-                                state.setCurrentParking(parking);
+                                final parking = await parkingService
+                                    .getParkingDetailed(parkings.first.id);
+                                await state.setCurrentParking(
+                                  ParkingModel.fromParkingDetailedModel(
+                                    parking,
+                                  ),
+                                  parking.currentEmployee,
+                                );
 
                                 if (context.mounted) {
                                   Navigator.of(context).pop(); // Cerrar diálogo
@@ -199,9 +208,9 @@ class InitScreen extends StatelessWidget {
 
         // Botón para cerrar sesión
         TextButton.icon(
-          onPressed: () {
+          onPressed: () async {
             final state = AppStateContainer.of(context);
-            state.logout();
+            await state.logout();
             context.go('/login');
           },
           icon: Icon(

@@ -592,6 +592,7 @@ class ParkingDetailedModel extends JsonConvertible<ParkingDetailedModel> {
   final ParkingParamsModel params;
   final List<AreaModel> areas;
   final List<EmployeeModel>? employees;
+  final EmployeeModel currentEmployee;
   final ParkingLocationModel? location;
   final int? areaCount;
   final ParkingOperationMode? operationMode;
@@ -613,6 +614,7 @@ class ParkingDetailedModel extends JsonConvertible<ParkingDetailedModel> {
     required this.params,
     required this.areas,
     this.employees,
+    required this.currentEmployee,
     this.location,
     this.areaCount,
     this.operationMode,
@@ -636,6 +638,7 @@ class ParkingDetailedModel extends JsonConvertible<ParkingDetailedModel> {
     required ParkingParamsModel params,
     List<AreaModel>? areas,
     List<EmployeeModel>? employees,
+    EmployeeModel? currentEmployee,
     ParkingLocationModel? location,
     int? totalSpots,
     int? availableSpots,
@@ -660,6 +663,7 @@ class ParkingDetailedModel extends JsonConvertible<ParkingDetailedModel> {
       params: params,
       areas: areas ?? this.areas,
       employees: employees ?? this.employees,
+      currentEmployee: currentEmployee ?? this.currentEmployee,
       location: location ?? this.location,
       areaCount: areaCount ?? this.areaCount,
       operationMode:

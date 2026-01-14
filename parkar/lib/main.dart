@@ -1,18 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:system_theme/system_theme.dart';
-import 'package:window_manager/window_manager.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
-import 'package:timezone/timezone.dart' as tz;
+import 'package:window_manager/window_manager.dart';
+
 import 'config/app_config.dart';
 import 'config/localization_config.dart';
+import 'constants/constants.dart';
+import 'di/di_container.dart';
 import 'routes/app_router.dart';
 import 'services/service_locator.dart';
 import 'state/app_state.dart';
 import 'state/app_state_container.dart';
-import 'di/di_container.dart';
 
 bool get isDesktop {
   if (kIsWeb) return false;
@@ -35,24 +36,19 @@ bool get isTablet {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Inicializar datos de localización para fechas
+  await initializeDateFormatting('es');
+
   // Inicializar base de datos de zonas horarias
   tzdata.initializeTimeZones();
 
   // Configurar codificación UTF-8 para caracteres especiales
   LocalizationConfig.configureUtf8();
 
-  // Configurar codificación UTF-8 para toda la aplicación
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-    ),
-  );
-
   AppConfig.init(
     // apiBaseUrl: 'http://localhost:3002',
     apiBaseUrl: 'http://192.168.100.8:3002',
+    // apiBaseUrl: 'http://192.168.1.16:3002',
     // apiBaseUrl: 'http://192.168.1.13:3002',
     // apiBaseUrl: 'http://192.168.1.7:3002',
     // apiBaseUrl: 'https://parkar-api.iathings.com',
@@ -71,15 +67,6 @@ void main() async {
       'cashRegister': '/cash-registers',
       'movement': '/movements',
     },
-  );
-
-  // Configurar la aplicación en modo pantalla completa
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-    ),
   );
 
   if (!isTablet && !isDesktop) {
@@ -114,15 +101,10 @@ void main() async {
 
   final appState = AppState();
   await appState.loadState();
+  print('DEBUG: AppState cargado ${appState.currentUser?.toJson()}');
   ServiceLocator().registerAppState(appState);
   final diContainer = DIContainer();
 
-  // Añadir listener para depuración
-  appState.addListener(() {
-    print(
-      'DEBUG main: AppState cambió - modo: ${appState.mode}, color: ${appState.color}',
-    );
-  });
 
   // Crear una instancia de animación para forzar actualizaciones
   runApp(MyApp(appState: appState, diContainer: diContainer));
@@ -136,7 +118,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('DEBUG: MyApp.build() ejecutado');
+    
     return AppStateContainer(
       state: appState,
       diContainer: diContainer,
@@ -148,11 +130,6 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             locale: appState.locale ?? LocalizationConfig.defaultLocale,
             themeMode: appState.mode,
-
-            // Configuración de localización para soporte completo de caracteres especiales
-            localizationsDelegates: LocalizationConfig.localizationsDelegates,
-            supportedLocales: LocalizationConfig.supportedLocales,
-
             theme: ThemeData(
               useMaterial3: true,
               colorScheme: ColorScheme.fromSeed(
@@ -168,6 +145,24 @@ class MyApp extends StatelessWidget {
               ),
             ),
             routerConfig: router,
+            builder: (context, child) {
+              final theme = Theme.of(context);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                SystemChrome.setSystemUIOverlayStyle(
+                  SystemUiOverlayStyle(
+                    statusBarColor: Colors.transparent,
+                    statusBarIconBrightness: theme.brightness == Brightness.dark
+                        ? Brightness.light
+                        : Brightness.dark,
+                    systemNavigationBarColor: theme.colorScheme.surface,
+                    systemNavigationBarIconBrightness: theme.brightness == Brightness.dark
+                        ? Brightness.light
+                        : Brightness.dark,
+                  ),
+                );
+              });
+              return child ?? const SizedBox.shrink();
+            },
           );
         },
       ),

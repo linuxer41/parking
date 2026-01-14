@@ -1,6 +1,7 @@
 import { t } from "elysia";
 import { UserCreateRequestSchema, UserResponseSchema } from "./user";
 import { ParkingCreateRequestSchema, ParkingResponseSchema } from "./parking";
+import { PasswordResetRequestSchema, PasswordResetConfirmSchema } from "./password-reset-token";
 
 const loginBodySchema = t.Object({
   email: t.String({ format: "email" }),
@@ -37,4 +38,4 @@ export const AuthResponseSchema = t.Object({
 export type CompleteRegistration = typeof RegistrationSchema.static;
 export type AuthResponse = typeof AuthResponseSchema.static;
 
-export { loginBodySchema, signupBodySchema };
+export { loginBodySchema, signupBodySchema, PasswordResetRequestSchema, PasswordResetConfirmSchema };

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:parkar/services/parking_service.dart';
+import '../../models/employee_model.dart';
+import '../../models/parking_model.dart';
+import '../../services/parking_service.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/api_exception.dart';
@@ -42,7 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final appState = AppStateContainer.of(context);
       final authService = AppStateContainer.di(context).resolve<AuthService>();
-      final parkingService = AppStateContainer.di(context).resolve<ParkingService>();
+      final parkingService = AppStateContainer.di(
+        context,
+      ).resolve<ParkingService>();
 
       try {
         final authResponse = await authService.login(
@@ -51,16 +55,26 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (!mounted) return;
-        appState.setAccessToken(authResponse.auth.token);
-        appState.setCurrentUser(authResponse.user);
+        await appState.setAccessToken(authResponse.auth.token);
+        await appState.setRefreshToken(authResponse.auth.refreshToken);
+        await appState.setCurrentUser(authResponse.user);
 
         // Los parkings ahora vienen en la respuesta
         final parkings = authResponse.parkings;
 
         // Si solo hay un estacionamiento, seleccionarlo por defecto
         if (parkings.length == 1) {
-          final parking = await parkingService.getParkingById(parkings.first.id);
-          appState.setCurrentParking(parking);
+          final parking = await parkingService.getParkingDetailed(
+            parkings.first.id,
+          );
+          final employee = parking.currentEmployee;
+          print('Parking: $parking');
+          print('Employee: $employee');
+
+          await appState.setCurrentParking(
+            ParkingModel.fromParkingDetailedModel(parking),
+            employee,
+          );
           if (mounted) context.go('/home');
           return;
         }

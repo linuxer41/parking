@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,8 +8,8 @@ import 'package:system_theme/system_theme.dart';
 import '../models/cash_register_model.dart';
 import '../models/employee_model.dart';
 import '../models/parking_model.dart';
+import '../models/printer_model.dart';
 import '../models/user_model.dart';
-import '../services/print_service.dart';
 
 class AppState extends ChangeNotifier {
   // Token and user state
@@ -25,11 +27,8 @@ class AppState extends ChangeNotifier {
   static const String _textDirectionKey = 'app_theme_text_direction';
   static const String _localeLanguageKey = 'app_theme_locale_language';
   static const String _localeCountryKey = 'app_theme_locale_country';
-
-  // Printing preferences
-  static const String _processingModeKey = 'processing_mode';
-  static const String _printMethodKey = 'print_method';
-  static const String _printerTypeKey = 'printer_type';
+  static const String _selectedAreaIdKey = 'selected_area_id';
+  static const String _printSettingsKey = 'print_settings';
 
   Color? _color;
   ThemeMode _mode = ThemeMode.light;
@@ -85,41 +84,70 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // For compatibility
-  ProcessingMode get processingMode => _printSettings.processingMode;
-  set processingMode(ProcessingMode mode) {
-    _printSettings.processingMode = mode;
-    _savePrintSettings();
-    notifyListeners();
-  }
+  // Current user role getter
+  String get currentRole {
+    print('employee: ${employee ?? "unknown"}');
+    if (currentParking?.isOwner == true) return 'owner';
+    if (employee != null) return employee!.role;
 
-  PrintMethod get printMethod => _printSettings.printMethod;
-  set printMethod(PrintMethod method) {
-    _printSettings.printMethod = method;
-    _savePrintSettings();
-    notifyListeners();
-  }
-
-  PrinterType get printerType => _printSettings.printerType;
-  set printerType(PrinterType type) {
-    _printSettings.printerType = type;
-    _savePrintSettings();
-    notifyListeners();
+    return 'owner'; // default
   }
 
   // Constructor
   AppState() {
-    loadState();
+    // loadState() will be called in main()
+  }
+
+  bool get isTokenExpired {
+    if (_authToken == null) return true;
+
+    final payload = _decodeJwtPayload(_authToken!);
+    if (payload == null) return true;
+
+    final exp = payload['exp'];
+    if (exp == null) return true;
+
+    // exp is in seconds since epoch
+    final expirationTime = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+    final now = DateTime.now();
+
+    return now.isAfter(expirationTime);
+  }
+
+  /// Decode JWT token payload
+  Map<String, dynamic>? _decodeJwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+
+      // Decode the payload (second part)
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+
+      return json.decode(decoded) as Map<String, dynamic>;
+    } catch (e) {
+      print('Error decoding JWT token: $e');
+      return null;
+    }
   }
 
   // Cargar el estado desde SharedPreferences
   Future<void> loadState() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Cargar tokens y datos del usuario
+    // Sync with AuthManager
     _authToken = prefs.getString('authToken');
     _refreshToken = prefs.getString('refreshToken');
-    _selectedAreaId = prefs.getString('selectedAreaId');
+    _currentUser = prefs.getString('currentUser') != null
+        ? UserModel.fromJson(jsonDecode(prefs.getString('currentUser')!))
+        : null;
+    _currentParking = prefs.getString('currentParking') != null
+        ? ParkingModel.fromJson(jsonDecode(prefs.getString('currentParking')!))
+        : null;
+
+    // Cargar otros datos
+    _selectedAreaId = prefs.getString(_selectedAreaIdKey);
 
     // Cargar configuración del tema
     final colorValue = prefs.getInt(_colorKey);
@@ -143,22 +171,10 @@ class AppState extends ChangeNotifier {
       _locale = Locale(language, country);
     }
 
-    // Load printing preferences
-    final processingModeIndex = prefs.getInt(_processingModeKey);
-    final printMethodIndex = prefs.getInt(_printMethodKey);
-    final printerTypeIndex = prefs.getInt(_printerTypeKey);
-
-    _printSettings = PrintSettings(
-      processingMode: processingModeIndex != null
-          ? ProcessingMode.values[processingModeIndex]
-          : ProcessingMode.viewPdf,
-      printMethod: printMethodIndex != null
-          ? PrintMethod.values[printMethodIndex]
-          : PrintMethod.native,
-      printerType: printerTypeIndex != null
-          ? PrinterType.values[printerTypeIndex]
-          : PrinterType.generic,
-    );
+    final printSettingsJson = prefs.getString(_printSettingsKey);
+    if (printSettingsJson != null) {
+      _printSettings = PrintSettings.fromJson(jsonDecode(printSettingsJson));
+    }
 
     notifyListeners();
   }
@@ -170,11 +186,30 @@ class AppState extends ChangeNotifier {
     // Guardar tokens
     await prefs.setString('authToken', _authToken ?? '');
     await prefs.setString('refreshToken', _refreshToken ?? '');
-    if (_selectedAreaId != null) {
-      await prefs.setString('selectedAreaId', _selectedAreaId!);
+    if (_currentUser != null) {
+      await prefs.setString('currentUser', jsonEncode(_currentUser?.toJson()));
     } else {
-      await prefs.remove('selectedAreaId');
+      await prefs.remove('currentUser');
     }
+
+    if (_currentParking != null) {
+      await prefs.setString(
+        'currentParking',
+        jsonEncode(_currentParking?.toJson()),
+      );
+    } else {
+      await prefs.remove('currentParking');
+    }
+    if (_selectedAreaId != null) {
+      await prefs.setString(_selectedAreaIdKey, _selectedAreaId!);
+    } else {
+      await prefs.remove(_selectedAreaIdKey);
+    }
+    await prefs.setString(
+      _printSettingsKey,
+      jsonEncode(_printSettings.toJson()),
+    );
+    await _savePrintSettings();
   }
 
   // Métodos para guardar configuración de tema
@@ -212,52 +247,61 @@ class AppState extends ChangeNotifier {
 
   Future<void> _savePrintSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_processingModeKey, _printSettings.processingMode.index);
-    await prefs.setInt(_printMethodKey, _printSettings.printMethod.index);
-    await prefs.setInt(_printerTypeKey, _printSettings.printerType.index);
+    await prefs.setString(
+      _printSettingsKey,
+      jsonEncode(_printSettings.toJson()),
+    );
   }
 
   // User state setters
-  void setCurrentUser(UserModel? currentUser) {
+  Future<void> setCurrentUser(UserModel? currentUser) async {
     _currentUser = currentUser;
+    await saveState();
     notifyListeners();
   }
 
-  void setEmployee(EmployeeModel? employee) {
-    _employee = employee;
-    notifyListeners();
-  }
-
-  void setCurrentParking(ParkingModel parking) {
+  Future<void> setCurrentParking(
+    ParkingModel parking,
+    EmployeeModel? employee,
+  ) async {
     _currentParking = parking;
+    _employee = employee;
     _selectedAreaId = null;
+    await saveState();
     notifyListeners();
   }
 
-  void setCurrentArea(String areaId) {
+  Future<void> setCurrentArea(String areaId) async {
     _selectedAreaId = areaId;
-    saveState();
+    await saveState();
     notifyListeners();
   }
 
-  void setCurrentCashRegister(CashRegisterModel? cashRegister) {
+  Future<void> setCurrentCashRegister(CashRegisterModel? cashRegister) async {
     _currentCashRegister = cashRegister;
+    await saveState();
     notifyListeners();
   }
 
-  void setAccessToken(String? authToken) {
+  Future<void> setAccessToken(String? authToken) async {
     _authToken = authToken;
-    saveState();
+    await saveState();
     notifyListeners();
   }
 
-  void setRefreshToken(String? refreshToken) {
+  Future<void> setRefreshToken(String? refreshToken) async {
     _refreshToken = refreshToken;
-    saveState();
+    await saveState();
     notifyListeners();
   }
 
-  void logout() {
+  Future<void> setPrinterSettings(PrintSettings settings) async {
+    _printSettings = settings;
+    notifyListeners();
+    await saveState();
+  }
+
+  Future<void> logout() async {
     _currentUser = null;
     _employee = null;
     _currentParking = null;
@@ -265,7 +309,8 @@ class AppState extends ChangeNotifier {
     _authToken = null;
     _refreshToken = null;
     _selectedAreaId = null;
-    saveState();
+    await saveState();
+
     notifyListeners();
   }
 }

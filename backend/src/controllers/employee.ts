@@ -1,7 +1,7 @@
 import Elysia, { t } from "elysia";
 import { db } from "../db";
 import { authPlugin } from "../plugins/access";
-import { EmployeeSchema, Employee, EmployeeCreateSchema, EmployeeUpdateSchema, EmployeeCreateRequestSchema, EmployeeUpdateRequestSchema, EmployeePasswordChangeRequestSchema } from "../models/employee";
+import { EmployeeResponseSchema, EmployeeResponse, EmployeeCreateSchema, EmployeeUpdateSchema, EmployeeCreateRequestSchema, EmployeeUpdateRequestSchema, EmployeePasswordChangeRequestSchema } from "../models/employee";
 import { NotFoundError } from "../utils/error";
 
 export const employeeController = new Elysia({
@@ -18,7 +18,7 @@ export const employeeController = new Elysia({
     "/",
     async ({ query }) => {
       const res = await db.employee.find({});
-      return res as Employee[];
+      return res as EmployeeResponse[];
     },
     {
       detail: {
@@ -36,7 +36,7 @@ export const employeeController = new Elysia({
         }),
       }),
       response: {
-        200: t.Array(EmployeeSchema),
+        200: t.Array(EmployeeResponseSchema),
         400: t.String(),
         500: t.String(),
       },
@@ -44,9 +44,9 @@ export const employeeController = new Elysia({
   )
   .post(
     "/",
-    async ({ body }) => {
-      const res = await db.employee.create(body);
-      return res as Employee;
+    async ({ parking, body }) => {
+      const res = await db.employee.create(body, parking.id );
+      return res
     },
     {
       body: EmployeeCreateRequestSchema,
@@ -56,7 +56,7 @@ export const employeeController = new Elysia({
           "Crea un nuevo registro de employee con los datos proporcionados.",
       },
       response: {
-        200: EmployeeSchema,
+        200: EmployeeResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -69,7 +69,7 @@ export const employeeController = new Elysia({
       if (!res) {
         throw new NotFoundError("Empleado no encontrado");
       }
-      return res as Employee;
+      return res as EmployeeResponse;
     },
     {
       detail: {
@@ -77,7 +77,7 @@ export const employeeController = new Elysia({
         description: "Retorna un employee específico basado en su ID.",
       },
       response: {
-        200: EmployeeSchema,
+        200: EmployeeResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -87,7 +87,7 @@ export const employeeController = new Elysia({
     "/:id",
     async ({ params, body }) => {
       const res = await db.employee.update(params.id, body);
-      return res as Employee;
+      return res as EmployeeResponse;
     },
     {
       body: EmployeeUpdateRequestSchema,
@@ -97,7 +97,7 @@ export const employeeController = new Elysia({
           "Actualiza un registro de employee existente con los datos proporcionados.",
       },
       response: {
-        200: EmployeeSchema,
+        200: EmployeeResponseSchema,
         400: t.String(),
         500: t.String(),
       },
@@ -127,7 +127,7 @@ export const employeeController = new Elysia({
     "/:id",
     async ({ params }) => {
       const res = await db.employee.delete(params.id);
-      return res as Employee;
+      return res as EmployeeResponse;
     },
     {
       detail: {
@@ -136,7 +136,7 @@ export const employeeController = new Elysia({
           "Elimina un registro de employee existente basado en su ID.",
       },
       response: {
-        200: EmployeeSchema,
+        200: EmployeeResponseSchema,
         400: t.String(),
         500: t.String(),
       },

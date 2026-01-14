@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:parkar/screens/profile/profile_screen.dart';
 import 'package:parkar/state/app_state_container.dart';
@@ -28,13 +29,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _initScreens();
+    if (_selectedIndex >= _screens.length) {
+      _selectedIndex = 0;
+    }
   }
 
   void _initScreens() {
     final appState = AppStateContainer.of(context);
+    final role = appState.currentRole;
     _screens = [
       const ParkingScreen(),
-      const DashboardScreen(),
+    ];
+    if (role == 'owner' || role == 'admin') {
+      _screens.add(const DashboardScreen());
+    }
+    _screens.add(
       ProfilePanel(
         onLogout: () {
           appState.logout();
@@ -42,16 +51,40 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         user: appState.currentUser!,
       ),
-    ];
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
-    // Usar ValueListenableBuilder para escuchar cambios en el modo de edición
     return Builder(
       builder: (context) {
+        final appState = AppStateContainer.of(context);
+        final role = appState.currentRole;
+        final destinations = [
+          const NavigationDestination(
+            icon: Icon(Icons.local_parking_outlined, size: 22),
+            selectedIcon: Icon(Icons.local_parking, size: 22),
+            label: 'Parqueo',
+          ),
+        ];
+        if (role == 'owner' || role == 'admin') {
+          destinations.add(
+            const NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined, size: 22),
+              selectedIcon: Icon(Icons.dashboard, size: 22),
+              label: 'Panel',
+            ),
+          );
+        }
+        destinations.add(
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline, size: 22),
+            selectedIcon: Icon(Icons.person, size: 22),
+            label: 'Perfil',
+          ),
+        );
+
         // Contenido para móviles
         final mobileContent = Scaffold(
           extendBody: false,
@@ -83,29 +116,37 @@ class _HomeScreenState extends State<HomeScreen> {
                       surfaceTintColor: Colors.transparent,
                       indicatorColor: colorScheme.secondaryContainer
                           .withOpacity(0.7),
-                      destinations: const [
-                        NavigationDestination(
-                          icon: Icon(Icons.local_parking_outlined, size: 22),
-                          selectedIcon: Icon(Icons.local_parking, size: 22),
-                          label: 'Parqueo',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.dashboard_outlined, size: 22),
-                          selectedIcon: Icon(Icons.dashboard, size: 22),
-                          label: 'Panel',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.person_outline, size: 22),
-                          selectedIcon: Icon(Icons.person, size: 22),
-                          label: 'Perfil',
-                        ),
-                      ],
+                      destinations: destinations,
                     ),
                   ),
                 ),
         );
 
         // Contenido para tablets y escritorio
+        final desktopDestinations = [
+          const NavigationRailDestination(
+            icon: Icon(Icons.local_parking_outlined),
+            selectedIcon: Icon(Icons.local_parking),
+            label: Text('Parqueo'),
+          ),
+        ];
+        if (role == 'owner' || role == 'admin') {
+          desktopDestinations.add(
+            const NavigationRailDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: Text('Panel'),
+            ),
+          );
+        }
+        desktopDestinations.add(
+          const NavigationRailDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: Text('Perfil'),
+          ),
+        );
+
         final desktopContent = Scaffold(
           extendBody: false,
           extendBodyBehindAppBar: true,
@@ -143,23 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onDestinationSelected: (index) {
                     setState(() => _selectedIndex = index);
                   },
-                  destinations: const [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.local_parking_outlined),
-                      selectedIcon: Icon(Icons.local_parking),
-                      label: Text('Parqueo'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard),
-                      label: Text('Panel'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person),
-                      label: Text('Perfil'),
-                    ),
-                  ],
+                  destinations: desktopDestinations,
                 ),
 
                 // Contenido principal sin restricciones de ancho
