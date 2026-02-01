@@ -47,8 +47,6 @@ double calculateParkingFee(
     },
   );
 
-  print('applicableRate: ${applicableRate.toJson()}');
-
   return _calculateFeeFromRate(totalMinutes, applicableRate);
 }
 
@@ -58,7 +56,7 @@ double calculateParkingFee(
 /// @returns Calculated fee
 double _calculateFeeFromRate(int totalMinutes, RateModel rate) {
   // Apply tolerance (free minutes)
-  final billableMinutes = totalMinutes > rate.tolerance ? totalMinutes - rate.tolerance : 0;
+  final billableMinutes = totalMinutes >= rate.tolerance ? totalMinutes - rate.tolerance : 0;
 
   if (billableMinutes == 0) return 0.0;
 

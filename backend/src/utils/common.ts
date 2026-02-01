@@ -70,7 +70,7 @@ function calculateParkingFee(
  */
 function calculateFeeFromRate(totalMinutes: number, rate: Rate): number {
   // Apply tolerance (free minutes)
-  const billableMinutes = totalMinutes > rate.tolerance ? totalMinutes - rate.tolerance : 0;
+  const billableMinutes = totalMinutes >= rate.tolerance ? totalMinutes - rate.tolerance : 0;
 
   if (billableMinutes == 0) return 0.0;
 
