@@ -17,6 +17,7 @@
     "big.js": "^7.0.1",
     "elysia": "latest",
     "pg": "^8.13.1",
+    "siat-pdf": "2.2.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
